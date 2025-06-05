@@ -1,0 +1,11 @@
+google-genai
+python-dotenv
+openai
+requests
+pydantic
+bs4
+tqdm
+pandas
+langchain 
+langchain-google-genai
+html2text
