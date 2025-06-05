@@ -1,5 +1,6 @@
 # gfg_apticles
 
+```
 GFG_APPS/
 ├── agents/
 │   ├── __init__.py
@@ -36,3 +37,4 @@ GFG_APPS/
 ├── README.md                # Project documentation
 ├── requirements.txt         # Python dependency list
 └── test.py                  # Script for testing functionality
+```
