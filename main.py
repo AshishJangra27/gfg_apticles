@@ -53,5 +53,10 @@ if __name__ == "__main__":
         with open(os.path.join(output_dir, "token_report.json"), "w", encoding="utf-8") as f:
             json.dump(llm_logs, f, indent=4)
 
+
+        with open(os.path.join('', "index.html"), "w", encoding="utf-8") as f:
+            f.write(webpage_code['response'])
+
+
     except Exception as e:
         print(f"Error: {e}")
