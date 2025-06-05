@@ -17,13 +17,13 @@ def llm_log(agent_name, response_obj):
 
 if __name__ == "__main__":
 
-    # url = input("Enter article URL: ")
-    url = 'https://www.geeksforgeeks.org/cosine-similarity/'
+    url = input("Enter article URL: ")
+    # url = 'https://www.geeksforgeeks.org/cosine-similarity/'
     llm_logs['timestamp'] = datetime.now().isoformat()
     llm_logs['url'] = url
 
     output_dir = "outputs/"
-    os.mkfir(output_dir, exist_ok=True)
+    # os.mkdir(output_dir, exist_ok=True)
 
     try:
         raw_article = scrape_article(url)

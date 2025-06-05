@@ -1,83 +1,83 @@
 ```markdown
-# Cosine Similarity: A Comprehensive Guide
+# Depth-First Search (DFS) for Graphs
 
-Cosine similarity is a measure of similarity between two non-zero vectors. It calculates the cosine of the angle between them, providing a value between -1 and 1, where 1 indicates perfect similarity, 0 indicates orthogonality (no similarity), and -1 indicates complete opposition.
+**Last Updated:** March 29, 2025
+
+Depth-First Search (DFS) is a graph traversal algorithm that explores as far as possible along each branch before backtracking. It's analogous to traversing a tree by fully exploring the left subtree before moving to the right. A key consideration with graphs, unlike trees, is the presence of cycles, which can lead to infinite loops. Therefore, DFS uses a `visited` array to keep track of processed nodes and prevent revisiting them.
 
 ## Core Concepts
 
-*   **Definition:** Cosine similarity quantifies the similarity between two vectors by measuring the cosine of the angle between them.
-*   **Vector Representation:** In cosine similarity, data objects are treated as vectors in a multi-dimensional space.
-*   **Formula:** The cosine similarity between two vectors x and y is calculated as follows:
+*   **Traversal Strategy:** Explores each branch as deeply as possible before backtracking.
+*   **Visited Array:** A boolean array to mark visited nodes, preventing cycles and redundant processing.
+*   **Recursive Implementation:**  DFS is commonly implemented using recursion, leveraging the call stack to maintain traversal state.
+*   **Adjacency List/Matrix:** DFS operates on a graph represented either as an adjacency list (preferred for sparse graphs) or an adjacency matrix (suitable for dense graphs).
 
-    ```
-    S_C(x, y) = x . y / (||x|| * ||y||)
-    ```
+## Algorithm Steps (Single Source)
 
-    Where:
+Given a graph represented by an adjacency list `adj` and a starting node `s`:
 
-    *   `x . y` is the dot product of vectors x and y.
-    *   `||x||` is the magnitude (or length) of vector x.
-    *   `||y||` is the magnitude (or length) of vector y.
+1.  **Mark the current node `s` as visited.**
+2.  **Process the current node `s`.** (e.g., add it to the traversal result).
+3.  **For each neighbor `i` of `s`:**
+    *   **If `i` is not visited:**
+        *   **Recursively call DFS on `i`.**
 
-*   **Interpretation:**
-    *   `S_C(x, y) = 1`: Vectors x and y are perfectly similar (angle of 0 degrees).
-    *   `S_C(x, y) = 0`: Vectors x and y are orthogonal (angle of 90 degrees).
-    *   `S_C(x, y) = -1`: Vectors x and y are completely dissimilar (angle of 180 degrees).
-*   **Dissimilarity:** The cosine dissimilarity is often used and is calculated as:
+## Algorithm Steps (Complete Traversal - Disconnected Graph)
 
-    ```
-    D_C(x, y) = 1 - S_C(x, y)
-    ```
+To traverse a potentially disconnected graph:
 
-## Example Calculation
+1.  **Initialize a `visited` array.**
+2.  **For each vertex `i` in the graph:**
+    *   **If `i` is not visited:**
+        *   **Call the single-source DFS algorithm starting from `i`.**
 
-Let's calculate the cosine similarity between two vectors: x = {3, 2, 0, 5} and y = {1, 0, 0, 0}.
+## Example
 
-1.  **Dot Product (x . y):**
-    `x . y = (3 * 1) + (2 * 0) + (0 * 0) + (5 * 0) = 3`
+Consider the following graph represented by the adjacency list `adj = [[1, 2], [0, 2], [0, 1, 3, 4], [2], [2]]` and a starting node of `0`.
 
-2.  **Magnitude of x (||x||):**
-    `||x|| = √(3^2 + 2^2 + 0^2 + 5^2) = √(9 + 4 + 0 + 25) = √38 ≈ 6.16`
+1.  Start at node 0: Mark 0 as visited. Output: 0
+2.  Move to node 1 (adjacent to 0): Mark 1 as visited. Output: 1
+3.  Move to node 2 (adjacent to 1): Mark 2 as visited. Output: 2
+4.  Move to node 3 (adjacent to 2): Mark 3 as visited. Output: 3 (backtrack to 2)
+5.  Move to node 4 (adjacent to 2): Mark 4 as visited. Output: 4 (backtrack to 2, then backtrack to 1, then to 0)
 
-3.  **Magnitude of y (||y||):**
-    `||y|| = √(1^2 + 0^2 + 0^2 + 0^2) = √1 = 1`
+Resulting DFS Traversal: `0 1 2 3 4`
 
-4.  **Cosine Similarity (S_C(x, y)):**
-    `S_C(x, y) = 3 / (6.16 * 1) ≈ 0.49`
+## Code Examples (Illustrative)
 
-5.  **Cosine Dissimilarity (D_C(x, y)):**
-    `D_C(x, y) = 1 - 0.49 = 0.51`
+**C++ (Single Source):**
 
-## Applications
+```cpp
+void dfsRec(vector<vector<int>> &adj, vector<bool> &visited, int s, vector<int> &res) {
+    visited[s] = true;
+    res.push_back(s);
+    for (int i : adj[s])
+        if (!visited[i])
+            dfsRec(adj, visited, i, res);
+}
 
-Cosine similarity is widely used in various fields, including:
+vector<int> DFS(vector<vector<int>> &adj) {
+    vector<bool> visited(adj.size(), false);
+    vector<int> res;
+    dfsRec(adj, visited, 0, res); //Start from source vertex 0
+    return res;
+}
+```
 
-*   **Text Analysis:** Comparing documents or sentences based on their content.
-*   **Document Comparison:** Identifying similar documents in a corpus.
-*   **Search Queries:** Ranking search results based on their relevance to a query.
-*   **Recommendation Systems:** Recommending items (e.g., products, movies) to users based on the similarity of their preferences.
+## Time and Space Complexity
 
-## Advantages
+*   **Time Complexity:** O(V + E), where V is the number of vertices and E is the number of edges.  Each vertex and edge is visited at most once.
+*   **Space Complexity:** O(V + E).  O(V) for the `visited` array and O(E) in worst case.  The recursive calls also contribute to the space complexity due to the call stack, which can be O(V) in the worst-case scenario (e.g., a skewed tree-like graph).
 
-*   **Insensitive to Magnitude:** Cosine similarity focuses on the angle between vectors, making it less sensitive to differences in magnitude. This is particularly useful when dealing with data where the absolute values are not as important as the relative values.
-*   **Effective in High-Dimensional Spaces:** Works well in high-dimensional spaces, such as those encountered in text analysis.
+## Practical Applications
 
-## Disadvantages
+*   **Pathfinding:** Finding a path between two nodes.
+*   **Cycle Detection:**  Determining if a graph contains cycles.
+*   **Topological Sorting:** Ordering vertices in a directed acyclic graph (DAG).
+*   **Connected Components:** Identifying sets of connected nodes in a graph.
+*   **Maze Solving:**  Finding a path from start to end in a maze.
 
-*   **Sensitive to Sparse Data:** Can be ineffective for sparse data with many zero components.
-*   **Ignores Magnitude:** Only considers the angle between vectors, potentially missing important information about magnitude differences.
-*   **Symmetric:** The order of comparison does not matter, which may be a limitation in certain applications where the direction of the relationship is important.
+## Key Takeaways
 
-## Other Similarity Measures
-
-While cosine similarity is a popular choice, other similarity measures include:
-
-*   Euclidean Distance
-*   Manhattan Distance
-*   Jaccard Similarity
-*   Minkowski Distance
-
-## Summary
-
-Cosine similarity is a valuable tool for measuring the similarity between vectors, particularly in applications where the magnitude of the vectors is not as important as their direction. Its widespread use in text analysis, recommendation systems, and information retrieval highlights its versatility and effectiveness. Understanding its strengths and limitations is crucial for selecting the appropriate similarity measure for a given task.
+DFS is a fundamental graph traversal algorithm. Understanding its recursive nature, the importance of the `visited` array, and its time/space complexity is crucial for solving various graph-related problems. The ability to adapt DFS for both single-source and complete graph traversals broadens its applicability.
 ```

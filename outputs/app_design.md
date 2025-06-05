@@ -1,80 +1,122 @@
 ```markdown
-# Design Plan: Interactive Cosine Similarity Learning App
+# Design Plan: Interactive Depth-First Search (DFS) Learning Web Application
 
-This document outlines the design plan for a single-page web application designed to teach cosine similarity through interactive visualizations and simulations.
+This document outlines the design plan for a single-page interactive web application designed to teach the Depth-First Search (DFS) algorithm for graphs.
 
 ## 1. Key Components of the Webpage
 
-*   **Introduction & Setup:** Briefly introduces cosine similarity and provides initial vector setup.
-*   **Vector Space Visualization:** A 2D or 3D space where users can manipulate vectors and observe the cosine similarity.
-*   **Interactive Calculation:** A step-by-step breakdown of the cosine similarity calculation with interactive inputs and real-time updates.
-*   **Application Showcase:** Illustrates cosine similarity applications with simple, interactive examples.
-*   **Comparison with Other Measures:** A brief interactive comparison of cosine similarity with other similarity metrics.
+*   **Introduction/Overview Section:** Briefly introduces DFS and its purpose.
+*   **Graph Visualization and Control Panel:** Allows users to create and modify a graph.
+*   **DFS Algorithm Stepper:** Visually demonstrates the DFS algorithm step-by-step.
+*   **Visited Node Explanation:** Displays the state of `visited` array and explains its role.
+*   **Code Snippet Display:** Shows the core DFS code. Highlights lines corresponding to the current step in the visualization.
+*   **Traversal Result Display:** Shows the final DFS traversal order.
 
 ## 2. Design Plan as per the Topic
 
-The application follows a progressive disclosure approach, starting with a simple visual representation and gradually adding complexity and detail.
+The application will guide the user through the following flow:
 
-1.  **Introduction:** A brief, non-interactive section that introduces the concept of cosine similarity and its purpose.
-2.  **Vector Manipulation:** Users start by defining two vectors in 2D space using draggable endpoints or numerical inputs.
-3.  **Visual Representation:** The vectors are visualized in the vector space, along with the angle between them.
-4.  **Cosine Similarity Calculation:** As the vectors are manipulated, the cosine similarity score is calculated and displayed in real-time. This section breaks down the calculation into steps (dot product, magnitude, etc.) with interactive inputs.
-5.  **Application Examples:** Show how cosine similarity is applied to text data.
-6.  **Comparison:** Briefly demonstrate the differences between cosine similarity and other measures with interactive examples.
+1.  **Graph Creation:** User starts by creating a graph using interactive controls. This reinforces understanding of graph structure (vertices and edges).
+2.  **Algorithm Selection:** User selects the DFS algorithm to visualize.
+3.  **Source Node Selection:** User selects the starting node for the DFS traversal.
+4.  **Step-by-Step Visualization:** The DFS algorithm is executed step-by-step, highlighting the current node, neighbor being explored, and changes to the `visited` array.
+5.  **Traversal Completion:** Upon completion, the final DFS traversal order is displayed.
+6.  **Iteration and Experimentation:** Users can modify the graph, choose a different starting node, and rerun the visualization to observe the effect on the traversal.
 
 ## 3. Visualization and Interactivity Plan
 
-| Concept                   | Visualization                                                                  | Interaction                                                                                       | Effect on Screen                                                                                                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vectors                   | Arrows in 2D or 3D space.                                                     | Draggable endpoints, numerical input fields for components.                                         | Vector arrows update in real-time.                                                                                                                                           |
-| Angle between Vectors     | Visual representation of the angle.                                            | Vector manipulation.                                                                              | Angle representation updates.                                                                                                                                            |
-| Cosine Similarity Value | Numerical display, color-coded scale (-1 to 1).                                | Vector manipulation.                                                                              | Numerical value updates, color changes on the scale.                                                                                                                           |
-| Dot Product               | Highlighted components in the calculation; visual representation (projection). | Numerical inputs for vector components, step-through button for the calculation process.         | Dot product value updates. Visual indication (e.g., color change, highlighted term) of the components being multiplied.                                               |
-| Magnitude                 | Length of the vector arrow.                                                    | Vector manipulation.                                                                              | Length of the vector arrow updates.                                                                                                                                           |
-| Text Similarity          | Example text documents.                                                          | Input new texts into text area boxes.                                                             | Updates the vectors and their cosine similarity score in real time based on word count for each document.                                                                  |
-| Other Similarity Measures| Examples of Euclidean distance, Manhattan Distance.                             | Toggle button to switch between measures, draggable points to represent the distance calculation. | Shows the distance measure on a graph using the draggable point.                                                                                                        |
+*   **Graph Visualization:**
+    *   **Visualization:** The graph is represented visually with nodes (circles/rectangles) and edges (lines/arrows).
+    *   **Interaction:**
+        *   **Node Creation:** Buttons to add new nodes to the graph. Clicking the button should create a new, unlinked node on the canvas.
+        *   **Edge Creation:** A "Connect" button or drag-and-drop functionality to connect two nodes with an edge. Users click one node, then another to create a directed edge. The UI should change the cursor on hover/click to indicate that creating edges is in process.
+        *   **Node Deletion:** Ability to delete selected nodes.
+        *   **Node Dragging:** Nodes should be draggable to rearrange the graph layout.
+    *   **Reflection:** The graph visualization is dynamically updated as the user adds, removes, or moves nodes and edges.
+
+*   **DFS Algorithm Stepper:**
+    *   **Visualization:** Highlights the current node being processed and the neighbor being explored.
+    *   **Interaction:**
+        *   **"Step" Button:** A button to advance to the next step in the DFS algorithm.
+        *   **"Run" Button:** A button to automatically run the DFS algorithm.
+        *   **"Reset" Button:** A button to reset the visualization to the beginning.
+        *   **Speed Control:** A slider to control the speed of the "Run" animation.
+    *   **Reflection:** Each step highlights the corresponding node in the graph visualization and updates the code snippet display.
+
+*   **Visited Node Explanation:**
+    *   **Visualization:** A table or list showing the state of the `visited` array (true/false for each node).
+    *   **Interaction:** None. The `visited` array updates automatically with each step.
+    *   **Reflection:** The `visited` array is dynamically updated with each step of the DFS algorithm. The table highlights the currently being updated `visited` node.
+
+*   **Code Snippet Display:**
+    *   **Visualization:** Displays the relevant DFS code (e.g., C++ code provided).
+    *   **Interaction:** None.
+    *   **Reflection:** The current line of code being executed is highlighted to match the current step in the visualization.
+
+*   **Traversal Result Display:**
+    *   **Visualization:** Displays the resulting DFS traversal order (e.g., "0 1 2 3 4").
+    *   **Interaction:** None.
+    *   **Reflection:** Updates automatically upon completion of the DFS traversal.
 
 ## 4. Exact UI/UX Layout of the Webpage
 
-The webpage is structured into distinct sections organized vertically.
+*   **Header:**
+    *   Title: "Interactive Depth-First Search (DFS) Visualizer"
+    *   Brief introductory text about DFS.
 
-*   **Header (Top):**  A simple header containing the title "Cosine Similarity Explorer".
-*   **Left Panel (Collapsible):**
-    *   **Vector Input:** Numerical input fields for vector components (x, y, and z for 3D). Option to switch between 2D and 3D visualization.
-    *   **Calculation Breakdown:** A collapsible section that displays the step-by-step calculation of cosine similarity with interactive inputs that highlight what's being calculated.
-    *   **Application Selection:** Buttons or tabs to choose different application scenarios.
-    *   **Measure Comparison:** A collapsible section containing the other measures.
-*   **Right Panel (Main Area):**
-    *   **Vector Space Visualization:** A 2D or 3D canvas displaying the vectors, angle, and related visual elements. This is the central focus of the application.
-    *   **Application Showcase:** Displays the selected application scenario with appropriate visualization.
-*   **Footer (Bottom):**  A brief summary or credits.
+*   **Left Panel (Controls):**
+    *   **Graph Creation Controls:**
+        *   "Add Node" Button
+        *   "Connect Nodes" Button (activate edge creation mode)
+        *   "Delete Node" Button (activate node deletion mode)
+        *   A visual indication that either "Connect Nodes" or "Delete Nodes" is active (e.g., highlighted button or cursor change).
+    *   **Algorithm Controls:**
+        *   "Select Start Node" (dropdown or click-to-select on the graph).
+        *   "Step" Button
+        *   "Run" Button
+        *   "Reset" Button
+        *   Speed Slider
+        *   Traversal result display.
 
-**UX Considerations:**
+*   **Right Panel (Animation Area):**
+    *   Graph Visualization (using SVG or Canvas).
+    *   "Visited" Array Display (Table or List).
+    *   Code Snippet Display (with syntax highlighting).
 
-*   **Responsiveness:** The layout should adapt to different screen sizes.
-*   **Animations and Transitions:** Smooth transitions between states (e.g., when manipulating vectors, showing/hiding calculation steps) to provide a clear sense of interaction.
-*   **Clear Visual Hierarchy:** Use typography, spacing, and color to create a clear visual hierarchy and guide the user's attention.
-*   **Tooltip Guidance:** Use subtle tooltips to explain the functionality of each interactive element and guide users through the exploration process.
+*   **User Experience Ideas:**
+    *   **Smooth Transitions:** Use animations for node highlighting and edge creation/deletion.
+    *   **Responsiveness:** Adapt the layout to different screen sizes (mobile-friendly).
+    *   **Tooltips:** Provide helpful tooltips for each control.
 
 ## 5. Educational Objective Behind Each Component
 
-| Component                     | Educational Objective                                                                                                                                  | Expected Learning Outcome                                                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vector Manipulation            | Visualize the relationship between vector components and their geometric representation.                                                                 | Understanding how changing vector components affects their direction and magnitude.                                                              |
-| Angle Visualization           | Understand the geometric interpretation of cosine similarity as the cosine of the angle between vectors.                                                  | Connecting the angle between vectors to the cosine similarity value.                                                                            |
-| Cosine Similarity Calculation | Demystify the formula by breaking it down into smaller, understandable steps. Show the impact of each component of the formula on the final similarity score. | Understanding the mathematical basis of cosine similarity and the role of dot product and magnitude.                                           |
-| Application Showcase          | Demonstrate real-world applications of cosine similarity to motivate learning and show its practical relevance.                                           | Recognizing the applicability of cosine similarity in various domains, such as text analysis and recommendation systems.                         |
-| Measure Comparison            | Appreciate the strengths and limitations of cosine similarity by comparing it with other similarity measures.                                            | Understanding when cosine similarity is the most appropriate measure and when other measures might be more suitable.                               |
+*   **Graph Creation:**
+    *   **Objective:** Understanding graph structure and representation.
+    *   **Outcome:** Users will be able to create and modify graphs, solidifying their understanding of nodes and edges.
+
+*   **DFS Algorithm Stepper:**
+    *   **Objective:** Visualizing the step-by-step execution of the DFS algorithm.
+    *   **Outcome:** Users will understand the recursive nature of DFS and how it explores the graph.
+
+*   **Visited Node Explanation:**
+    *   **Objective:** Understanding the role of the `visited` array in preventing cycles.
+    *   **Outcome:** Users will grasp the importance of the `visited` array in ensuring the algorithm terminates correctly.
+
+*   **Code Snippet Display:**
+    *   **Objective:** Connecting the algorithm's visualization to its code implementation.
+    *   **Outcome:** Users will be able to relate the code to the visual representation of the algorithm.
+
+*   **Traversal Result Display:**
+    *   **Objective:** Showing the final DFS traversal order.
+    *   **Outcome:** Users will be able to predict the DFS traversal order for different graphs and starting nodes.
 
 ## 6. Suggestions for Enhancing Learner Engagement
 
-*   **Progressive Reveal:** Gradually reveal the complexity of the calculation as the user explores the interface. Start with basic vector manipulation and angle visualization, then introduce the dot product and magnitude calculations.
-*   **Guided Tooltips:** Use tooltips to provide concise explanations of each interactive element and guide users through the learning process.
-*   **"What If" Scenarios:** Present users with "what if" scenarios (e.g., "What happens to the cosine similarity if you double the length of one vector?") to encourage experimentation and deeper understanding.
-*   **Mini Walkthrough:** Provide a brief animated walkthrough highlighting the main features and interactions of the application.
-*   **Gamification (Subtle):** A subtle progress bar or badge system could provide a sense of accomplishment as users explore the different features.
-*   **Easter Eggs:** Include a hidden interaction that reveals a fun fact about cosine similarity or related mathematical concepts.
-*   **Use of Color:** Implement a color scheme that helps the user know what the different elements represent and their relationship (for instance, vectors can be displayed in different colors).
+*   **Progressive Reveal:** Initially, show only the basic graph creation controls and the graph visualization. Gradually introduce the algorithm controls and other components as the user interacts with the graph.
+*   **Guided Tooltips:** Provide tooltips that guide the user through the different functionalities of the application.
+*   **Mini Walkthrough:**  A short, animated walkthrough showing how to create a graph, select a starting node, and run the DFS algorithm.
+*   **Color Coding:** Use consistent color coding to highlight the current node, neighbor, and `visited` array elements.
+*   **Interactive Challenges:**  Include simple challenges, such as "Create a graph where the DFS traversal starting from node 0 visits all nodes in a specific order". No explicit assessment, but a thought experiment to run after they learned from the interactive app.
 
-By implementing these strategies, the interactive single-page web application will provide a comprehensive and engaging learning experience for understanding cosine similarity.
+This design provides a framework for creating an engaging and educational interactive web application for learning the Depth-First Search algorithm. By combining visual representations, interactive controls, and clear explanations, the application will help users develop a deeper understanding of this fundamental graph traversal technique.
 ```
