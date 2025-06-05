@@ -1,21 +1,27 @@
 import streamlit as st
 import os
 from datetime import datetime
+import streamlit.components.v1 as components
+
 from utils.scrape import scrape_article
 from agents.agents import get_clean_summary_from_llm, get_webpage_design_from_llm, get_webpage_from_llm
 from utils.support import llm_log, save_log, initialize_run
 
 st.set_page_config(page_title="LLM Article → Webpage Generator", layout="wide")
-st.title("🧠 LLM Article to Webpage Generator")
 
-# Input
-url = st.text_input("🔗 Enter article URL")
+# HEADER
+st.title("🧠 LLM Article to Webpage Generator")
+st.caption("📎 Paste an article URL below to generate a complete webpage!")
+
+# INPUT
+url = st.text_input("🔗 Enter Article URL")
 
 if st.button("🚀 Generate"):
     if not url.strip():
         st.warning("Please enter a valid URL.")
     else:
         run_folder, llm_logs = initialize_run(url)
+
         try:
             with st.spinner("🔍 Scraping article..."):
                 raw_article = scrape_article(url, save=True, output_dir=run_folder)
@@ -34,17 +40,23 @@ if st.button("🚀 Generate"):
             with st.spinner("💻 Generating webpage code..."):
                 webpage_code = get_webpage_from_llm(design_brief['response'], save=True, output_dir=run_folder)
             llm_logs['developer'] = llm_log(webpage_code)
-            st.code(webpage_code['response'], language='html')
+            st.success("✅ Webpage code generated.")
 
-            # Save logs
+            # Save token logs
             save_log(llm_logs, run_folder)
-            st.success("📦 Token log saved.")
 
-            with st.expander("📊 Token Usage"):
-                st.json(llm_logs)
+            # LAYOUT: Display code (left) + Render output (right)
+            col1, col2 = st.columns([1, 1])
 
-            st.info(f"📁 All files saved in: `{run_folder}`")
+            with col1:
+                st.subheader("💻 HTML Code")
+                st.code(webpage_code['response'], language='html')
 
+            with col2:
+                st.subheader("🌐 Rendered Webpage")
+                components.html(webpage_code['response'], height=600, scrolling=True)
+
+            # Download Section
             st.subheader("⬇️ Download Files")
 
             def download_file_button(filename, label):
@@ -53,7 +65,12 @@ if st.button("🚀 Generate"):
                     with open(file_path, "r", encoding="utf-8") as f:
                         st.download_button(label=label, data=f.read(), file_name=filename, mime="text/plain")
 
-            download_file_button("webpage_code.html", "Download 💻 Webpage Code")
+            download_file_button("webpage_code.html", "💻 Download Webpage Code")
+
+            with st.expander("📊 Token Usage"):
+                st.json(llm_logs)
+
+            st.info(f"📁 All files saved in: `{run_folder}`")
 
         except Exception as e:
             st.error(f"❌ Error: {e}")
