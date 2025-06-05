@@ -1,4 +1,17 @@
-# gfg_apticles
+# gfg_apticles -> Webpage Generator
+
+This app lets you paste any article URL and converts it into:
+- A clean summary
+- A webpage design idea
+- A working HTML code
+
+Built with `Streamlit`, `Google Gemini`
+
+## How to Use
+1. Paste any article link
+2. Click **Generate**
+3. Get summary, design, and code — all auto-generated!
+
 
 ```
 GFG_APPS/
