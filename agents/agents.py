@@ -7,7 +7,6 @@ load_dotenv()
 client = genai.Client(api_key= os.getenv("GOOGLE_API_KEY"))
 
 
-
 def get_clean_summary_from_llm(article_text: str, save: bool = False, output_dir: str = "./") -> dict:
     """
     Fetches an article summary using a language model.
@@ -71,7 +70,7 @@ def get_webpage_design_from_llm(summarised_article: str, save: bool = False, out
 
     try:
         webpage_design_idea = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash-preview-04-17",
             contents=webpage_design_prompt
         )
 
