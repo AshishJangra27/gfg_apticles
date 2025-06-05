@@ -1,0 +1,19 @@
+{
+    "timestamp": "2025-06-06T02:34:59.517537",
+    "url": "https://www.geeksforgeeks.org/sql-join-set-1-inner-left-right-and-full-joins/",
+    "summariser": {
+        "prompt_token": 3274,
+        "response_token": 707,
+        "total_token": 3981
+    },
+    "designer": {
+        "prompt_token": 1215,
+        "response_token": 963,
+        "total_token": 2178
+    },
+    "developer": {
+        "prompt_token": 1521,
+        "response_token": 10604,
+        "total_token": 30843
+    }
+}

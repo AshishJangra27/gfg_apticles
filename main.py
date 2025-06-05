@@ -3,8 +3,6 @@ import os
 from datetime import datetime
 from utils.scrape import scrape_article
 from agents.agents import get_clean_summary_from_llm,  get_webpage_design_from_llm,  get_webpage_from_llm
-# from agents.webpage_desing_agent import get_webpage_design_from_llm
-# from agents.developer_agent import get_webpage_from_llm
 from utils.support import llm_log, save_log, initialize_run
 
 llm_logs = {}
