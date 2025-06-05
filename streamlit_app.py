@@ -7,54 +7,52 @@ from utils.scrape import scrape_article
 from agents.agents import get_clean_summary_from_llm, get_webpage_design_from_llm, get_webpage_from_llm
 from utils.support import llm_log, save_log, initialize_run
 
-st.set_page_config(page_title="LLM Article → Webpage Generator", layout="wide")
+st.set_page_config(page_title="GFG Apticles: LLM Article → Webpage Generator", layout="wide")
 
 # HEADER
-st.title("GFG Apticles: LLM Article to Webpage Generator")
-st.caption("📎 Paste an article URL below to generate a complete webpage!")
+st.title("🧠 GFG Apticles: LLM Article to Webpage Generator")
+st.caption("📎 Paste an article URL below to generate a fully interactive webpage!")
 
 # INPUT
 url = st.text_input("🔗 Enter Article URL")
 
 if st.button("🚀 Generate"):
     if not url.strip():
-        st.warning("Please enter a valid URL.")
+        st.warning("⚠️ Please enter a valid URL.")
     else:
         run_folder, llm_logs = initialize_run(url)
+        progress = st.progress(0, text="Initializing...")
 
         try:
             with st.spinner("🔍 Scraping article..."):
                 raw_article = scrape_article(url, save=True, output_dir=run_folder)
-            st.success("✅ Article scraped.")
+            progress.progress(25, text="✅ Scraped article.")
+            st.success("✅ Article scraped successfully.")
 
-            with st.spinner("✍️ Summarizing..."):
+            with st.spinner("✍️ Summarizing content..."):
                 summarised_article = get_clean_summary_from_llm(raw_article, save=True, output_dir=run_folder)
             llm_logs['summariser'] = llm_log(summarised_article)
-            st.success("✅ Summary generated.")
+            progress.progress(50, text="✅ Summary generated.")
+            st.success("✅ Summary complete.")
 
             with st.spinner("🎨 Creating design brief..."):
                 design_brief = get_webpage_design_from_llm(summarised_article['response'], save=True, output_dir=run_folder)
             llm_logs['designer'] = llm_log(design_brief)
-            st.success("✅ Design brief ready.")
+            progress.progress(75, text="✅ Design brief ready.")
+            st.success("✅ Design prepared.")
 
             with st.spinner("💻 Generating webpage code..."):
                 webpage_code = get_webpage_from_llm(design_brief['response'], save=True, output_dir=run_folder)
             llm_logs['developer'] = llm_log(webpage_code)
+            progress.progress(100, text="✅ Webpage generated.")
             st.success("✅ Webpage code generated.")
 
             # Save token logs
             save_log(llm_logs, run_folder)
 
-            # LAYOUT: Display code (left) + Render output (right)
-            col1, col2 = st.columns([1, 1])
-
-            with col1:
-                st.subheader("💻 HTML Code")
-                st.code(webpage_code['response'], language='html')
-
-            with col2:
-                st.subheader("🌐 Rendered Webpage")
-                components.html(webpage_code['response'], height=600, scrolling=True)
+            # Render full-screen output
+            st.subheader("🌐 Final Rendered Webpage")
+            components.html(webpage_code['response'], height=900, scrolling=True)
 
             # Download Section
             st.subheader("⬇️ Download Files")
