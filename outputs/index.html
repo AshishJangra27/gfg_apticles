@@ -1,0 +1,831 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosine Similarity Explorer</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e1e;
+            color: #00ff00;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            text-align: center;
+            padding: 10px;
+            border-bottom: 1px solid #00ff00;
+        }
+        main {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .left-panel {
+            width: 300px;
+            padding: 10px;
+            border-right: 1px solid #00ff00;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .right-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        canvas {
+            flex-grow: 1;
+            background-color: #000;
+            display: block; /* Remove extra space below canvas */
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid #00ff00;
+            font-size: 0.9em;
+        }
+        input[type="number"], input[type="text"], textarea {
+            font-family: monospace;
+            background-color: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px;
+            margin-bottom: 5px;
+            width: calc(100% - 12px); /* Adjust for padding and border */
+        }
+        button {
+            font-family: monospace;
+            background-color: #005500;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        button:hover {
+            background-color: #007700;
+        }
+        h2 {
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+            border-bottom: 1px dotted #00ff00;
+        }
+        .vector-input label {
+            display: inline-block;
+            width: 40px;
+            margin-right: 5px;
+        }
+        .vector-input div {
+            margin-bottom: 5px;
+        }
+        .calculation-step {
+            margin-bottom: 8px;
+        }
+        .highlight {
+            color: yellow;
+            font-weight: bold;
+        }
+        .cosine-similarity-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: center;
+        }
+         details {
+            border: 1px solid #00ff00;
+            padding: 5px;
+            margin-bottom: 10px;
+         }
+         summary {
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 5px;
+         }
+         summary::-webkit-details-marker { display: none; } /* Hide default marker */
+         summary::before {
+             content: '+ '; /* Custom marker */
+             margin-right: 5px;
+         }
+         details[open] summary::before {
+             content: '- ';
+         }
+
+         .application-showcase {
+             padding: 10px;
+             border-top: 1px solid #00ff00;
+             max-height: 300px; /* Limit height */
+             overflow-y: auto;
+         }
+          .text-similarity-inputs textarea {
+              width: calc(50% - 10px);
+              height: 80px;
+              box-sizing: border-box;
+              margin: 0;
+              float: left;
+          }
+          .text-similarity-inputs textarea:first-child {
+              margin-right: 10px;
+          }
+          .text-similarity-inputs::after {
+              content: "";
+              display: table;
+              clear: both;
+          }
+          .comparison-example {
+              margin-top: 10px;
+          }
+
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+            }
+            .left-panel {
+                width: auto;
+                border-right: none;
+                border-bottom: 1px solid #00ff00;
+                max-height: 40vh; /* Limit height on small screens */
+            }
+            .right-panel {
+                 overflow-y: auto; /* Allow scrolling in main area */
+            }
+            canvas {
+                height: 60vh; /* Give canvas remaining height */
+            }
+             .text-similarity-inputs textarea {
+                 width: 100%;
+                 margin: 0 0 10px 0;
+             }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Cosine Similarity Explorer</h1>
+    </header>
+
+    <main>
+        <aside class="left-panel">
+            <div class="vector-input">
+                <h2>Vector Input (2D)</h2>
+                <div title="Vector 1 components (x, y)">
+                    Vector 1: <label for="v1x">x:</label><input type="number" id="v1x" value="5"> <label for="v1y">y:</label><input type="number" id="v1y" value="2">
+                </div>
+                 <div title="Vector 2 components (x, y)">
+                    Vector 2: <label for="v2x">x:</label><input type="number" id="v2x" value="2"> <label for="v2y">y:</label><input type="number" id="v2y" value="5">
+                </div>
+            </div>
+
+            <details class="calculation-breakdown">
+                <summary>Calculation Breakdown</summary>
+                <div class="calculation-step">
+                    <h3>1. Dot Product (v1 ⋅ v2)</h3>
+                    (<span id="v1x_val"></span> * <span id="v2x_val"></span>) + (<span id="v1y_val"></span> * <span id="v2y_val"></span>) = <span id="dot_product_val"></span>
+                    <p title="Geometric interpretation: Projection of one vector onto another, scaled by the length of the second vector. Zero means orthogonal.">Tooltip: Dot product measures the magnitude of the projection of one vector onto another.</p>
+                </div>
+                <div class="calculation-step">
+                    <h3>2. Magnitude (||v1||)</h3>
+                    sqrt(<span id="v1x_val_sq"></span>² + <span id="v1y_val_sq"></span>²) = sqrt(<span id="v1_mag_sq_sum"></span>) = <span id="v1_magnitude_val"></span>
+                     <p title="Length of the vector. Calculated using Pythagorean theorem in 2D.">Tooltip: Magnitude is the length of the vector.</p>
+                </div>
+                 <div class="calculation-step">
+                    <h3>3. Magnitude (||v2||)</h3>
+                    sqrt(<span id="v2x_val_sq"></span>² + <span id="v2y_val_sq"></span>²) = sqrt(<span id="v2_mag_sq_sum"></span>) = <span id="v2_magnitude_val"></span>
+                     <p title="Length of the vector. Calculated using Pythagorean theorem in 2D.">Tooltip: Magnitude is the length of the vector.</p>
+                </div>
+                 <div class="calculation-step">
+                    <h3>4. Cosine Similarity</h3>
+                    (v1 ⋅ v2) / (||v1|| * ||v2||) <br>
+                    <span id="dot_product_val_final"></span> / (<span id="v1_magnitude_val_final"></span> * <span id="v2_magnitude_val_final"></span>) <br>
+                    = <span id="cosine_similarity_result"></span>
+                     <p title="Cosine of the angle between the two vectors. Range [-1, 1]. 1 = same direction, 0 = orthogonal, -1 = opposite direction.">Tooltip: Cosine Similarity measures the angle between vectors, not their magnitude.</p>
+                </div>
+            </details>
+
+             <details class="application-selection">
+                 <summary>Application Showcase: Text Similarity</summary>
+                 <div class="application-showcase">
+                      <p>Cosine similarity is used to compare documents by treating them as vectors in a high-dimensional space based on word frequencies.</p>
+                      <h3>Document Similarity Example</h3>
+                      <div class="text-similarity-inputs">
+                         <textarea id="doc1" placeholder="Enter Document 1 Text">the quick brown fox jumps over the lazy dog</textarea>
+                         <textarea id="doc2" placeholder="Enter Document 2 Text">the slow green fox crawls under the sleepy cat</textarea>
+                      </div>
+                     <button id="calculate-text-similarity">Calculate Text Similarity</button>
+                      <p>Similarity Score: <span id="text-similarity-score"></span></p>
+                      <p>Vector 1 (Word Counts): <span id="doc1-vector"></span></p>
+                      <p>Vector 2 (Word Counts): <span id="doc2-vector"></span></p>
+                 </div>
+             </details>
+
+             <details class="measure-comparison">
+                  <summary>Compare with Other Measures</summary>
+                  <div class="comparison-example">
+                      <h3>Euclidean Distance</h3>
+                      <p>Euclidean distance measures the straight-line distance between two points.</p>
+                       <p>Point 1: (<span id="p1x_val"></span>, <span id="p1y_val"></span>)</p>
+                       <p>Point 2: (<span id="p2x_val"></span>, <span id="p2y_val"></span>)</p>
+                       <p>Distance: <span id="euclidean-distance-val"></span></p>
+                       <p title="Euclidean distance is affected by magnitude. Vectors far apart will have large distance even if their direction is similar.">Tooltip: Euclidean distance measures absolute distance, sensitive to vector magnitude.</p>
+                       <button id="reset-comparison-points">Reset Points</button>
+                       <p style="font-size: 0.9em; margin-top: 5px;">(Drag points on canvas to see effect)</p>
+                  </div>
+             </details>
+
+        </aside>
+
+        <section class="right-panel">
+            <canvas id="vectorCanvas"></canvas>
+            <div class="cosine-similarity-value" title="Range -1 (opposite) to +1 (same direction). 0 is orthogonal.">
+                Cosine Similarity: <span id="cosine_value">0.00</span>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Explore Cosine Similarity | <a href="https://github.com/ashishmentor" target="_blank" style="color: #00ff00;">GitHub</a></p>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('vectorCanvas');
+        const ctx = canvas.getContext('2d');
+        const v1xInput = document.getElementById('v1x');
+        const v1yInput = document.getElementById('v1y');
+        const v2xInput = document.getElementById('v2x');
+        const v2yInput = document.getElementById('v2y');
+
+        const dotProductVal = document.getElementById('dot_product_val');
+        const v1xVal = document.getElementById('v1x_val');
+        const v1yVal = document.getElementById('v1y_val');
+        const v2xVal = document.getElementById('v2x_val');
+        const v2yVal = document.getElementById('v2y_val');
+
+        const v1xValSq = document.getElementById('v1x_val_sq');
+        const v1yValSq = document.getElementById('v1y_val_sq');
+        const v1MagSqSum = document.getElementById('v1_mag_sq_sum');
+        const v1MagnitudeVal = document.getElementById('v1_magnitude_val');
+
+        const v2xValSq = document.getElementById('v2x_val_sq');
+        const v2yValSq = document.getElementById('v2y_val_sq');
+        const v2MagSqSum = document.getElementById('v2_mag_sq_sum');
+        const v2MagnitudeVal = document.getElementById('v2_magnitude_val');
+
+        const dotProductValFinal = document.getElementById('dot_product_val_final');
+        const v1MagnitudeValFinal = document.getElementById('v1_magnitude_val_final');
+        const v2MagnitudeValFinal = document.getElementById('v2_magnitude_val_final');
+        const cosineSimilarityResult = document.getElementById('cosine_similarity_result');
+
+        const cosineValueDisplay = document.getElementById('cosine_value');
+
+        // Text Similarity Elements
+        const doc1Textarea = document.getElementById('doc1');
+        const doc2Textarea = document.getElementById('doc2');
+        const calculateTextButton = document.getElementById('calculate-text-similarity');
+        const textSimilarityScoreSpan = document.getElementById('text-similarity-score');
+        const doc1VectorSpan = document.getElementById('doc1-vector');
+        const doc2VectorSpan = document.getElementById('doc2-vector');
+
+        // Comparison Elements
+        const p1xValSpan = document.getElementById('p1x_val');
+        const p1yValSpan = document.getElementById('p1y_val');
+        const p2xValSpan = document.getElementById('p2x_val');
+        const p2yValSpan = document.getElementById('p2y_val');
+        const euclideanDistanceValSpan = document.getElementById('euclidean-distance-val');
+        const resetComparisonButton = document.getElementById('reset-comparison-points');
+
+
+        let v1 = { x: parseFloat(v1xInput.value), y: parseFloat(v1yInput.value) };
+        let v2 = { x: parseFloat(v2xInput.value), y: parseFloat(v2yInput.value) };
+
+        // Points for Euclidean distance comparison
+        let p1 = { x: -3, y: -3 };
+        let p2 = { x: 3, y: 3 };
+
+        const VECTOR_COLOR_1 = '#00ffff'; // Cyan
+        const VECTOR_COLOR_2 = '#ffff00'; // Yellow
+        const AXIS_COLOR = '#555';
+        const GRID_COLOR = '#333';
+        const ANGLE_COLOR = '#ff00ff'; // Magenta
+        const POINT_COLOR = '#ff0000'; // Red
+        const COMPARISON_COLOR = '#ff8800'; // Orange
+
+        let isDraggingV1 = false;
+        let isDraggingV2 = false;
+        let isDraggingP1 = false;
+        let isDraggingP2 = false;
+
+        let dragStartMouseX, dragStartMouseY;
+        let dragStartVectorX, dragStartVectorY; // For vectors
+
+        // --- Canvas Drawing ---
+
+        function drawGrid() {
+            const step = 50; // Pixels per unit
+            ctx.strokeStyle = GRID_COLOR;
+            ctx.lineWidth = 0.5;
+
+            // Vertical lines
+            for (let x = -canvas.width / 2; x < canvas.width / 2; x += step) {
+                 const canvasX = canvas.width / 2 + x;
+                 ctx.beginPath();
+                 ctx.moveTo(canvasX, 0);
+                 ctx.lineTo(canvasX, canvas.height);
+                 ctx.stroke();
+            }
+             // Horizontal lines
+            for (let y = -canvas.height / 2; y < canvas.height / 2; y += step) {
+                 const canvasY = canvas.height / 2 - y; // Y is inverted in canvas
+                 ctx.beginPath();
+                 ctx.moveTo(0, canvasY);
+                 ctx.lineTo(canvas.width, canvasY);
+                 ctx.stroke();
+            }
+        }
+
+        function drawAxes() {
+            ctx.strokeStyle = AXIS_COLOR;
+            ctx.lineWidth = 1;
+
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            // Arrows for axes
+            const arrowSize = 8;
+            // X-axis arrow
+            ctx.beginPath();
+            ctx.moveTo(canvas.width, canvas.height / 2);
+            ctx.lineTo(canvas.width - arrowSize, canvas.height / 2 - arrowSize / 2);
+            ctx.moveTo(canvas.width, canvas.height / 2);
+            ctx.lineTo(canvas.width - arrowSize, canvas.height / 2 + arrowSize / 2);
+            ctx.stroke();
+             // Y-axis arrow
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2 - arrowSize / 2, arrowSize);
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2 + arrowSize / 2, arrowSize);
+            ctx.stroke();
+
+            // Labels (optional)
+             ctx.fillStyle = AXIS_COLOR;
+             ctx.font = '12px monospace';
+             ctx.fillText('X', canvas.width - arrowSize - 5, canvas.height / 2 + 15);
+             ctx.fillText('Y', canvas.width / 2 + 10, arrowSize + 5);
+        }
+
+         function worldToCanvas(x, y) {
+             const scale = 20; // Adjust scale factor
+             return {
+                 x: canvas.width / 2 + x * scale,
+                 y: canvas.height / 2 - y * scale // Y-axis is inverted
+             };
+         }
+
+         function canvasToWorld(cx, cy) {
+             const scale = 20; // Needs to match worldToCanvas scale
+             return {
+                 x: (cx - canvas.width / 2) / scale,
+                 y: (canvas.height / 2 - cy) / scale // Y-axis is inverted
+             };
+         }
+
+
+        function drawVector(vector, color) {
+            const start = worldToCanvas(0, 0);
+            const end = worldToCanvas(vector.x, vector.y);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+
+            // Draw arrowhead
+            const angle = Math.atan2(end.y - start.y, end.x - start.x);
+            const arrowSize = 10;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(end.x, end.y);
+            ctx.lineTo(end.x - arrowSize * Math.cos(angle - Math.PI / 6), end.y - arrowSize * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(end.x - arrowSize * Math.cos(angle + Math.PI / 6), end.y - arrowSize * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw draggable point at the end
+            ctx.fillStyle = color;
+             ctx.beginPath();
+             ctx.arc(end.x, end.y, 5, 0, Math.PI * 2);
+             ctx.fill();
+        }
+
+        function drawAngle(v1, v2) {
+             const angle1 = Math.atan2(v1.y, v1.x);
+             const angle2 = Math.atan2(v2.y, v2.x);
+             const startAngle = Math.min(angle1, angle2);
+             const endAngle = Math.max(angle1, angle2);
+
+             // Handle cases where angle wraps around 0/2PI
+             let sweepAngle = endAngle - startAngle;
+             if (sweepAngle > Math.PI) {
+                 sweepAngle = 2 * Math.PI - sweepAngle;
+                 // Need to swap start/end angles for arc if crossing the negative x-axis
+                 if (angle1 > angle2) {
+                     const temp = startAngle;
+                     startAngle = endAngle;
+                     endAngle = temp;
+                 }
+             }
+
+             const origin = worldToCanvas(0, 0);
+             const radius = 30; // Radius of the arc
+
+             ctx.strokeStyle = ANGLE_COLOR;
+             ctx.lineWidth = 1;
+             ctx.beginPath();
+             ctx.arc(origin.x, origin.y, radius, startAngle, endAngle);
+             ctx.stroke();
+
+            // Optional: Display angle value (in degrees)
+            const angleDegrees = (Math.acos(calculateCosineSimilarity(v1, v2)) * 180 / Math.PI).toFixed(1);
+            const midAngle = startAngle + sweepAngle / 2;
+             // Position the text slightly away from the arc
+             const textX = origin.x + (radius + 20) * Math.cos(midAngle);
+             const textY = origin.y + (radius + 20) * Math.sin(midAngle);
+             ctx.fillStyle = ANGLE_COLOR;
+             ctx.fillText(`${angleDegrees}°`, textX, textY);
+        }
+
+        function drawComparisonPoints(p1, p2) {
+             const cP1 = worldToCanvas(p1.x, p1.y);
+             const cP2 = worldToCanvas(p2.x, p2.y);
+
+             ctx.fillStyle = POINT_COLOR;
+             ctx.beginPath();
+             ctx.arc(cP1.x, cP1.y, 6, 0, Math.PI * 2);
+             ctx.fill();
+             ctx.beginPath();
+             ctx.arc(cP2.x, cP2.y, 6, 0, Math.PI * 2);
+             ctx.fill();
+
+             // Draw line between points
+             ctx.strokeStyle = COMPARISON_COLOR;
+             ctx.lineWidth = 2;
+             ctx.beginPath();
+             ctx.moveTo(cP1.x, cP1.y);
+             ctx.lineTo(cP2.x, cP2.y);
+             ctx.stroke();
+        }
+
+         // --- Calculation Functions ---
+
+        function calculateDotProduct(vA, vB) {
+            return vA.x * vB.x + vA.y * vB.y;
+        }
+
+        function calculateMagnitude(v) {
+            return Math.sqrt(v.x * v.x + v.y * v.y);
+        }
+
+        function calculateCosineSimilarity(vA, vB) {
+            const dot = calculateDotProduct(vA, vB);
+            const magA = calculateMagnitude(vA);
+            const magB = calculateMagnitude(vB);
+
+            if (magA === 0 || magB === 0) {
+                return 0; // Or handle as NaN, but 0 is often practical
+            }
+
+            // Clamp result to [-1, 1] due to potential floating point inaccuracies
+            const similarity = dot / (magA * magB);
+            return Math.max(-1, Math.min(1, similarity));
+        }
+
+         function calculateEuclideanDistance(pA, pB) {
+             const dx = pA.x - pB.x;
+             const dy = pA.y - pB.y;
+             return Math.sqrt(dx * dx + dy * dy);
+         }
+
+        // --- Update UI ---
+
+        function updateCalculationUI(vA, vB) {
+             const dot = calculateDotProduct(vA, vB);
+             const magA = calculateMagnitude(vA);
+             const magB = calculateMagnitude(vB);
+             const similarity = calculateCosineSimilarity(vA, vB);
+
+             // Step 1: Dot Product
+             v1xVal.textContent = vA.x.toFixed(2);
+             v1yVal.textContent = vA.y.toFixed(2);
+             v2xVal.textContent = vB.x.toFixed(2);
+             v2yVal.textContent = vB.y.toFixed(2);
+             dotProductVal.textContent = dot.toFixed(2);
+
+             // Step 2: Magnitude V1
+             v1xValSq.textContent = (vA.x * vA.x).toFixed(2);
+             v1yValSq.textContent = (vA.y * vA.y).toFixed(2);
+             v1MagSqSum.textContent = (vA.x * vA.x + vA.y * vA.y).toFixed(2);
+             v1MagnitudeVal.textContent = magA.toFixed(2);
+
+              // Step 3: Magnitude V2
+             v2xValSq.textContent = (vB.x * vB.x).toFixed(2);
+             v2yValSq.textContent = (vB.y * vB.y).toFixed(2);
+             v2MagSqSum.textContent = (vB.x * vB.x + vB.y * vB.y).toFixed(2);
+             v2MagnitudeVal.textContent = magB.toFixed(2);
+
+             // Step 4: Cosine Similarity
+             dotProductValFinal.textContent = dot.toFixed(2);
+             v1MagnitudeValFinal.textContent = magA.toFixed(2);
+             v2MagnitudeValFinal.textContent = magB.toFixed(2);
+             cosineSimilarityResult.textContent = similarity.toFixed(4);
+
+             // Main Cosine Value Display
+             cosineValueDisplay.textContent = similarity.toFixed(4);
+             // Optional: Color coding the main display
+             if (similarity > 0.8) cosineValueDisplay.style.color = 'lightgreen';
+             else if (similarity > 0.4) cosineValueDisplay.style.color = 'yellow';
+             else if (similarity < -0.8) cosineValueDisplay.style.color = 'red';
+             else if (similarity < -0.4) cosineValueDisplay.style.color = 'orange';
+             else cosineValueDisplay.style.color = '#00ff00';
+        }
+
+         function updateComparisonUI(pA, pB) {
+             const distance = calculateEuclideanDistance(pA, pB);
+              p1xValSpan.textContent = pA.x.toFixed(2);
+              p1yValSpan.textContent = pA.y.toFixed(2);
+              p2xValSpan.textContent = pB.x.toFixed(2);
+              p2yValSpan.textContent = pB.y.toFixed(2);
+              euclideanDistanceValSpan.textContent = distance.toFixed(4);
+         }
+
+         function updateAll() {
+             // Update from input fields
+              v1.x = parseFloat(v1xInput.value) || 0;
+              v1.y = parseFloat(v1yInput.value) || 0;
+              v2.x = parseFloat(v2xInput.value) || 0;
+              v2.y = parseFloat(v2yInput.value) || 0;
+
+             updateCalculationUI(v1, v2);
+             updateComparisonUI(p1, p2);
+             draw();
+         }
+
+         // --- Canvas Drawing Orchestration ---
+
+        function draw() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawGrid();
+            drawAxes();
+            drawVector(v1, VECTOR_COLOR_1);
+            drawVector(v2, VECTOR_COLOR_2);
+            drawAngle(v1, v2); // Draw angle *after* vectors
+            drawComparisonPoints(p1, p2); // Draw comparison points
+
+        }
+
+        // --- Event Handlers ---
+
+        function handleInput(event) {
+             // Update vector object from input fields
+             v1.x = parseFloat(v1xInput.value) || 0;
+             v1.y = parseFloat(v1yInput.value) || 0;
+             v2.x = parseFloat(v2xInput.value) || 0;
+             v2.y = parseFloat(v2yInput.value) || 0;
+
+             updateCalculationUI(v1, v2);
+             draw();
+        }
+
+         function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+         }
+
+         function isNearPoint(p, mousePos, tolerance = 10) {
+             const cP = worldToCanvas(p.x, p.y);
+             const dist = Math.sqrt((mousePos.x - cP.x)**2 + (mousePos.y - cP.y)**2);
+             return dist < tolerance;
+         }
+
+         function handleMouseDown(event) {
+             const mousePos = getMousePos(canvas, event);
+
+             if (isNearPoint(v1, mousePos)) {
+                 isDraggingV1 = true;
+                 dragStartMouseX = mousePos.x;
+                 dragStartMouseY = mousePos.y;
+                 dragStartVectorX = v1.x;
+                 dragStartVectorY = v1.y;
+             } else if (isNearPoint(v2, mousePos)) {
+                  isDraggingV2 = true;
+                 dragStartMouseX = mousePos.x;
+                 dragStartMouseY = mousePos.y;
+                 dragStartVectorX = v2.x;
+                 dragStartVectorY = v2.y;
+             } else if (isNearPoint(p1, mousePos)) {
+                  isDraggingP1 = true;
+                 dragStartMouseX = mousePos.x;
+                 dragStartMouseY = mousePos.y;
+                 dragStartVectorX = p1.x; // Reusing var names, represents point x
+                 dragStartVectorY = p1.y; // Reusing var names, represents point y
+             } else if (isNearPoint(p2, mousePos)) {
+                  isDraggingP2 = true;
+                 dragStartMouseX = mousePos.x;
+                 dragStartMouseY = mousePos.y;
+                 dragStartVectorX = p2.x; // Reusing var names, represents point x
+                 dragStartVectorY = p2.y; // Reusing var names, represents point y
+             }
+
+         }
+
+         function handleMouseMove(event) {
+             if (!isDraggingV1 && !isDraggingV2 && !isDraggingP1 && !isDraggingP2) return;
+
+             const mousePos = getMousePos(canvas, event);
+             const worldPos = canvasToWorld(mousePos.x, mousePos.y);
+
+             if (isDraggingV1) {
+                 v1.x = worldPos.x;
+                 v1.y = worldPos.y;
+                 v1xInput.value = v1.x.toFixed(2);
+                 v1yInput.value = v1.y.toFixed(2);
+                 updateCalculationUI(v1, v2);
+                 draw();
+             } else if (isDraggingV2) {
+                 v2.x = worldPos.x;
+                 v2.y = worldPos.y;
+                 v2xInput.value = v2.x.toFixed(2);
+                 v2yInput.value = v2.y.toFixed(2);
+                 updateCalculationUI(v1, v2);
+                 draw();
+             } else if (isDraggingP1) {
+                 p1.x = worldPos.x;
+                 p1.y = worldPos.y;
+                 updateComparisonUI(p1, p2);
+                 draw();
+             } else if (isDraggingP2) {
+                 p2.x = worldPos.x;
+                 p2.y = worldPos.y;
+                 updateComparisonUI(p1, p2);
+                 draw();
+             }
+         }
+
+         function handleMouseUp() {
+             isDraggingV1 = false;
+             isDraggingV2 = false;
+             isDraggingP1 = false;
+             isDraggingP2 = false;
+         }
+
+         function handleResize() {
+             // The draw function already sets canvas size based on CSS and redraws
+             draw();
+             // Re-update UI to ensure values match visual state after resize
+             updateCalculationUI(v1, v2);
+             updateComparisonUI(p1, p2);
+         }
+
+         // --- Text Similarity Application ---
+
+         function tokenize(text) {
+             return text.toLowerCase().match(/\b\w+\b/g) || [];
+         }
+
+         function createFrequencyVector(tokens, vocabulary) {
+             const vector = new Array(vocabulary.length).fill(0);
+             const tokenCounts = {};
+             tokens.forEach(token => {
+                 tokenCounts[token] = (tokenCounts[token] || 0) + 1;
+             });
+
+             vocabulary.forEach((word, index) => {
+                 vector[index] = tokenCounts[word] || 0;
+             });
+             return vector;
+         }
+
+         function calculateVectorDotProduct(vA, vB) {
+             let dot = 0;
+             for (let i = 0; i < vA.length; i++) {
+                 dot += vA[i] * vB[i];
+             }
+             return dot;
+         }
+
+          function calculateVectorMagnitude(v) {
+             let sumSq = 0;
+             for (let i = 0; i < v.length; i++) {
+                 sumSq += v[i] * v[i];
+             }
+             return Math.sqrt(sumSq);
+         }
+
+
+         function calculateVectorCosineSimilarity(vA, vB) {
+            const dot = calculateVectorDotProduct(vA, vB);
+            const magA = calculateVectorMagnitude(vA);
+            const magB = calculateVectorMagnitude(vB);
+
+            if (magA === 0 || magB === 0) {
+                return 0;
+            }
+            return dot / (magA * magB);
+         }
+
+
+         function calculateTextSimilarity() {
+             const text1 = doc1Textarea.value;
+             const text2 = doc2Textarea.value;
+
+             const tokens1 = tokenize(text1);
+             const tokens2 = tokenize(text2);
+
+             // Build vocabulary (unique words) from both documents
+             const vocabularySet = new Set([...tokens1, ...tokens2]);
+             const vocabulary = Array.from(vocabularySet).sort(); // Sort for consistent vector order
+
+             const vector1 = createFrequencyVector(tokens1, vocabulary);
+             const vector2 = createFrequencyVector(tokens2, vocabulary);
+
+             const similarity = calculateVectorCosineSimilarity(vector1, vector2);
+
+             textSimilarityScoreSpan.textContent = similarity.toFixed(4);
+             doc1VectorSpan.textContent = `[${vector1.join(', ')}]`;
+             doc2VectorSpan.textContent = `[${vector2.join(', ')}]`;
+
+             // Optional: Show vocabulary
+             // console.log("Vocabulary:", vocabulary);
+             // console.log("Vector 1:", vector1);
+             // console.log("Vector 2:", vector2);
+         }
+
+        // --- Comparison Reset ---
+        function resetComparisonPoints() {
+            p1 = { x: -3, y: -3 };
+            p2 = { x: 3, y: 3 };
+            updateComparisonUI(p1, p2);
+            draw();
+        }
+
+
+        // --- Initialization ---
+
+        // Initial draw and UI update
+        handleResize(); // Set initial canvas size and draw
+
+        // Add event listeners
+        v1xInput.addEventListener('input', handleInput);
+        v1yInput.addEventListener('input', handleInput);
+        v2xInput.addEventListener('input', handleInput);
+        v2yInput.addEventListener('input', handleInput);
+
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseout', handleMouseUp); // Stop dragging if mouse leaves canvas
+
+        window.addEventListener('resize', handleResize);
+
+        // Text Similarity Button
+        calculateTextButton.addEventListener('click', calculateTextSimilarity);
+
+         // Comparison Reset Button
+        resetComparisonButton.addEventListener('click', resetComparisonPoints);
+
+        // Initial calculation for text similarity
+        calculateTextSimilarity();
+
+        // Initial update for comparison points
+        updateComparisonUI(p1, p2);
+
+
+    </script>
+
+</body>
+</html>
+```
