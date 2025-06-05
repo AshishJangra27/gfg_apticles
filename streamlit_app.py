@@ -10,7 +10,7 @@ from utils.support import llm_log, save_log, initialize_run
 st.set_page_config(page_title="LLM Article → Webpage Generator", layout="wide")
 
 # HEADER
-st.title("🧠 LLM Article to Webpage Generator")
+st.title("GFG Apticles: LLM Article to Webpage Generator")
 st.caption("📎 Paste an article URL below to generate a complete webpage!")
 
 # INPUT
