@@ -1,0 +1,19 @@
+{
+    "timestamp": "2025-06-06T02:10:38.582709",
+    "url": "https://www.geeksforgeeks.org/cosine-similarity/",
+    "summariser": {
+        "prompt_token": 1614,
+        "response_token": 520,
+        "total_token": 2134
+    },
+    "designer": {
+        "prompt_token": 1029,
+        "response_token": 770,
+        "total_token": 1799
+    },
+    "developer": {
+        "prompt_token": 1324,
+        "response_token": 8610,
+        "total_token": 20559
+    }
+}

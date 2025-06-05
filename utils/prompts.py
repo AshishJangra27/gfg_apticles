@@ -2,26 +2,44 @@ import os
 
 def generate_clean_summary_prompt(raw_article: str) -> str:
     """
-    Generate a prompt to clean, simplify, and structure a technical article.
+    Generates a cleaned and structured version of a technical article focused strictly on 
+    core concepts that can be turned into interactive visual learning components.
     """
 
     return f"""
-You are an expert technical editor and learning experience designer.
+            You are a senior technical editor and interaction-focused content simplifier.
 
-Below is a raw technical article scraped from a webpage:
+            Your task is to **extract and restructure** only the **core conceptual content** from the raw article below, 
+            so it can later be transformed into an interactive visual learning webpage.
 
----
-{raw_article}
----
+            ---
 
-Please do the following:
-1. Clean and simplify the content by removing repetitive or irrelevant text, links etc.
-2. Summarize core concepts using clear, structured formatting (use steps, lists, formulas, etc).
-3. Preserve technical accuracy but make it easier to understand for learners.
-4. Generate a final 500 words summary of the article, focusing on key concepts and practical applications.
+            **Raw Article Content**:
+            {raw_article}
+            ---
 
-Return the refined article in markdown format.
-""".strip()
+            **Goal**:
+            Remove everything that is not directly useful for building **visual, interactive learning components**.
+
+            **Remove**:
+            - History, author opinions, case studies, intros, outros
+            - Repetitive content, ads, references, links
+            - Unnecessary theory or background
+
+            **Retain and Structure**:
+            - Core **concepts**, **mechanics**, **formulas**, **rules**, and **step-by-step logic**
+            - Clear explanations that can later be mapped to visuals or interactivity
+            - Code blocks, flow diagrams (in text), algorithmic steps (if any)
+
+            **Format**:
+            - Use markdown with sections, bullet points, and clear headings
+            - Keep it **under 500 words**
+            - Maintain **technical accuracy**, but use clear, simple language
+
+            **Expected Output**:
+            Only the refined, structured conceptual content in markdown format.  
+            Do **not** add summaries, conclusions, or commentary.
+            """.strip()
 
 
 
@@ -34,88 +52,122 @@ Return the refined article in markdown format.
 
 def generate_webpage_design_prompt(summarised_article: str) -> str:
     """
-    Generate a detailed prompt for designing an interactive single-page learning web application
-    based on the summarised technical article.
+    Generate a clean, focused prompt for designing a static, single-page interactive learning web app
+    based strictly on core conceptual content.
     """
     return f"""
-You are an expert educator, web designer, and interactive learning experience creator. 
-You have created many successful interactive single-page web applications that help learners 
-understand complex technical topics through visual and hands-on interactions.
+            ```You are an expert instructional designer and interaction-first web educator.
 
-Below is a summarised technical article intended for learning:
+            Your goal is to **transform the following summarised technical content** into a **static, single-page, interactive learning experience** that allows users to explore the concept directly through visual and hands-on elements — not through text explanations.
 
----
-{summarised_article}
----
+            ---
 
-Your task is to create a complete **design plan** for an interactive single-page learning web application 
-based on the above content. The goal is to help learners understand the core concepts by engaging 
-with the content visually and interactively.
+            📄 **Summarised Concept**:
+            {summarised_article}
+            ---
 
-Please include:
+            🎯 **Your Task**:
+            Design a **visual learning experience** that enables learners to interact directly with the core concepts above.  
+            The final output will be a **static, minimal HTML page** with a fixed viewport, designed for conceptual clarity and intuitive interaction.
 
-1. **Key Components of the Webpage**  
-   - Identify the major sections or blocks that should exist (e.g., interactive simulation, visual stepper, concept explorer).
+            ---
 
-2. **Design Plan as per the Topic**  
-   - Suggest the most suitable structure and flow for this particular topic.  
-   - Decide how the learner should navigate through or explore the concept.
+            🧩 **Include the Following in Your Design Plan**:
 
-3. **Visualization and Interactivity Plan**  
-   - Identify which concepts must be visualized or interacted with.  
-   - Describe how the interaction will work (e.g., sliders, buttons, graph nodes, draggable elements).  
-   - Mention how changes in interaction will reflect on the screen.
+            1. ### 🧱 Section Breakdown & UI Layout  
+            - Identify all **essential interactive blocks or components** (e.g., concept simulator, visual explorer, step visualizer).
+            - Describe **static layout**: What appears where on the screen (header, side panels, main area).
+            - Follow a **viewport-first layout** (no long scrolling or paginated content).
 
-4. **Exact UI/UX Layout of the Webpage**  
-   - Describe the layout clearly (e.g., header, left panel: controls, right panel: animation area).  
-   - Mention user experience ideas like animations, transitions, or responsiveness if needed.
+            2. ### 🕹️ Interactivity Mapping  
+            - For each concept, describe:
+                - What will the user interact with?
+                - What will change on screen (e.g., diagram, graph, formula)?
+                - What type of interaction: sliders, buttons, click-points, code runners, flow diagrams?
 
-5. **Educational Objective Behind Each Component**  
-   - Explain how each visual/interactive element contributes to deeper understanding.  
-   - Mention the expected learning outcome from each part.
+            3. ### 🧠 Learning Objective Behind Each Interaction  
+            - Explain the **intent** of each interaction: what concept does it clarify or demonstrate?
+            - Mention expected learning outcome from that component.
 
-6. **Suggestions for Enhancing Learner Engagement**  
-   - Suggest any subtle elements that can keep learners engaged (e.g., progressive reveal, guided tooltips, mini walkthrough).
+            4. ### 🧪 Cognitive Flow & Learner Progression  
+            - Suggest how the learner progresses across the page (e.g., left to right, progressive steps, toggle views).
+            - Avoid navigation-heavy designs. Focus on **interaction-as-learning**.
 
-This webpage will have **only interactive learning** – no textual theory, quizzes, or practice questions. 
-It should be a **single-page application** with strong technical depth and high educational value.
+            5. ### ✨ Subtle Engagement Elements  
+            - Recommend any light, non-disruptive UX ideas like:
+                - Hover-based hints, animated transitions for changes
+                - Guided tooltips only if concept needs orientation
 
-Return the output in clear, structured markdown format.
-""".strip()
+            ---
 
+            📌 **Constraints**:
+            - Do **not** include text-heavy sections, quizzes, or long explanations.
+            - Keep all design strictly visual + interactive.
+            - Output should be **structured in clear markdown**, no commentary.
 
-
-
-
-
-
+            """.strip()
 
 
 
 def generate_webpage_prompt(design_brief: str) -> str:
     """
-    Generate a prompt for a minimalist developer to build a complete, single-page interactive webpage
-    using only HTML, CSS, and JavaScript, based on the design instructions.
+    Generate a strict, theme-specific, and robust prompt for building a complete 
+    static interactive webpage using HTML, CSS, and JavaScript — with GeeksforGeeks styling,
+    canvas-based interaction, and perfectly working components.
     """
+
     return f"""
-You are a minimalist and highly skilled web developer who follows the "information over decoration (IO)" philosophy. 
-You build beautiful, functional, and focused single-page web applications using only HTML, CSS, and JavaScript.
+        You are a minimalist and highly disciplined web developer.
 
-Below is a design brief from a designer describing the exact plan for a single-page interactive learning webpage:
+        Your task is to build a **fully functional, static, single-page HTML application** 
+        based on the detailed design brief below. This page is built for learners to **directly interact with technical concepts**, with both visual clarity and flawless behavior.
 
----
-{design_brief}
----
+        ---
 
-Your task is to:
+        🧾 **Design Brief**:
+        {design_brief}
+        ---
 
-1. Create one single HTML file that includes everything — HTML structure, CSS styles, and JavaScript functionality.
-2. Focus heavily on the interactive portion as described. Give it maximum screen space.
-3. Use only monospace font throughout the page.
-4. The title should be centered at the top of the page.
-5. Add a footer at the bottom with the GitHub link: `https://github.com/ashishmentor`.
-6. Ensure the entire page is clean, minimal, and responsive.
-7. The result must be working and include all interactivity as described.
+        🧑‍💻 **Development Instructions**:
 
-Return only the **complete single HTML file code in raw text format not code block**, no extra explanations or commentary. Just the code.
-""".strip()
+        1. Create a single `.html` file that includes:
+        - Full **HTML structure**
+        - Embedded **CSS**
+        - Embedded or inline **JavaScript**
+
+        2. Apply the **GeeksforGeeks color theme**:
+        - Background: White (`#ffffff`)
+        - Primary: GeeksforGeeks Green (`#2f8d46`)
+        - Text: Dark (`#222222`)
+
+        3. Use a **static, non-scrollable viewport layout**:
+        - Fit all interface components within a single visible screen
+        - Maintain clarity, whitespace, and focus on interactivity
+
+        4. **Interactive Area Requirements**:
+        - Include a central **canvas** or dynamic zone where users directly explore the concept
+        - Support **in-canvas interactions** such as clicking, dragging, hovering, or manipulating elements directly
+        - Allow optional external controls (sliders, toggles, selectors), but ensure all critical interactions are also canvas-driven
+
+        5. ⚠️ **Functional Precision Requirement**:
+        - Every feature or component you include must work **perfectly and without errors**
+        - It’s acceptable to implement fewer features — but **nothing should be partially working or buggy**
+        - Prioritize **technical accuracy, interaction feedback, and stability**
+
+        6. UX/UI Expectations:
+        - Clean layout, visually balanced
+        - Smooth transitions if they help learning clarity
+        - Font: system UI or monospace (optional), readable and accessible
+
+        7. Add a **footer** with the following links:
+        - GitHub: `https://github.com/AshishJangra27/`
+        - LinkedIn: `https://www.linkedin.com/in/ashish-jangra/`
+        - Footer should match the theme and stay fixed at the bottom if possible
+
+        8. **Do not use**:
+        - Any libraries, frameworks, CDNs, or media files
+        - No external imports — use only raw HTML, CSS, and JS
+
+        📦 **Output Format**:
+        Return only the complete `.html` code as **plain text** — no markdown blocks, comments, or extra explanation.
+        """.strip()

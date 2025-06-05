@@ -1,0 +1,754 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosine Similarity Interactive</title>
+    <style>
+        /* GeeksforGeeks Theme */
+        :root {
+            --gfg-green: #2f8d46;
+            --gfg-dark: #222222;
+            --gfg-white: #ffffff;
+            --gfg-light-grey: #f0f0f0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: var(--gfg-dark);
+            background-color: var(--gfg-white);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .panel {
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto; /* Allow internal scrolling if content exceeds panel height */
+        }
+
+        #left-panel {
+            width: 280px;
+            border-right: 1px solid var(--gfg-light-grey);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #center-panel {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #right-panel {
+            width: 350px;
+            border-left: 1px solid var(--gfg-light-grey);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h2 {
+            color: var(--gfg-green);
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--gfg-green);
+            padding-bottom: 5px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-fields {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-fields input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            border: 1px solid var(--gfg-light-grey);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+         .input-fields input[type="number"]:focus {
+            outline: 2px solid var(--gfg-green);
+            border-color: var(--gfg-green);
+        }
+
+        .highlight-input {
+            outline: 2px solid var(--gfg-green) !important;
+            border-color: var(--gfg-green) !important;
+        }
+
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            user-select: none; /* Prevent text selection on toggle label */
+        }
+
+        .toggle-group label {
+            font-weight: bold;
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--gfg-green);
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px var(--gfg-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Formula Section */
+        .formula-box {
+            background-color: var(--gfg-light-grey);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            overflow-x: auto;
+        }
+
+        .formula {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .formula .numerator, .formula .denominator {
+            display: block;
+            text-align: center;
+        }
+
+        .formula .fraction-line {
+            display: block;
+            border-bottom: 1px solid var(--gfg-dark);
+            margin: 5px 0;
+        }
+
+        .similarity-score {
+            margin-top: 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-align: center;
+            color: var(--gfg-green);
+        }
+
+        canvas {
+            border: 1px solid var(--gfg-light-grey);
+            background-color: var(--gfg-white);
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        footer {
+            background-color: var(--gfg-dark);
+            color: var(--gfg-white);
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+        }
+
+        footer a {
+            color: var(--gfg-green);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Tooltip for Magnitude Focus */
+        .magnitude-tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            pointer-events: none; /* Allow clicks to pass through */
+            z-index: 100;
+            white-space: nowrap;
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="left-panel" class="panel">
+            <h2>Vector Input & Controls</h2>
+
+            <div class="input-group">
+                <label>Vector A (x, y)</label>
+                <div class="input-fields">
+                    <input type="number" id="vecA-x" value="3" step="0.1">
+                    <input type="number" id="vecA-y" value="1" step="0.1">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Vector B (x, y)</label>
+                <div class="input-fields">
+                    <input type="number" id="vecB-x" value="1" step="0.1">
+                    <input type="number" id="vecB-y" value="3" step="0.1">
+                </div>
+            </div>
+
+             <div class="toggle-group">
+                <label for="sparseDataToggle">Simulate Sparse Data</label>
+                 <label class="switch">
+                    <input type="checkbox" id="sparseDataToggle">
+                    <span class="slider"></span>
+                 </label>
+            </div>
+
+            <div class="toggle-group">
+                <label for="orientationFocusToggle">Orientation vs Magnitude</label>
+                <label class="switch">
+                    <input type="checkbox" id="orientationFocusToggle">
+                    <span class="slider"></span>
+                 </label>
+            </div>
+
+            <!-- Add spacing filler if needed -->
+             <div style="flex-grow: 1;"></div>
+
+        </div>
+
+        <div id="center-panel" class="panel">
+            <canvas id="vectorCanvas" width="500" height="500"></canvas>
+             <div class="magnitude-tooltip"></div>
+        </div>
+
+        <div id="right-panel" class="panel">
+            <h2>Cosine Similarity</h2>
+
+            <div class="formula-box">
+                <div class="formula">
+                    CosineSimilarity(A, B) =
+                    <span class="fraction">
+                        <span class="numerator">A · B</span>
+                        <span class="fraction-line"></span>
+                        <span class="denominator">||A|| ||B||</span>
+                    </span>
+                    <br><br>
+                    = <span class="fraction">
+                        <span class="numerator">
+                            (<span id="dot-product-formula">A_x * B_x + A_y * B_y</span>)
+                        </span>
+                         <span class="fraction-line"></span>
+                        <span class="denominator">
+                            (&radic;<span id="magA-formula">A_x&sup2; + A_y&sup2;</span>) * (&radic;<span id="magB-formula">B_x&sup2; + B_y&sup2;</span>)
+                        </span>
+                    </span>
+                    <br><br>
+                    = <span id="calculated-formula"></span>
+                </div>
+            </div>
+
+            <div class="similarity-score">
+                Similarity Score: <span id="score-value">N/A</span>
+                <br>
+                Angle (degrees): <span id="angle-value">N/A</span>
+            </div>
+
+            <!-- Add spacing filler if needed -->
+             <div style="flex-grow: 1;"></div>
+
+        </div>
+    </div>
+
+    <footer>
+        Made for learning by Ashish Jangra
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('vectorCanvas');
+        const ctx = canvas.getContext('2d');
+        const vecAxInput = document.getElementById('vecA-x');
+        const vecAyInput = document.getElementById('vecA-y');
+        const vecBxInput = document.getElementById('vecB-x');
+        const vecByInput = document.getElementById('vecB-y');
+        const sparseDataToggle = document.getElementById('sparseDataToggle');
+        const orientationFocusToggle = document.getElementById('orientationFocusToggle');
+        const dotProductFormulaSpan = document.getElementById('dot-product-formula');
+        const magAFormulaSpan = document.getElementById('magA-formula');
+        const magBFormulaSpan = document.getElementById('magB-formula');
+        const calculatedFormulaSpan = document.getElementById('calculated-formula');
+        const scoreValueSpan = document.getElementById('score-value');
+        const angleValueSpan = document.getElementById('angle-value');
+        const magnitudeTooltip = document.querySelector('.magnitude-tooltip');
+
+        const origin = { x: canvas.width / 2, y: canvas.height / 2 };
+        const scale = 40; // Pixels per unit in the vector space
+        let currentVecA = { x: parseFloat(vecAxInput.value), y: parseFloat(vecAyInput.value) };
+        let currentVecB = { x: parseFloat(vecBxInput.value), y: parseFloat(vecByInput.value) };
+        let originalVecA = { ...currentVecA };
+        let originalVecB = { ...currentVecB };
+
+        let animationFrameId = null;
+        let animationStartTime = null;
+        const animationDuration = 300; // ms
+
+        // --- Vector Math Functions ---
+        function dotProduct(v1, v2) {
+            return v1.x * v2.x + v1.y * v2.y;
+        }
+
+        function magnitude(v) {
+            return Math.sqrt(v.x * v.x + v.y * v.y);
+        }
+
+        function cosineSimilarity(v1, v2) {
+            const magA = magnitude(v1);
+            const magB = magnitude(v2);
+            if (magA === 0 || magB === 0) {
+                return 0; // Avoid division by zero
+            }
+            return dotProduct(v1, v2) / (magA * magB);
+        }
+
+        function toDegrees(radians) {
+             // Handle potential floating point inaccuracies near 1 or -1 causing acos(x) issues
+             const clampedRadians = Math.max(-1, Math.min(1, radians));
+             return Math.acos(clampedRadians) * (180 / Math.PI);
+        }
+
+        // --- Drawing Functions ---
+        function drawAxis() {
+            ctx.strokeStyle = varToHex('--gfg-light-grey');
+            ctx.lineWidth = 1;
+
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(0, origin.y);
+            ctx.lineTo(canvas.width, origin.y);
+            ctx.stroke();
+
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(origin.x, 0);
+            ctx.lineTo(origin.x, canvas.height);
+            ctx.stroke();
+        }
+
+        function drawVector(v, color, label, isOrientationFocused) {
+            const endX = origin.x + v.x * scale;
+            const endY = origin.y - v.y * scale; // Canvas Y is inverted
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isOrientationFocused ? 2 : 2; // Maybe thicker line in focus mode? Let's keep same line width for now, use angle arc/tooltip
+             if (isOrientationFocused) {
+                 ctx.setLineDash([5, 5]); // Dashed line for magnitude
+             } else {
+                 ctx.setLineDash([]); // Solid line
+             }
+            ctx.beginPath();
+            ctx.moveTo(origin.x, origin.y);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+             ctx.setLineDash([]); // Reset line dash
+
+            // Draw arrowhead
+            const headlen = 10;
+            const angle = Math.atan2(endY - origin.y, endX - origin.x);
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - headlen * Math.cos(angle - Math.PI / 6), endY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(endX - headlen * Math.cos(angle + Math.PI / 6), endY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw label
+            ctx.fillStyle = varToHex('--gfg-dark');
+            ctx.font = 'bold 12px system-ui';
+            const labelOffset = 15;
+            ctx.fillText(label, endX + labelOffset * Math.cos(angle), endY + labelOffset * Math.sin(angle));
+
+            // Return end point for hit testing/tooltip
+            return { x: endX, y: endY, vector: v, label: label };
+        }
+
+        function drawAngle(v1, v2, isOrientationFocused) {
+            const sim = cosineSimilarity(v1, v2);
+            const angleRad = Math.acos(Math.max(-1, Math.min(1, sim))); // Angle between 0 and PI
+
+            if (angleRad === 0) return; // No angle to draw for collinear vectors
+
+            const startAngle = Math.atan2(-v1.y, v1.x); // Angle relative to positive X axis
+            const endAngle = Math.atan2(-v2.y, v2.x);
+
+            // Determine sweep direction to draw the smaller angle
+            let sweepAngle = endAngle - startAngle;
+            if (sweepAngle > Math.PI) sweepAngle -= 2 * Math.PI;
+            if (sweepAngle < -Math.PI) sweepAngle += 2 * Math.PI;
+
+            ctx.strokeStyle = isOrientationFocused ? varToHex('--gfg-green') : varToHex('--gfg-light-grey');
+            ctx.lineWidth = isOrientationFocused ? 3 : 1;
+            ctx.beginPath();
+            // Arc needs start and end angles in a consistent direction (e.g., counter-clockwise from 0 to 2PI)
+            // Adjust angles to be positive and handle cases where start/end cross 0/2PI
+            const adjustedStart = startAngle < 0 ? startAngle + 2 * Math.PI : startAngle;
+            const adjustedEnd = endAngle < 0 ? endAngle + 2 * Math.PI : endAngle;
+
+            // Ensure arc always draws the angle between vectors correctly
+             // Check if the angle crosses the 0/2PI boundary
+             let largeArc = false;
+             if (Math.abs(sweepAngle) > Math.PI) {
+                 largeArc = true; // This logic is complex for canvas arc, let's simplify
+             }
+
+             // Draw arc from v1 to v2 along the smaller angle
+             // Determine the direction: if sweepAngle is positive, draw counter-clockwise; if negative, clockwise.
+             ctx.arc(origin.x, origin.y, 30, adjustedStart, adjustedEnd, sweepAngle < 0);
+
+            ctx.stroke();
+
+            // Optionally label angle in Orientation Focus mode? Or rely on the score display.
+            // The prompt asks to "highlight the angle" - making the arc thicker/greener does this.
+            // Tooltip shows magnitude, angle score shows the correlation.
+        }
+
+
+        // --- Update & Render ---
+        function updateFormulaDisplay(v1, v2, simScore, angleDeg) {
+            const v1x = v1.x.toFixed(1);
+            const v1y = v1.y.toFixed(1);
+            const v2x = v2.x.toFixed(1);
+            const v2y = v2.y.toFixed(1);
+            const dot = dotProduct(v1, v2).toFixed(2);
+            const magA = magnitude(v1).toFixed(2);
+            const magB = magnitude(v2).toFixed(2);
+
+            dotProductFormulaSpan.innerHTML = `${v1x} * ${v2x} + ${v1y} * ${v2y} = ${dot}`;
+            magAFormulaSpan.innerHTML = `${v1x}&sup2; + ${v1y}&sup2; = ${magnitude(v1)*magnitude(v1).toFixed(2)}`; // Show squared sum before sqrt
+            magBFormulaSpan.innerHTML = `${v2x}&sup2; + ${v2y}&sup2; = ${magnitude(v2)*magnitude(v2).toFixed(2)}`;
+
+            const magsProduct = (magA * magB).toFixed(2);
+            const calculatedVal = (magsProduct === "0.00") ? "Division by zero" : `${dot} / ${magsProduct} = ${simScore.toFixed(4)}`;
+
+            calculatedFormulaSpan.textContent = calculatedVal;
+            scoreValueSpan.textContent = simScore.toFixed(4);
+            angleValueSpan.textContent = angleDeg.toFixed(2) + '°';
+        }
+
+        function applySparseData(v) {
+             // A simple sparse simulation: set the component closer to zero to zero
+             // If components are equal magnitude, pick one randomly
+             const absX = Math.abs(v.x);
+             const absY = Math.abs(v.y);
+             if (absX < absY) {
+                 return { x: 0, y: v.y };
+             } else if (absY < absX) {
+                 return { x: v.x, y: 0 };
+             } else { // absX === absY
+                 if (Math.random() < 0.5) {
+                     return { x: 0, y: v.y };
+                 } else {
+                     return { x: v.x, y: 0 };
+                 }
+             }
+        }
+
+        function draw(vecA, vecB, isOrientationFocused) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawAxis();
+            const endPointA = drawVector(vecA, varToHex('--gfg-green'), 'A', isOrientationFocused);
+            const endPointB = drawVector(vecB, '#007bff', 'B', isOrientationFocused); // Use a distinct color for B
+            drawAngle(vecA, vecB, isOrientationFocused);
+            return [endPointA, endPointB]; // Return endpoints for hit testing
+        }
+
+        function animateDraw(newVecA, newVecB, isOrientationFocused) {
+             const startTime = performance.now();
+             const initialVecA = currentVecA; // Start from current drawn position
+             const initialVecB = currentVecB;
+
+             function frame(currentTime) {
+                 const elapsed = currentTime - startTime;
+                 const progress = Math.min(elapsed / animationDuration, 1);
+                 const easeProgress = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress; // Ease-in-out
+
+                 const animatedVecA = {
+                     x: initialVecA.x + (newVecA.x - initialVecA.x) * easeProgress,
+                     y: initialVecA.y + (newVecA.y - initialVecA.y) * easeProgress
+                 };
+                 const animatedVecB = {
+                     x: initialVecB.x + (newVecB.x - initialVecB.x) * easeProgress,
+                     y: initialVecB.y + (newVecB.y - initialVecB.y) * easeProgress
+                 };
+
+                 // Store the state being drawn for potential next animation or hover
+                 currentVecA = animatedVecA;
+                 currentVecB = animatedVecB;
+
+                 const endpoints = draw(animatedVecA, animatedVecB, isOrientationFocused);
+                 latestEndpoints = endpoints; // Update for hover detection
+
+                 if (progress < 1) {
+                     animationFrameId = requestAnimationFrame(frame);
+                 } else {
+                     // Final state update after animation
+                     currentVecA = newVecA;
+                     currentVecB = newVecB;
+                     latestEndpoints = draw(currentVecA, currentVecB, isOrientationFocused); // Draw final state precisely
+                 }
+             }
+
+             if (animationFrameId) {
+                 cancelAnimationFrame(animationFrameId);
+             }
+             animationFrameId = requestAnimationFrame(frame);
+        }
+
+
+        function update() {
+            // Read current input values
+            let inputVecA = { x: parseFloat(vecAxInput.value), y: parseFloat(vecAyInput.value) };
+            let inputVecB = { x: parseFloat(vecBxInput.value), y: parseFloat(vecByInput.value) };
+
+             // Store original values if not already stored or if sparse is being turned off
+            if (!sparseDataToggle.checked) {
+                 originalVecA = { ...inputVecA };
+                 originalVecB = { ...inputVecB };
+            }
+
+            let workingVecA = { ...inputVecA };
+            let workingVecB = { ...inputVecB };
+
+            // Apply sparse data simulation if toggled
+            if (sparseDataToggle.checked) {
+                 // Apply sparse logic to the *original* values to ensure consistency when toggling
+                 workingVecA = applySparseData(originalVecA);
+                 workingVecB = applySparseData(originalVecB);
+
+                 // Update input fields to show the sparse values, but without triggering 'input' event cycle
+                 // Use a flag or disable events temporarily if needed, but simply setting value is ok for this case
+                 // vecAxInput.value = workingVecA.x; // Decided against changing input values - let them show what the user typed.
+                 // vecAyInput.value = workingVecA.y; // Calculation uses 'working' vectors, which reflect sparse data.
+                 // vecBxInput.value = workingVecB.x;
+                 // vecByInput.value = workingVecB.y;
+            }
+
+
+            const simScore = cosineSimilarity(workingVecA, workingVecB);
+            const angleDeg = toDegrees(simScore);
+
+            // Animate the transition to the new working vectors
+            animateDraw(workingVecA, workingVecB, orientationFocusToggle.checked);
+
+            // Update formula and score display based on working vectors
+            updateFormulaDisplay(workingVecA, workingVecB, simScore, angleDeg);
+        }
+
+        // --- Helper to get CSS Variable Color ---
+        function varToHex(variableName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+        }
+
+        // --- Event Listeners ---
+        vecAxInput.addEventListener('input', update);
+        vecAyInput.addEventListener('input', update);
+        vecBxInput.addEventListener('input', update);
+        vecByInput.addEventListener('input', update);
+
+        sparseDataToggle.addEventListener('change', update);
+        orientationFocusToggle.addEventListener('change', () => {
+            // Redraw immediately with new orientation focus state
+            draw(currentVecA, currentVecB, orientationFocusToggle.checked);
+            // If tooltip is visible and focus is OFF, hide it
+            if (!orientationFocusToggle.checked) {
+                 hideTooltip();
+            }
+        });
+
+        // --- Hover Hints & Tooltip on Canvas ---
+        let latestEndpoints = []; // To store the end points of the last drawn vectors
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            let hoveredVector = null;
+
+            // Check hover over vector A endpoint area
+            if (latestEndpoints[0]) {
+                 const endA = latestEndpoints[0];
+                 const distA = Math.sqrt(Math.pow(mouseX - endA.x, 2) + Math.pow(mouseY - endA.y, 2));
+                 if (distA < 15) { // Radius for hover detection
+                     hoveredVector = 'A';
+                 }
+            }
+
+            // Check hover over vector B endpoint area (only if A wasn't hovered)
+             if (!hoveredVector && latestEndpoints[1]) {
+                 const endB = latestEndpoints[1];
+                 const distB = Math.sqrt(Math.pow(mouseX - endB.x, 2) + Math.pow(mouseY - endB.y, 2));
+                 if (distB < 15) {
+                     hoveredVector = 'B';
+                 }
+            }
+
+            // Handle input highlighting
+            document.querySelectorAll('.input-fields input').forEach(input => {
+                 input.classList.remove('highlight-input');
+            });
+
+            if (hoveredVector === 'A') {
+                 vecAxInput.classList.add('highlight-input');
+                 vecAyInput.classList.add('highlight-input');
+                 if (orientationFocusToggle.checked) showTooltip(event, latestEndpoints[0].vector, 'A');
+                 else hideTooltip();
+            } else if (hoveredVector === 'B') {
+                 vecBxInput.classList.add('highlight-input');
+                 vecByInput.classList.add('highlight-input');
+                 if (orientationFocusToggle.checked) showTooltip(event, latestEndpoints[1].vector, 'B');
+                 else hideTooltip();
+            } else {
+                hideTooltip();
+            }
+        });
+
+         canvas.addEventListener('mouseout', () => {
+             document.querySelectorAll('.input-fields input').forEach(input => {
+                 input.classList.remove('highlight-input');
+            });
+             hideTooltip();
+         });
+
+
+        function showTooltip(event, vector, label) {
+             if (!orientationFocusToggle.checked) return; // Only show in focus mode
+
+             const mag = magnitude(vector);
+             const simScore = parseFloat(scoreValueSpan.textContent); // Get current calculated score
+
+             magnitudeTooltip.style.left = `${event.clientX + 15}px`;
+             magnitudeTooltip.style.top = `${event.clientY - 15}px`;
+             magnitudeTooltip.innerHTML = `<b>Vector ${label}</b><br>Magnitude: ${mag.toFixed(2)}<br><br><i>Cosine Similarity (orientation-based): ${simScore.toFixed(4)}</i>`;
+             magnitudeTooltip.style.display = 'block';
+         }
+
+         function hideTooltip() {
+             magnitudeTooltip.style.display = 'none';
+         }
+
+
+        // --- Initial Setup ---
+        // Use requestAnimationFrame for initial draw too, to be consistent
+         function initialDraw() {
+            currentVecA = { x: parseFloat(vecAxInput.value), y: parseFloat(vecAyInput.value) };
+            currentVecB = { x: parseFloat(vecBxInput.value), y: parseFloat(vecByInput.value) };
+             originalVecA = { ...currentVecA };
+             originalVecB = { ...currentVecB };
+            draw(currentVecA, currentVecB, orientationFocusToggle.checked);
+             latestEndpoints = draw(currentVecA, currentVecB, orientationFocusToggle.checked); // Store initial endpoints
+            const simScore = cosineSimilarity(currentVecA, currentVecB);
+            const angleDeg = toDegrees(simScore);
+            updateFormulaDisplay(currentVecA, currentVecB, simScore, angleDeg);
+         }
+
+         initialDraw(); // Initial render
+
+         // Make canvas responsive (simple fit to parent) - ensure redraw on resize if needed,
+         // though fixed viewport might make this less critical.
+         // For truly fixed, we could omit resize handling. Let's assume the flex layout handles
+         // canvas container size and we just need to set canvas width/height attributes.
+         // The current setup uses fixed width/height attributes. If the panel size changes,
+         // the canvas won't resize with it unless attributes are updated.
+         // Given "static, non-scrollable viewport", let's assume the panel sizes are relatively stable
+         // and the fixed canvas size is acceptable. If responsiveness is needed, add a resize observer.
+
+         // Optional: ResizeObserver for Canvas responsiveness (if panel sizes are dynamic)
+         // const resizeObserver = new ResizeObserver(entries => {
+         //     for (let entry of entries) {
+         //         if (entry.target === canvas.parentElement) { // Observe the parent container
+         //             const { width, height } = entry.contentRect;
+         //             canvas.width = width;
+         //             canvas.height = height;
+         //             origin.x = canvas.width / 2;
+         //             origin.y = canvas.height / 2;
+         //             update(); // Redraw on resize
+         //         }
+         //     }
+         // });
+         // resizeObserver.observe(canvas.parentElement);
+
+
+    </script>
+</body>
+</html>
+```

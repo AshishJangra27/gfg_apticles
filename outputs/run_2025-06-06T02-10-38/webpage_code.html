@@ -1,0 +1,801 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cosine Similarity</title>
+    <style>
+        /* GeeksforGeeks Theme */
+        :root {
+            --primary-color: #2f8d46; /* GeeksforGeeks Green */
+            --background-color: #ffffff; /* White */
+            --text-color: #222222; /* Dark */
+            --highlight-color: #d4edda; /* Light green for highlighting */
+            --border-color: #cccccc;
+            --footer-bg: #222222; /* Dark background for footer */
+            --footer-text: #ffffff; /* White text for footer */
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use full viewport height */
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            padding: 10px 20px;
+            text-align: center;
+            flex-shrink: 0; /* Don't shrink header */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        header p {
+             margin: 5px 0 0 0;
+             font-size: 1em;
+             opacity: 0.9;
+        }
+
+        main {
+            flex-grow: 1; /* Main content takes remaining space */
+            display: flex;
+            flex-direction: row; /* Arrange sections horizontally */
+            padding: 10px;
+            gap: 10px; /* Space between sections */
+            overflow: hidden; /* Important for static layout */
+        }
+
+        .section {
+            background-color: #f9f9f9; /* Slightly off-white for sections */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Ensure content within sections doesn't cause overflow */
+             flex-basis: 0; /* Allow flex-grow to control size */
+             min-width: 0; /* Allow shrinking below content size */
+        }
+
+        .section h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+            flex-shrink: 0;
+        }
+
+        /* Top Section: Visualizer */
+        #visualizer-section {
+             flex-grow: 2; /* Visualizer takes more horizontal space */
+             align-items: center; /* Center canvas and info horizontally */
+        }
+
+        #vectorCanvas {
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            margin-bottom: 10px;
+            flex-grow: 1; /* Canvas takes available vertical space */
+            width: 100%; /* Use full width of container */
+            cursor: grab;
+        }
+
+        #visualizer-info {
+            text-align: center;
+            font-size: 1.1em;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        #visualizer-info span {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Bottom Section: Calculator */
+        #calculator-section {
+             flex-grow: 1; /* Calculator takes less horizontal space */
+        }
+
+        .input-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            flex-shrink: 0;
+        }
+
+        .vector-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .vector-inputs label {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .vector-inputs div {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .vector-inputs input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            text-align: center;
+            font-size: 1em;
+             -moz-appearance: textfield; /* Hide default number arrows in Firefox */
+        }
+         /* Hide default number arrows in Chrome, Safari, Edge */
+         .vector-inputs input[type="number"]::-webkit-outer-spin-button,
+         .vector-inputs input[type="number"]::-webkit-inner-spin-button {
+             -webkit-appearance: none;
+             margin: 0;
+         }
+
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            margin-bottom: 15px;
+            align-self: flex-start; /* Align button to the left */
+            flex-shrink: 0;
+        }
+
+        button:hover {
+            background-color: #256e36; /* Darker green on hover */
+        }
+
+        #calculation-steps {
+            margin-top: 10px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+            flex-grow: 1;
+            overflow-y: auto; /* Allow scrolling only in the calculation steps area if needed */
+        }
+
+        .step {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            line-height: 1.5;
+            white-space: pre-wrap; /* Preserve formatting for formulas */
+        }
+
+        .step strong {
+            color: var(--primary-color);
+        }
+
+        .step .formula {
+             font-family: monospace;
+             background-color: #eeeeee;
+             padding: 2px 4px;
+             border-radius: 3px;
+             font-size: 0.9em;
+        }
+
+        .highlight {
+            background-color: var(--highlight-color);
+        }
+
+        .input-highlight {
+             background-color: #ffffcc; /* Light yellow for input highlights */
+             transition: background-color 0.3s ease;
+        }
+
+        .step .result {
+            font-weight: bold;
+             color: var(--text-color);
+        }
+
+
+        footer {
+            background-color: var(--footer-bg); /* Dark background for footer */
+            color: var(--footer-text);
+            padding: 10px 20px;
+            text-align: center;
+            flex-shrink: 0; /* Don't shrink footer */
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: var(--primary-color); /* Green links in footer */
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--footer-text); /* White on hover */
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Cosine Similarity</h1>
+        <p>Visualize vector direction and calculate similarity score</p>
+    </header>
+
+    <main>
+        <section class="section" id="visualizer-section">
+            <h2>Interactive Visualizer</h2>
+            <canvas id="vectorCanvas"></canvas>
+            <div id="visualizer-info">
+                Angle: <span id="angle-display">0.00</span>° | Cosine Similarity: <span id="similarity-display">0.00</span>
+            </div>
+        </section>
+
+        <section class="section" id="calculator-section">
+            <h2>Calculation Steps</h2>
+            <div class="input-group">
+                <div class="vector-inputs">
+                    <label>Vector x:</label>
+                    <div>
+                        ( x1: <input type="number" id="x1" value="3" min="0" step="0.1">,
+                          x2: <input type="number" id="x2" value="1" min="0" step="0.1"> )
+                    </div>
+                </div>
+                 <div class="vector-inputs">
+                    <label>Vector y:</label>
+                    <div>
+                        ( y1: <input type="number" id="y1" value="1" min="0" step="0.1">,
+                          y2: <input type="number" id="y2" value="3" min="0" step="0.1"> )
+                    </div>
+                </div>
+            </div>
+            <button id="calculate-button">Calculate Steps</button>
+            <div id="calculation-steps">
+                <!-- Calculation steps will be inserted here -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Interactive Learning Tool |
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a></p>
+    </footer>
+
+    <script>
+        // --- Visualizer ---
+        const canvas = document.getElementById('vectorCanvas');
+        const ctx = canvas.getContext('2d');
+        const angleDisplay = document.getElementById('angle-display');
+        const similarityDisplay = document.getElementById('similarity-display');
+
+        let vectorX = { x: 3, y: 1 }; // Initial vector X
+        let vectorY = { x: 1, y: 3 }; // Initial vector Y
+        const origin = { x: 0, y: 0 };
+
+        // Canvas drawing parameters
+        let scale = 30; // Pixels per unit
+        let canvasOriginX = 0;
+        let canvasOriginY = 0;
+
+        // Dragging state
+        let isDragging = false;
+        let draggedVector = null; // 'x' or 'y'
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+         // Get CSS variables (needed for canvas colors and highlighting)
+         let var_primary_color, var_background_color, var_text_color, var_highlight_color;
+
+
+        // Function to update canvas dimensions based on container size
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            // Use offsetWidth/Height as clientWidth/Height might be 0 before element is painted
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight - (document.getElementById('visualizer-info').offsetHeight || 0) - 10; // Subtract info height and gap approx
+
+             // Ensure minimum size
+            if (canvas.height < 100) canvas.height = 100;
+
+            // Set origin offset based on size
+            canvasOriginX = 30; // Offset for axis labels
+            canvasOriginY = canvas.height - 30; // Offset for axis labels
+
+            // Adjust scale based on available space and initial vectors
+            const maxCoord = Math.max(vectorX.x, vectorX.y, vectorY.x, vectorY.y, 5); // Ensure at least scale 5 units
+            const availableWidth = canvas.width - canvasOriginX - 20; // Space for drawing + right margin
+            const availableHeight = canvasOriginY - 20; // Space for drawing + top margin
+            scale = Math.min(availableWidth / maxCoord, availableHeight / maxCoord);
+            if (scale < 10) scale = 10; // Minimum scale
+
+
+            draw(); // Redraw after resize
+        }
+
+        // Helper function to convert vector coords to canvas coords
+        function toCanvasCoords(v) {
+            return {
+                x: canvasOriginX + v.x * scale,
+                y: canvasOriginY - v.y * scale // Y is inverted in canvas
+            };
+        }
+
+        // Helper function to convert canvas coords to vector coords
+        function toVectorCoords(vCanvas) {
+            return {
+                x: (vCanvas.x - canvasOriginX) / scale,
+                y: (canvasOriginY - vCanvas.y) / scale
+            };
+        }
+
+        // Calculate dot product
+        function dotProduct(v1, v2) {
+            return v1.x * v2.x + v1.y * v2.y;
+        }
+
+        // Calculate magnitude
+        function magnitude(v) {
+            return Math.sqrt(v.x * v.x + v.y * v.y);
+        }
+
+        // Calculate cosine similarity
+        function cosineSimilarity(v1, v2) {
+            const mag1 = magnitude(v1);
+            const mag2 = magnitude(v2);
+
+            if (mag1 === 0 || mag2 === 0) {
+                return 0;
+            }
+
+            let similarity = dotProduct(v1, v2) / (mag1 * mag2);
+
+            // Clamp value to [-1, 1] due to floating point inaccuracies
+            similarity = Math.max(-1, Math.min(1, similarity));
+
+            return similarity;
+        }
+
+         // Calculate angle in degrees
+        function angleBetweenVectors(v1, v2) {
+             const similarity = cosineSimilarity(v1, v2);
+             if (isNaN(similarity) || (magnitude(v1) === 0 || magnitude(v2) === 0)) return 0; // Handle zero vectors
+             const angleRad = Math.acos(similarity);
+             return angleRad * (180 / Math.PI); // Convert radians to degrees
+        }
+
+
+        // Draw functions
+        function drawGrid() {
+            ctx.strokeStyle = '#eeeeee';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 2]); // Dashed lines
+
+            // Vertical lines
+            for (let i = 1; (canvasOriginX + i * scale) < canvas.width; i++) {
+                ctx.beginPath();
+                ctx.moveTo(canvasOriginX + i * scale, 0);
+                ctx.lineTo(canvasOriginX + i * scale, canvas.height - canvasOriginY);
+                ctx.stroke();
+            }
+            // Horizontal lines
+            for (let i = 1; (canvasOriginY - i * scale) > 0; i++) {
+                ctx.beginPath();
+                ctx.moveTo(canvasOriginX, canvasOriginY - i * scale);
+                ctx.lineTo(canvas.width, canvasOriginY - i * scale);
+                ctx.stroke();
+            }
+             ctx.setLineDash([]); // Solid lines again
+        }
+
+        function drawAxes() {
+            ctx.strokeStyle = var_text_color;
+            ctx.lineWidth = 2;
+            ctx.fillStyle = var_text_color;
+
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(canvasOriginX, canvasOriginY);
+            ctx.lineTo(canvas.width - 10, canvasOriginY); // Stop before arrowhead
+            ctx.stroke();
+
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(canvasOriginX, canvasOriginY);
+            ctx.lineTo(canvasOriginX, 10); // Stop before arrowhead
+            ctx.stroke();
+
+            // Arrowheads
+            ctx.beginPath();
+            ctx.moveTo(canvas.width, canvasOriginY); ctx.lineTo(canvas.width - 10, canvasOriginY - 5); ctx.lineTo(canvas.width - 10, canvasOriginY + 5); ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(canvasOriginX, 0); ctx.lineTo(canvasOriginX - 5, 10); ctx.lineTo(canvasOriginX + 5, 10); ctx.closePath(); ctx.fill();
+
+            // Labels
+            ctx.font = '12px Arial';
+            ctx.fillText('x', canvas.width - 20, canvasOriginY + 20);
+            ctx.fillText('y', canvasOriginX - 20, 20);
+            ctx.fillText('(0,0)', canvasOriginX - 25, canvasOriginY + 15);
+
+             // Axis labels (numbers)
+             ctx.font = '10px Arial';
+             for(let i = 1; (canvasOriginX + i * scale) < canvas.width - 20; i++) {
+                  ctx.fillText(i, canvasOriginX + i * scale - 5, canvasOriginY + 15);
+             }
+             for(let i = 1; (canvasOriginY - i * scale) > 20; i++) {
+                   ctx.fillText(i, canvasOriginX - 15, canvasOriginY - i * scale + 5);
+             }
+        }
+
+        function drawVector(v, color) {
+            const vCanvas = toCanvasCoords(v);
+            const originCanvas = toCanvasCoords(origin);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(originCanvas.x, originCanvas.y);
+            ctx.lineTo(vCanvas.x, vCanvas.y);
+            ctx.stroke();
+
+            // Draw endpoint circle
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(vCanvas.x, vCanvas.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff'; // White border for visibility
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function drawAngleArc(v1, v2) {
+            const originCanvas = toCanvasCoords(origin);
+            // Use atan2 relative to the origin for accurate angle on canvas
+            const angle1 = Math.atan2(originCanvas.y - toCanvasCoords(v1).y, toCanvasCoords(v1).x - originCanvas.x);
+            const angle2 = Math.atan2(originCanvas.y - toCanvasCoords(v2).y, toCanvasCoords(v2).x - originCanvas.x);
+
+
+            let startAngle = Math.min(angle1, angle2);
+            let endAngle = Math.max(angle1, angle2);
+
+             // Handle cases where angle crosses the positive X axis (0/2pi boundary) - this logic is tricky with atan2 range (-pi, pi]
+             // A simpler way for angles <= PI (which is true for 2D vector similarity) is just the direct difference
+             // However, if we used atan2 directly from vectors {x, y}, positive y is 'down' on canvas.
+             // Let's use a reliable angle calculation that works with positive quadrant vectors {x,y} >= 0
+             // Angle relative to positive x-axis:
+             const angleRad1 = Math.atan2(v1.y, v1.x);
+             const angleRad2 = Math.atan2(v2.y, v2.x);
+
+             startAngle = Math.min(angleRad1, angleRad2);
+             endAngle = Math.max(angleRad1, angleRad2);
+
+
+            ctx.strokeStyle = var_primary_color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // arc(x, y, radius, startAngle, endAngle, anticlockwise)
+            // Canvas origin is top-left. We are drawing from our custom bottom-left origin.
+            // Angles are measured clockwise from positive x-axis in canvas arc function.
+            // Need to convert our standard math angles (counter-clockwise from positive x)
+            // to canvas angles (clockwise from positive x).
+            // Canvas angle = -math angle
+            // Canvas angles need to be positive for arc function's typical use
+            // Let's use the angle between approach which avoids absolute angles relative to axis.
+            // Alternatively, calculate angle relative to x axis and use that for canvas arc, remembering Y is inverted.
+            // The angle calculation logic from drawAngleArc was slightly off due to canvas Y.
+
+            // Corrected approach using canvas coordinates angle relative to horizontal axis:
+            const v1Canvas = toCanvasCoords(vectorX);
+            const v2Canvas = toCanvasCoords(vectorY);
+            const originCanvas = toCanvasCoords(origin);
+
+            const angle1Canvas = Math.atan2(v1Canvas.y - originCanvas.y, v1Canvas.x - originCanvas.x);
+            const angle2Canvas = Math.atan2(v2Canvas.y - originCanvas.y, v2Canvas.x - originCanvas.x);
+
+            startAngle = Math.min(angle1Canvas, angle2Canvas);
+            endAngle = Math.max(angle1Canvas, angle2Canvas);
+
+             // If the angle between vectors is > PI, it means they are on opposite sides of the origin.
+             // In the positive quadrant, the angle between two vectors from origin will always be <= PI (180 degrees).
+             // So, a simple arc from startAngle to endAngle should be sufficient.
+
+            ctx.beginPath();
+            // Use the origin in canvas coordinates
+            ctx.arc(originCanvas.x, originCanvas.y, 30, startAngle, endAngle, false);
+            ctx.stroke();
+
+             // Add a small indicator line within the arc
+             const midAngle = startAngle + (endAngle - startAngle) / 2;
+             ctx.beginPath();
+             ctx.moveTo(originCanvas.x + Math.cos(midAngle) * 25, originCanvas.y + Math.sin(midAngle) * 25);
+             ctx.lineTo(originCanvas.x + Math.cos(midAngle) * 35, originCanvas.y + Math.sin(midAngle) * 35);
+             ctx.stroke();
+        }
+
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+            drawAxes();
+            drawVector(vectorX, var_primary_color); // Vector X in primary color
+            drawVector(vectorY, '#ff7f50'); // Vector Y in a distinct color (e.g., Coral)
+
+            // Only draw angle arc if magnitudes are non-zero
+            if (magnitude(vectorX) > 0.01 && magnitude(vectorY) > 0.01) { // Use small threshold
+                 drawAngleArc(vectorX, vectorY);
+            }
+
+
+            const angle = angleBetweenVectors(vectorX, vectorY);
+            const similarity = cosineSimilarity(vectorX, vectorY);
+
+            angleDisplay.textContent = angle.toFixed(2);
+            similarityDisplay.textContent = similarity.toFixed(2);
+        }
+
+        // Event Listeners for dragging
+        canvas.addEventListener('mousedown', (e) => {
+            const canvasRect = canvas.getBoundingClientRect();
+            const mousePos = {
+                x: e.clientX - canvasRect.left,
+                y: e.clientY - canvasRect.top
+            };
+            const vXCanvas = toCanvasCoords(vectorX);
+            const vYCanvas = toCanvasCoords(vectorY);
+
+            // Check if mouse is near vector endpoints (within 10 pixels)
+            const distToX = Math.sqrt(Math.pow(mousePos.x - vXCanvas.x, 2) + Math.pow(mousePos.y - vXCanvas.y, 2));
+            const distToY = Math.sqrt(Math.pow(mousePos.x - vYCanvas.x, 2) + Math.pow(mousePos.y - vYCanvas.y, 2));
+
+            if (distToX < 10) {
+                isDragging = true;
+                draggedVector = 'x';
+                dragOffsetX = mousePos.x - vXCanvas.x;
+                dragOffsetY = mousePos.y - vXCanvas.y;
+                canvas.style.cursor = 'grabbing';
+            } else if (distToY < 10) {
+                isDragging = true;
+                draggedVector = 'y';
+                 dragOffsetX = mousePos.x - vYCanvas.x;
+                 dragOffsetY = mousePos.y - vYCanvas.y;
+                 canvas.style.cursor = 'grabbing';
+            }
+             // Prevent default drag behavior
+             if(isDragging) {
+                 e.preventDefault();
+             }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) {
+                // Optional: Change cursor on hover
+                 const canvasRect = canvas.getBoundingClientRect();
+                 const mousePos = {
+                    x: e.clientX - canvasRect.left,
+                    y: e.clientY - canvasRect.top
+                 };
+                 const vXCanvas = toCanvasCoords(vectorX);
+                 const vYCanvas = toCanvasCoords(vectorY);
+                 const distToX = Math.sqrt(Math.pow(mousePos.x - vXCanvas.x, 2) + Math.pow(mousePos.y - vXCanvas.y, 2));
+                 const distToY = Math.sqrt(Math.pow(mousePos.x - vYCanvas.x, 2) + Math.pow(mousePos.y - vYCanvas.y, 2));
+
+                 if (distToX < 10 || distToY < 10) {
+                     canvas.style.cursor = 'pointer'; // Indicates clickable/draggable
+                 } else {
+                     canvas.style.cursor = 'grab';
+                 }
+
+                return; // Do nothing if not dragging
+            }
+
+            const canvasRect = canvas.getBoundingClientRect();
+            const mousePos = {
+                x: e.clientX - canvasRect.left,
+                y: e.clientY - canvasRect.top
+            };
+
+            const newCanvasPos = {
+                 x: mousePos.x - dragOffsetX,
+                 y: mousePos.y - dragOffsetY
+            };
+
+            // Convert new canvas position back to vector coordinates
+            let newVectorCoords = toVectorCoords(newCanvasPos);
+
+            // Clamp to positive quadrant and prevent dragging the origin point itself
+            newVectorCoords.x = Math.max(0, newVectorCoords.x);
+            newVectorCoords.y = Math.max(0, newVectorCoords.y);
+
+            // Prevent setting vector to (0,0) via dragging endpoint
+             const minMagnitude = 0.1; // Minimum length to avoid issues with magnitude 0
+             if (magnitude(newVectorCoords) < minMagnitude) {
+                 // Option 1: Stop dragging if too close to origin (simple)
+                 // isDragging = false;
+                 // draggedVector = null;
+                 // canvas.style.cursor = 'grab';
+                 // return;
+
+                 // Option 2: Snap to minimum length in current direction (more complex, maybe unnecessary)
+                 // Let's stick to Option 1 or simply allow (0,0) and handle it in calculations.
+                 // The calculation handles (0,0) by returning 0. Let's allow (0,0) and just clamp >= 0.
+             }
+
+
+            if (draggedVector === 'x') {
+                vectorX = { x: newVectorCoords.x, y: newVectorCoords.y };
+            } else if (draggedVector === 'y') {
+                vectorY = { x: newVectorCoords.x, y: newVectorCoords.y };
+            }
+
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            draggedVector = null;
+            canvas.style.cursor = 'grab'; // Revert cursor
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            // Stop dragging if mouse leaves canvas
+             isDragging = false;
+             draggedVector = null;
+             canvas.style.cursor = 'grab'; // Revert cursor
+        });
+
+        // Initial draw and resize setup
+        window.addEventListener('load', () => {
+             // Get CSS variables after load
+            const style = getComputedStyle(document.documentElement);
+            var_primary_color = style.getPropertyValue('--primary-color').trim();
+            var_background_color = style.getPropertyValue('--background-color').trim();
+            var_text_color = style.getPropertyValue('--text-color').trim();
+            var_highlight_color = style.getPropertyValue('--highlight-color').trim();
+
+            resizeCanvas(); // Set initial size and draw
+             // Also trigger initial calculator state (empty or example)
+             // The brief implies calculation happens on button click, so no initial calculation.
+        });
+
+        window.addEventListener('resize', resizeCanvas); // Redraw on window resize
+
+
+        // --- Calculator ---
+        const x1Input = document.getElementById('x1');
+        const x2Input = document.getElementById('x2');
+        const y1Input = document.getElementById('y1');
+        const y2Input = document.getElementById('y2');
+        const calculateButton = document.getElementById('calculate-button');
+        const calculationStepsDiv = document.getElementById('calculation-steps');
+
+        calculateButton.addEventListener('click', () => {
+            calculationStepsDiv.innerHTML = ''; // Clear previous steps
+
+            let x1 = parseFloat(x1Input.value) || 0;
+            let x2 = parseFloat(x2Input.value) || 0;
+            let y1 = parseFloat(y1Input.value) || 0;
+            let y2 = parseFloat(y2Input.value) || 0;
+
+             // Ensure positive values
+             x1 = Math.max(0, x1); x1Input.value = x1;
+             x2 = Math.max(0, x2); x2Input.value = x2;
+             y1 = Math.max(0, y1); y1Input.value = y1;
+             y2 = Math.max(0, y2); y2Input.value = y2;
+
+            const vecX = { x: x1, y: x2 };
+            const vecY = { x: y1, y: y2 };
+
+            // Step 1: Dot Product
+            const dot = dotProduct(vecX, vecY);
+            addStep(`<strong>Step 1: Dot Product (x . y)</strong>`,
+                    `<span class="formula">(x₁ * y₁) + (x₂ * y₂)</span><br>(<span data-input="x1">${x1}</span> * <span data-input="y1">${y1}</span>) + (<span data-input="x2">${x2}</span> * <span data-input="y2">${y2}</span>) = <span class="result">${(x1 * y1).toFixed(2)}</span> + <span class="result">${(x2 * y2).toFixed(2)}</span> = <span class="result">${dot.toFixed(2)}</span>`);
+
+            // Step 2: Magnitude of x
+            const magX = magnitude(vecX);
+             addStep(`<strong>Step 2: Magnitude of x (||x||)</strong>`,
+                    `<span class="formula">sqrt(x₁² + x₂²)</span><br>sqrt(<span data-input="x1">${x1}</span>² + <span data-input="x2">${x2}</span>²) = sqrt(<span class="result">${(x1*x1).toFixed(2)}</span> + <span class="result">${(x2*x2).toFixed(2)}</span>) = sqrt(<span class="result">${(x1*x1 + x2*x2).toFixed(2)}</span>) = <span class="result">${magX.toFixed(2)}</span>`);
+
+
+            // Step 3: Magnitude of y
+            const magY = magnitude(vecY);
+             addStep(`<strong>Step 3: Magnitude of y (||y||)</strong>`,
+                    `<span class="formula">sqrt(y₁² + y₂²)</span><br>sqrt(<span data-input="y1">${y1}</span>² + <span data-input="y2">${y2}</span>²) = sqrt(<span class="result">${(y1*y1).toFixed(2)}</span> + <span class="result">${(y2*y2).toFixed(2)}</span>) = sqrt(<span class="result">${(y1*y1 + y2*y2).toFixed(2)}</span>) = <span class="result">${magY.toFixed(2)}</span>`);
+
+
+            // Step 4: Cosine Similarity
+            let similarity = 0;
+            let similarityFormulaHtml = `<span class="formula">(x . y) / (||x|| * ||y||)</span><br><span class="result">${dot.toFixed(2)}</span> / (<span class="result">${magX.toFixed(2)}</span> * <span class="result">${magY.toFixed(2)}</span>)`;
+            if (magX > 0.01 && magY > 0.01) { // Use threshold for division
+                similarity = dot / (magX * magY);
+                similarity = Math.max(-1, Math.min(1, similarity)); // Clamp
+                 similarityFormulaHtml += ` = <span class="result">${(magX * magY).toFixed(2)}</span> = <span class="result">${similarity.toFixed(2)}</span>`;
+            } else {
+                 similarityFormulaHtml += ` = <span class="result">0.00</span> (Division by zero or zero magnitude)`;
+            }
+             addStep(`<strong>Step 4: Cosine Similarity (S_C(x, y))</strong>`, similarityFormulaHtml);
+
+
+            // Step 5: Dissimilarity
+            const dissimilarity = 1 - similarity;
+            addStep(`<strong>Step 5: Dissimilarity (D_C(x, y))</strong>`,
+                    `<span class="formula">1 - S_C(x, y)</span><br>1 - <span class="result">${similarity.toFixed(2)}</span> = <span class="result">${dissimilarity.toFixed(2)}</span>`);
+
+            // Add highlighting after steps are added
+            highlightCalculationSteps();
+        });
+
+        function addStep(title, content) {
+            const stepDiv = document.createElement('div');
+            stepDiv.classList.add('step');
+            stepDiv.innerHTML = `${title}<br>${content}`;
+            calculationStepsDiv.appendChild(stepDiv);
+        }
+
+        function highlightCalculationSteps() {
+            const steps = calculationStepsDiv.querySelectorAll('.step');
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    // Highlight step background
+                    step.classList.add('highlight');
+
+                    // Highlight relevant input fields concurrently with step highlight
+                    step.querySelectorAll('[data-input]').forEach(span => {
+                        const inputId = span.getAttribute('data-input');
+                        const inputElement = document.getElementById(inputId);
+                        if (inputElement) {
+                            inputElement.classList.add('input-highlight');
+                             // Remove input highlight after a short delay
+                             setTimeout(() => {
+                                 inputElement.classList.remove('input-highlight');
+                             }, 800); // Input highlight duration
+                        }
+                    });
+
+                    // Remove step highlight after a longer delay
+                    setTimeout(() => {
+                        step.classList.remove('highlight');
+                    }, 1000); // Step highlight duration
+
+                }, index * 1200); // Delay between starting each step's highlight animation
+            });
+             // Scroll to the bottom after all steps are added and animation starts
+             setTimeout(() => {
+                 calculationStepsDiv.scrollTop = calculationStepsDiv.scrollHeight;
+             }, steps.length * 1200 + 200); // Wait for the last animation to start + a small buffer
+        }
+
+         // Add placeholder or initial text to calculation steps
+         calculationStepsDiv.innerHTML = '<div class="step" style="text-align: center; color: #666;">Enter vector components above and click "Calculate Steps"</div>';
+
+
+         // Optional: Sync calculator inputs with visualizer vectors on load? No, brief implies separate.
+         // Optional: Sync visualizer vectors with calculator inputs on calculate? No, brief implies separate.
+         // Let them remain independent as per cognitive flow and description.
+
+
+    </script>
+
+</body>
+</html>
+```

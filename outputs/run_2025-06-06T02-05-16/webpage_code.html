@@ -1,0 +1,1074 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Tree Explorer</title>
+    <style>
+        /* GeeksforGeeks Theme */
+        :root {
+            --primary-color: #2f8d46;
+            --background-color: #ffffff;
+            --text-color: #222222;
+            --secondary-background: #f0f0f0; /* Slightly different background for panels */
+            --border-color: #cccccc;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        .container {
+            flex-grow: 1; /* Allow content to fill height */
+            display: grid;
+            grid-template-columns: 250px 1fr 250px; /* Left | Main | Right */
+            gap: 15px;
+            padding: 15px;
+            overflow: hidden; /* Prevent panels from causing scroll */
+        }
+
+        .panel {
+            background-color: var(--secondary-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto; /* Allow panels to scroll internally if content exceeds height */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+             box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        .main-area {
+            background-color: var(--secondary-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align items to the top, not center */
+            overflow: hidden;
+             box-sizing: border-box; /* Include padding/border */
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            width: 100%; /* Make border span full width */
+            box-sizing: border-box;
+        }
+
+        /* Terminology Explorer */
+        .terminology-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            padding-top: 20px; /* Add padding for diagram */
+            padding-bottom: 20px;
+        }
+
+        .term-node {
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+             font-weight: bold;
+             box-sizing: border-box;
+        }
+
+         /* Connections for Terminology Diagram */
+         .terminology-diagram > .term-node:not(:first-child)::before {
+             content: '';
+             position: absolute;
+             top: -20px; /* Half of gap */
+             left: 50%;
+             transform: translateX(-50%);
+             width: 2px;
+             height: 20px;
+             background-color: var(--border-color);
+             z-index: 0;
+         }
+
+         .children {
+             display: flex;
+             gap: 40px;
+             position: relative;
+             z-index: 1; /* Ensure children nodes are above lines */
+         }
+
+         .children::before {
+             content: '';
+             position: absolute;
+             top: -20px; /* Half of gap */
+             left: 0;
+             width: 100%;
+             height: 2px;
+             background-color: var(--border-color);
+             z-index: 0;
+         }
+
+         .children > .term-node {
+             margin-top: 20px; /* Half of gap */
+         }
+
+
+        /* Tooltip for Terminology */
+        .term-tooltip {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--text-color);
+            color: var(--background-color);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10;
+        }
+
+        .term-node:hover .term-tooltip {
+            opacity: 1;
+        }
+
+        /* Properties Calculator */
+        .properties-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+
+        .properties-form input[type="number"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: calc(100% - 18px); /* Adjust for padding and border */
+            box-sizing: border-box;
+        }
+
+        .properties-results div {
+            margin-bottom: 8px;
+            padding: 8px;
+            background-color: var(--background-color);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9em;
+            word-wrap: break-word; /* Prevent long text from overflowing */
+        }
+
+        /* Tree Visualizer */
+        .tree-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+             width: 100%; /* Ensure controls take full width of main-area padding */
+             box-sizing: border-box;
+             justify-content: center; /* Center controls */
+        }
+
+        .tree-controls input[type="number"] {
+             padding: 8px;
+             border: 1px solid var(--border-color);
+             border-radius: 4px;
+             width: 100px; /* Fixed width for input */
+             box-sizing: border-box;
+        }
+
+        .tree-controls button {
+            padding: 8px 15px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .tree-controls button:hover {
+            background-color: #226b37; /* Darker green */
+        }
+
+         .tree-controls button:active {
+             background-color: #1a542a; /* Even darker */
+         }
+
+
+         .tree-controls button:disabled {
+             background-color: #ccc;
+             cursor: not-allowed;
+         }
+
+
+        canvas {
+            width: 100%;
+            flex-grow: 1; /* Allow canvas to fill remaining height */
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            box-sizing: border-box;
+            cursor: pointer; /* Indicate interactivity */
+        }
+
+         #node-tooltip {
+             position: absolute;
+             background-color: var(--text-color);
+             color: var(--background-color);
+             padding: 5px 10px;
+             border-radius: 4px;
+             font-size: 0.9em;
+             pointer-events: none;
+             z-index: 20;
+             display: none; /* Hidden by default */
+             transform: translate(-50%, -110%); /* Position above mouse/node */
+             white-space: nowrap;
+         }
+
+
+        /* Traversal Visualizer */
+        .traversal-controls {
+            margin-bottom: 15px;
+        }
+
+        .traversal-controls label {
+            margin-right: 15px;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+         .traversal-controls input[type="radio"] {
+             cursor: pointer;
+         }
+
+         #start-traversal-btn {
+             padding: 8px 15px;
+             background-color: var(--primary-color);
+             color: var(--background-color);
+             border: none;
+             border-radius: 4px;
+             cursor: pointer;
+             transition: background-color 0.2s ease-in-out;
+             display: block; /* Make button take full width */
+             width: 100%;
+             box-sizing: border-box;
+             margin-bottom: 15px; /* Space below button */
+         }
+         #start-traversal-btn:hover {
+             background-color: #226b37;
+         }
+         #start-traversal-btn:active {
+             background-color: #1a542a;
+         }
+
+
+        .traversal-output {
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            padding: 10px;
+            min-height: 50px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto; /* Allow horizontal scrolling for long sequences */
+            font-size: 0.9em;
+            white-space: pre-wrap; /* Wrap text */
+            word-wrap: break-word;
+        }
+
+
+        /* Footer */
+        footer {
+            background-color: var(--text-color);
+            color: var(--secondary-background);
+            padding: 10px;
+            text-align: center;
+            font-size: 0.8em;
+            flex-shrink: 0;
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Binary Tree Explorer
+    </header>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Terminology Explorer</h2>
+            <div class="terminology-diagram">
+                 <div class="term-node root">R <span class="term-tooltip">Root Node: The topmost node in the tree.</span></div>
+                 <div class="children">
+                     <div class="term-node internal">I <span class="term-tooltip">Internal Node: A node with at least one child.</span></div>
+                     <div class="term-node leaf">L <span class="term-tooltip">Leaf Node: A node with no children.</span></div>
+                 </div>
+                 <div class="children">
+                     <div class="term-node leaf">L <span class="term-tooltip">Leaf Node: A node with no children.</span></div>
+                     <div class="term-node leaf">L <span class="term-tooltip">Leaf Node: A node with no children.</span></div>
+                 </div>
+             </div>
+             <p style="font-size: 0.9em; text-align: center; margin-top: 10px;">Hover over nodes for definitions.</p>
+        </div>
+
+        <div class="main-area">
+            <h2>Tree Visualizer</h2>
+             <div class="tree-controls">
+                 <input type="number" id="node-value" placeholder="Enter value" min="-1000" max="1000">
+                 <button id="insert-btn">Insert</button>
+                 <button id="delete-btn">Delete</button>
+                 <button id="clear-btn">Clear Tree</button>
+             </div>
+            <canvas id="treeCanvas"></canvas>
+            <div id="node-tooltip"></div> <!-- Tooltip for canvas nodes -->
+        </div>
+
+        <div class="panel">
+            <h2>Properties Calculator</h2>
+            <div class="properties-form">
+                <div>
+                    <label for="tree-height">Tree Height (H):</label>
+                    <input type="number" id="tree-height" min="-1" placeholder="e.g., 3">
+                </div>
+                <div>
+                    <label for="num-nodes">Number of Nodes (N):</label>
+                    <input type="number" id="num-nodes" min="0" placeholder="e.g., 7">
+                </div>
+            </div>
+            <div class="properties-results">
+                 <div>Max Nodes at Level L (for H): <span id="max-nodes-level">N/A</span></div>
+                 <div>Max Nodes in Tree (Full/Complete for H): <span id="max-nodes-tree">N/A</span></div>
+                 <div>Min Height (for N nodes): <span id="min-height-nodes">N/A</span></div>
+                 <div>Possible Leaf Levels (for N, H): <span id="levels-leaves">N/A</span></div>
+            </div>
+            <p style="font-size: 0.9em; text-align: center; margin-top: 10px;">Enter height or nodes to calculate properties.</p>
+
+            <h2 style="margin-top: 20px;">Traversal Visualizer</h2>
+             <div class="traversal-controls">
+                 <input type="radio" id="preorder-radio" name="traversal" value="preorder">
+                 <label for="preorder-radio">Preorder (Root, Left, Right)</label><br>
+                 <input type="radio" id="inorder-radio" name="traversal" value="inorder">
+                 <label for="inorder-radio">Inorder (Left, Root, Right)</label><br>
+                 <input type="radio" id="postorder-radio" name="traversal" value="postorder">
+                 <label for="postorder-radio">Postorder (Left, Right, Root)</label><br>
+                 <input type="radio" id="levelorder-radio" name="traversal" value="levelorder">
+                 <label for="levelorder-radio">Level Order (BFS)</label>
+             </div>
+             <button id="start-traversal-btn">Start Animation</button>
+             <div class="traversal-output" id="traversal-output">Traversal sequence will appear here...</div>
+        </div>
+    </div>
+
+    <footer>
+        © 2023 Binary Tree Explorer |
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Data Structures ---
+        class Node {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+                // For visualization layout
+                this.x = 0;
+                this.y = 0;
+                this.level = 0;
+                this.highlight = false; // For traversal animation
+                // Store final drawn positions for hit detection
+                this._drawnX = 0;
+                this._drawnY = 0;
+            }
+        }
+
+        class BinarySearchTree {
+            constructor() {
+                this.root = null;
+                this.nodeCount = 0; // Kept updated for properties calculation hints
+            }
+
+            insert(value) {
+                const numValue = parseInt(value);
+                if (isNaN(numValue)) {
+                     console.warn("Insert requires a valid number.");
+                     return false;
+                }
+                // Prevent excessively large/small numbers for visualization clarity
+                 if (numValue < -99 || numValue > 999) {
+                      console.warn("Value out of recommended range (-99 to 999) for visualization.");
+                      // Still allow insertion but warn
+                 }
+
+
+                if (this.root === null) {
+                    this.root = new Node(numValue);
+                    this.nodeCount++;
+                    drawTree(); // Draw immediately after root insertion
+                    return true;
+                }
+
+                let currentNode = this.root;
+                while (true) {
+                    if (numValue === currentNode.value) {
+                        console.warn("Value already exists:", numValue);
+                        return false; // Prevent duplicates
+                    }
+                    if (numValue < currentNode.value) {
+                        if (currentNode.left === null) {
+                            currentNode.left = new Node(numValue);
+                            this.nodeCount++;
+                            drawTree(); // Draw after successful insertion
+                            return true;
+                        }
+                        currentNode = currentNode.left;
+                    } else { // numValue > currentNode.value
+                        if (currentNode.right === null) {
+                            currentNode.right = new Node(numValue);
+                            this.nodeCount++;
+                            drawTree(); // Draw after successful insertion
+                            return true;
+                        }
+                        currentNode = currentNode.right;
+                    }
+                }
+            }
+
+            delete(value) {
+                const numValue = parseInt(value);
+                if (isNaN(numValue)) {
+                     console.warn("Delete requires a valid number.");
+                     return false;
+                }
+
+                let parent = null;
+                let current = this.root;
+                let found = false;
+
+                // Find the node to delete
+                while (current !== null) {
+                    if (numValue === current.value) {
+                        found = true;
+                        break;
+                    }
+                    parent = current;
+                    if (numValue < current.value) {
+                        current = current.left;
+                    } else {
+                        current = current.right;
+                    }
+                }
+
+                if (!found) {
+                    console.warn("Value not found for deletion:", numValue);
+                    return false; // Value not in tree
+                }
+
+                 // Deletion logic (Case 1, 2, 3, 4 handled)
+                 // Case 1: Node has no children (is a leaf)
+                 if (current.left === null && current.right === null) {
+                     if (current === this.root) {
+                         this.root = null;
+                     } else if (current === parent.left) {
+                         parent.left = null;
+                     } else {
+                         parent.right = null;
+                     }
+                 }
+                 // Case 2: Node has only a left child
+                 else if (current.right === null) {
+                      if (current === this.root) {
+                          this.root = current.left;
+                      } else if (current === parent.left) {
+                          parent.left = current.left;
+                      } else {
+                          parent.right = current.left;
+                      }
+                 }
+                 // Case 3: Node has only a right child
+                 else if (current.left === null) {
+                     if (current === this.root) {
+                         this.root = current.right;
+                     } else if (current === parent.left) {
+                         parent.left = current.right;
+                     } else {
+                         parent.right = current.right;
+                     }
+                 }
+                 // Case 4: Node has two children
+                 else {
+                     // Find the in-order successor (smallest value in the right subtree)
+                     let successorParent = current;
+                     let successor = current.right;
+                     while (successor.left !== null) {
+                         successorParent = successor;
+                         successor = successor.left;
+                     }
+
+                     // Copy the successor's value to the current node
+                     current.value = successor.value;
+
+                     // Delete the successor from its original position
+                     // The successor will have no left child (by definition)
+                     if (successorParent === current) {
+                         // Successor was the direct right child
+                         successorParent.right = successor.right;
+                     } else {
+                         // Successor was deeper in the right subtree
+                         successorParent.left = successor.right;
+                     }
+                 }
+
+                 this.nodeCount--; // Decrement count on successful deletion
+                 drawTree(); // Redraw after successful deletion
+                 return true; // Deletion successful
+            }
+
+
+             clear() {
+                 this.root = null;
+                 this.nodeCount = 0;
+                 drawTree(); // Draw empty tree
+                 clearTraversalAnimation(); // Clear any ongoing animation
+                 traversalOutputDiv.textContent = 'Traversal sequence will appear here...';
+             }
+
+             // Helper to get tree height - for properties calculator (optional but good practice)
+             getHeight(node = this.root) {
+                if (!node) {
+                    return -1; // Height of empty tree is -1
+                }
+                return 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+             }
+        }
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+        const nodeValueInput = document.getElementById('node-value');
+        const insertBtn = document.getElementById('insert-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const nodeTooltip = document.getElementById('node-tooltip'); // Tooltip element
+
+        const treeHeightInput = document.getElementById('tree-height');
+        const numNodesInput = document.getElementById('num-nodes');
+        const maxNodesLevelSpan = document.getElementById('max-nodes-level');
+        const maxNodesTreeSpan = document.getElementById('max-nodes-tree');
+        const minHeightNodesSpan = document.getElementById('min-height-nodes');
+        const levelsLeavesSpan = document.getElementById('levels-leaves');
+
+        const traversalRadios = document.querySelectorAll('input[name="traversal"]');
+        const startTraversalBtn = document.getElementById('start-traversal-btn');
+        const traversalOutputDiv = document.getElementById('traversal-output');
+
+        // --- Global State ---
+        const bst = new BinarySearchTree();
+        const NODE_RADIUS = 20;
+        const VERTICAL_SPACING = 60; // Space between levels
+        const MIN_HORIZONTAL_SPACING = 30; // Minimum space between nodes at the same level
+        let animationTimer = null; // To manage traversal animation timeouts
+
+
+        // --- Canvas Drawing Functions ---
+
+         let currentX = 50; // Start drawing from the left edge + padding
+
+         // Recursive function to calculate X position based on in-order traversal
+         // This assigns X coordinates relative to each other, then we center the whole structure.
+         function assignXInOrder(node, level) {
+             if (node === null) {
+                 return;
+             }
+
+             node.level = level;
+
+             // Visit left subtree
+             assignXInOrder(node.left, level + 1);
+
+             // Visit current node
+             // Assign X coordinate based on the last used X + spacing
+             node.x = currentX;
+             node.y = 50 + level * VERTICAL_SPACING; // Start 50px from top
+             currentX += MIN_HORIZONTAL_SPACING + NODE_RADIUS * 2; // Move currentX for the next node
+
+
+             // Visit right subtree
+             assignXInOrder(node.right, level + 1);
+         }
+
+
+         // Draw the tree on the canvas
+        function drawTree() {
+            if (!canvas || !ctx) return;
+
+            const canvasWidth = canvas.offsetWidth;
+            const canvasHeight = canvas.offsetHeight;
+
+            // Set canvas drawing buffer size to match display size
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+             if (!bst.root) {
+                 ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+                 ctx.font = '16px system-ui';
+                 ctx.textAlign = 'center';
+                 ctx.textBaseline = 'middle';
+                 ctx.fillText('Tree is empty. Insert a node!', canvasWidth / 2, canvasHeight / 2);
+                 return;
+             }
+
+             // Reset currentX for the in-order positioning
+             currentX = 50; // Padding from the left edge
+
+             // Assign positions using the in-order traversal strategy
+             assignXInOrder(bst.root, 0);
+
+             // Need to recenter the entire tree if the in-order assignment placed it off-center
+             // Calculate the total width used
+             let minTreeX = Infinity, maxTreeX = -Infinity;
+             function findBounds(node) {
+                 if (!node) return;
+                 minTreeX = Math.min(minTreeX, node.x);
+                 maxTreeX = Math.max(maxTreeX, node.x);
+                 findBounds(node.left);
+                 findBounds(node.right);
+             }
+             findBounds(bst.root);
+
+             // Calculate offset to center the tree horizontally
+             const treeContentWidth = maxTreeX - minTreeX;
+             const requiredCanvasWidth = treeContentWidth + NODE_RADIUS * 2 + MIN_HORIZONTAL_SPACING; // Approx width needed
+             const xOffset = (canvasWidth / 2) - (minTreeX + treeContentWidth / 2); // Center based on calculated bounds
+
+             // Function to draw nodes and connections with offset
+             function drawNode(node) {
+                 if (node === null) {
+                     return;
+                 }
+
+                 const nodeX = node.x + xOffset;
+                 const nodeY = node.y; // Y position doesn't need global centering
+
+                 // Draw connection line from parent (if not root)
+                 if (node !== bst.root) {
+                     const parent = findParent(bst.root, node);
+                      if (parent) {
+                          const parentX = parent.x + xOffset;
+                          const parentY = parent.y;
+                         ctx.beginPath();
+                         ctx.moveTo(parentX, parentY + NODE_RADIUS); // Start below parent
+                         ctx.lineTo(nodeX, nodeY - NODE_RADIUS); // End above child
+                         ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border-color');
+                         ctx.lineWidth = 1;
+                         ctx.stroke();
+                     }
+                 }
+
+                 // Draw node circle
+                 ctx.beginPath();
+                 ctx.arc(nodeX, nodeY, NODE_RADIUS, 0, Math.PI * 2);
+                 ctx.fillStyle = node.highlight ? 'yellow' : getComputedStyle(document.body).getPropertyValue('--primary-color');
+                 ctx.fill();
+                 ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+                 ctx.lineWidth = 2;
+                 ctx.stroke();
+
+                 // Draw node value
+                 ctx.fillStyle = node.highlight ? getComputedStyle(document.body).getPropertyValue('--text-color') : getComputedStyle(document.body).getPropertyValue('--background-color');
+                 ctx.font = '14px Arial';
+                 ctx.textAlign = 'center';
+                 ctx.textBaseline = 'middle';
+                 ctx.fillText(node.value, nodeX, nodeY);
+
+                 // Store final drawn positions for mouse interaction
+                 node._drawnX = nodeX;
+                 node._drawnY = nodeY;
+
+
+                 // Draw children recursively
+                 drawNode(node.left);
+                 drawNode(node.right);
+             }
+
+             drawNode(bst.root);
+         }
+
+         // Helper to find parent - necessary for drawing lines (recursive search)
+         function findParent(root, targetNode) {
+             if (!root || !targetNode || root === targetNode) {
+                 return null; // Target node is root or not in tree
+             }
+             if (root.left === targetNode || root.right === targetNode) {
+                 return root;
+             }
+             // Search in left subtree
+             let parent = findParent(root.left, targetNode);
+             if (parent) return parent;
+             // Search in right subtree
+             return findParent(root.right, targetNode);
+         }
+
+
+         // Resize canvas when window resizes
+         window.addEventListener('resize', drawTree);
+
+
+        // --- Properties Calculator Logic ---
+        function updateProperties() {
+            const height = parseInt(treeHeightInput.value);
+            const nodes = parseInt(numNodesInput.value);
+
+            // Calculations based on tree height (H)
+            if (!isNaN(height) && height >= -1) {
+                 maxNodesLevelSpan.textContent = `2^${height === -1 ? '(-1)' : height} = ${height === -1 ? '0' : Math.pow(2, height)}`;
+                 maxNodesTreeSpan.textContent = `2^(${height}+1) - 1 = ${Math.pow(2, height + 1) - 1}`;
+            } else {
+                 maxNodesLevelSpan.textContent = 'N/A';
+                 maxNodesTreeSpan.textContent = 'N/A';
+            }
+
+            // Calculations based on number of nodes (N)
+             if (!isNaN(nodes) && nodes >= 0) {
+                 // Minimum height for N nodes
+                 minHeightNodesSpan.textContent = nodes === 0 ? '-1' : `ceil(log2(${nodes}+1)) - 1 = ${Math.max(0, Math.ceil(Math.log2(nodes + 1)) - 1)}`; // Math.max(0, ...) handles N=1 correctly (height 0)
+
+                 // Possible Levels for Leaves
+                 let possibleLeafLevels = 'N/A';
+                 if (!isNaN(nodes) && nodes > 0) {
+                      const calculatedMinHeight = Math.max(0, Math.ceil(Math.log2(nodes + 1)) - 1);
+                       if (!isNaN(height) && height >= calculatedMinHeight) {
+                          // If height is also provided and consistent with nodes
+                          possibleLeafLevels = `Levels from ${calculatedMinHeight} to ${height}`;
+                       } else {
+                          // Only nodes provided
+                          possibleLeafLevels = `From level ${calculatedMinHeight} onwards`; // Can be anywhere from min height level to max possible height
+                       }
+                 } else if (nodes === 0) {
+                      possibleLeafLevels = 'N/A (Empty Tree)';
+                 } else if (!isNaN(height) && height >= 0) {
+                     // Only height provided
+                     possibleLeafLevels = `Up to level ${height}`; // Leaves can be at any level up to H
+                 }
+                 levelsLeavesSpan.textContent = possibleLeafLevels;
+
+             } else {
+                 minHeightNodesSpan.textContent = 'N/A';
+                 // If nodes is N/A, and height is N/A, leaves are N/A
+                 if(isNaN(height) || height < -1) {
+                    levelsLeavesSpan.textContent = 'N/A';
+                 }
+             }
+
+             // Optional: Update inputs based on BST state (if available)
+             // treeHeightInput.placeholder = `e.g., ${bst.getHeight()}`;
+             // numNodesInput.placeholder = `e.g., ${bst.nodeCount}`;
+        }
+
+        treeHeightInput.addEventListener('input', updateProperties);
+        numNodesInput.addEventListener('input', updateProperties);
+
+        // Initial calculation on load
+        updateProperties();
+
+
+        // --- Tree Visualizer Interactions ---
+
+        insertBtn.addEventListener('click', () => {
+            const value = nodeValueInput.value;
+            if (bst.insert(value)) {
+                 nodeValueInput.value = ''; // Clear input on success
+                 updateProperties(); // Update properties as node count changed
+            }
+        });
+
+        deleteBtn.addEventListener('click', () => {
+            const value = nodeValueInput.value;
+            if (bst.delete(value)) {
+                 nodeValueInput.value = ''; // Clear input on success
+                 updateProperties(); // Update properties as node count changed
+            }
+        });
+
+         clearBtn.addEventListener('click', () => {
+             bst.clear();
+             updateProperties(); // Update properties as node count changed (to 0)
+             nodeValueInput.value = '';
+         });
+
+
+         // Add hover and click interaction for canvas nodes
+         canvas.addEventListener('mousemove', (event) => {
+             const rect = canvas.getBoundingClientRect();
+             const scaleX = canvas.width / rect.width;    // relationship bitmap vs. layout size
+             const scaleY = canvas.height / rect.height;  // relationship bitmap vs. layout size
+             const mouseX = (event.clientX - rect.left) * scaleX;
+             const mouseY = (event.clientY - rect.top) * scaleY;
+
+             let hoveredNode = null;
+             function checkHover(node) {
+                 if (!node) return false;
+                 // Use stored drawn positions for accurate hit detection
+                 const dist = Math.sqrt((mouseX - node._drawnX)**2 + (mouseY - node._drawnY)**2);
+                 if (dist <= NODE_RADIUS) {
+                     hoveredNode = node;
+                     return true;
+                 }
+                 if (checkHover(node.left)) return true;
+                 if (checkHover(node.right)) return true;
+                 return false;
+             }
+             checkHover(bst.root);
+
+             if (hoveredNode) {
+                 nodeTooltip.style.display = 'block';
+                 // Position tooltip relative to the canvas element, adjusted for scroll/offset if needed
+                 // Using screen coordinates relative to the element for the tooltip div
+                 nodeTooltip.style.left = `${event.clientX}px`;
+                 nodeTooltip.style.top = `${event.clientY}px`;
+                 nodeTooltip.textContent = `Value: ${hoveredNode.value}`;
+             } else {
+                 nodeTooltip.style.display = 'none';
+             }
+         });
+
+         canvas.addEventListener('mouseout', () => {
+             nodeTooltip.style.display = 'none';
+         });
+
+         // Simple click interaction: log node value or show alert
+         canvas.addEventListener('click', (event) => {
+              const rect = canvas.getBoundingClientRect();
+              const scaleX = canvas.width / rect.width;
+              const scaleY = canvas.height / rect.height;
+              const clickX = (event.clientX - rect.left) * scaleX;
+              const clickY = (event.clientY - rect.top) * scaleY;
+
+              function checkClick(node) {
+                   if (!node) return false;
+                   // Use stored drawn positions for accurate hit detection
+                   const dist = Math.sqrt((clickX - node._drawnX)**2 + (clickY - node._drawnY)**2);
+                   if (dist <= NODE_RADIUS) {
+                       console.log("Clicked Node Value:", node.value);
+                       alert(`Clicked Node Value: ${node.value}`); // Simple feedback
+                       return true;
+                   }
+                   if (checkClick(node.left)) return true;
+                   if (checkClick(node.right)) return true;
+                   return false;
+               }
+               checkClick(bst.root);
+          });
+
+
+        // --- Traversal Visualizer Logic ---
+
+         let traversalSequence = [];
+         let traversalIndex = 0;
+         const ANIMATION_DELAY = 700; // ms between highlighting nodes (slightly increased)
+         let animationRunning = false;
+
+         function clearTraversalAnimation() {
+             if (animationTimer) {
+                 clearTimeout(animationTimer);
+                 animationTimer = null;
+             }
+             animationRunning = false;
+             // Reset highlight state of all nodes
+             function unhighlight(node) {
+                 if (node) {
+                     node.highlight = false;
+                     unhighlight(node.left);
+                     unhighlight(node.right);
+                 }
+             }
+             unhighlight(bst.root);
+             drawTree(); // Redraw to remove highlights
+         }
+
+         function animateTraversal() {
+             if (traversalIndex < traversalSequence.length && animationRunning) {
+                 // Clear previous highlight
+                 if (traversalIndex > 0 && traversalSequence[traversalIndex - 1]) {
+                     traversalSequence[traversalIndex - 1].highlight = false;
+                 }
+
+                 // Highlight current node
+                 const currentNode = traversalSequence[traversalIndex];
+                 if (currentNode) {
+                     currentNode.highlight = true;
+                     drawTree(); // Redraw to show highlight
+
+                     // Update output
+                     if (traversalOutputDiv.textContent.includes('sequence will appear here') || traversalOutputDiv.textContent === 'Select a traversal type.') {
+                         traversalOutputDiv.textContent = currentNode.value;
+                     } else {
+                         traversalOutputDiv.textContent += ' -> ' + currentNode.value;
+                     }
+                 }
+
+                 traversalIndex++;
+                 animationTimer = setTimeout(animateTraversal, ANIMATION_DELAY);
+             } else {
+                  // Animation finished or stopped
+                  if (traversalSequence.length > 0 && traversalIndex > 0 && traversalSequence[traversalIndex - 1]) {
+                     traversalSequence[traversalIndex - 1].highlight = false; // Unhighlight last node
+                  }
+                  drawTree(); // Final redraw
+                  animationTimer = null;
+                  animationRunning = false;
+                  startTraversalBtn.disabled = false; // Re-enable button
+             }
+         }
+
+
+         function performTraversal(type) {
+             if (!bst.root) {
+                 traversalOutputDiv.textContent = 'Tree is empty.';
+                 return [];
+             }
+
+             traversalSequence = []; // Reset sequence
+
+             function preorder(node) {
+                 if (node) {
+                     traversalSequence.push(node);
+                     preorder(node.left);
+                     preorder(node.right);
+                 }
+             }
+
+             function inorder(node) {
+                 if (node) {
+                     inorder(node.left);
+                     traversalSequence.push(node);
+                     inorder(node.right);
+                 }
+             }
+
+             function postorder(node) {
+                 if (node) {
+                     postorder(node.left);
+                     postorder(node.right);
+                     traversalSequence.push(node);
+                 }
+             }
+
+             function levelorder() {
+                 const queue = [];
+                 if (bst.root) {
+                     queue.push(bst.root);
+                 }
+                 while (queue.length > 0) {
+                     const node = queue.shift();
+                     traversalSequence.push(node);
+                     if (node.left) queue.push(node.left);
+                     if (node.right) queue.push(node.right);
+                 }
+             }
+
+             switch (type) {
+                 case 'preorder':
+                     preorder(bst.root);
+                     break;
+                 case 'inorder':
+                     inorder(bst.root);
+                     break;
+                 case 'postorder':
+                     postorder(bst.root);
+                     break;
+                 case 'levelorder':
+                     levelorder();
+                     break;
+                 default:
+                     console.error("Unknown traversal type:", type);
+                     return [];
+             }
+
+              return traversalSequence; // Return the populated sequence (for potential future use)
+         }
+
+
+         startTraversalBtn.addEventListener('click', () => {
+             if (animationRunning) {
+                  console.log("Animation is already running.");
+                  return; // Prevent starting multiple animations
+             }
+
+             let selectedTraversal = null;
+             for (const radio of traversalRadios) {
+                 if (radio.checked) {
+                     selectedTraversal = radio.value;
+                     break;
+                 }
+             }
+
+             if (!selectedTraversal) {
+                 traversalOutputDiv.textContent = 'Select a traversal type.';
+                 console.warn("Please select a traversal type.");
+                 return;
+             }
+
+             if (!bst.root) {
+                  traversalOutputDiv.textContent = 'Tree is empty. Cannot traverse.';
+                  return;
+             }
+
+             // Prepare and start animation
+             clearTraversalAnimation(); // Ensure previous animation is stopped and highlights cleared
+             performTraversal(selectedTraversal); // This populates traversalSequence
+             traversalIndex = 0; // Reset index for the new animation
+             animationRunning = true;
+             startTraversalBtn.disabled = true; // Disable button while animating
+             animateTraversal(); // Start the animation
+         });
+
+         // --- Initial Setup ---
+         drawTree(); // Draw initial empty canvas
+
+    </script>
+</body>
+</html>
+```

@@ -1,28 +1,21 @@
-# import requests
-# from bs4 import BeautifulSoup
-
-# url = 'https://www.geeksforgeeks.org/ml-linear-regression/'
-# headers = { 'User-Agent': 'Mozilla/5.0' }
-
-# response = requests.get(url, headers=headers)
-# soup = BeautifulSoup(response.content, 'html.parser')
-
-# article = soup.find('article')
-
-# if article:
-#     content_tags = article.find_all(['p', 'li', 'h1', 'h2', 'h3', 'pre', 'code'])
-
-#     full_text = '\n\n'.join(tag.get_text(strip=True) for tag in content_tags)
-#     print(full_text)
-# else:
-#     print("Article content not found.")
-
-
+import os
 import requests
 from bs4 import BeautifulSoup
 import html2text
 
-def scrape_article(url: str) -> str:
+def scrape_article(url: str, save: bool = False, output_dir: str = "./") -> str:
+    """
+    Scrapes the main content from a web article and returns it as markdown text.
+
+    Parameters:
+    - url: str → The URL of the article to scrape.
+    - save: bool → Whether to save the scraped content to a markdown file.
+    - output_dir: str → Directory to save the file if save=True.
+
+    Returns:
+    - str → The cleaned article text in markdown format.
+    """
+
     headers = { 'User-Agent': 'Mozilla/5.0' }
     response = requests.get(url, headers=headers)
     
@@ -37,6 +30,11 @@ def scrape_article(url: str) -> str:
     article = soup.find('article')
     content = article if article else soup.body
 
-    markdown_text = html2text.html2text(str(content))
-    
-    return markdown_text.strip()
+    markdown_text = html2text.html2text(str(content)).strip()
+
+    if save:
+        os.makedirs(output_dir, exist_ok=True)
+        with open(os.path.join(output_dir, "raw_article.md"), "w", encoding="utf-8") as f:
+            f.write(markdown_text)
+
+    return markdown_text
