@@ -28,13 +28,7 @@ app.add_middleware(
 
 @app.post("/generate-webpage")
 def generate_webpage(data: ArticleInput):
-    """
-    Accepts a URL, scrapes the article, runs LLM agents, and returns:
-    - Summary
-    - Design
-    - Webpage HTML
-    - Token usage
-    """
+    
     url = data.url
 
     try:
