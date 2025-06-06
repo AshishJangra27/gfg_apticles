@@ -10,3 +10,6 @@ langchain==0.3.25
 langchain-google-genai==2.1.5
 html2text==2025.4.15
 streamlit==1.45.0
+fastapi
+pydantic
+uvicorn

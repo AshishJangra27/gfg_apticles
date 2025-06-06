@@ -1,0 +1,19 @@
+{
+    "timestamp": "2025-06-06T15:21:48.190179",
+    "url": "https://www.geeksforgeeks.org/python-if-else/",
+    "summariser": {
+        "prompt_token": 2015,
+        "response_token": 600,
+        "total_token": 2615
+    },
+    "designer": {
+        "prompt_token": 1112,
+        "response_token": 1791,
+        "total_token": 4369
+    },
+    "developer": {
+        "prompt_token": 2345,
+        "response_token": 8026,
+        "total_token": 38193
+    }
+}
