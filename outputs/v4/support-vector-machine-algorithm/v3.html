@@ -1,0 +1,455 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Filter Explorer</title>
+    <style>
+        /* Global Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Essential for single-screen */
+            background-color: #fff;
+            color: #000;
+            font-family: monospace; /* Monospace font */
+            font-size: 1em;
+            line-height: 1.5;
+        }
+
+        /* Accent Color */
+        :root {
+            --green-accent: #2f8d46;
+            --light-gray: #cccccc;
+        }
+
+        /* Layout */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 8vh; /* Header height */
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            padding: 0 2vw;
+            box-sizing: border-box;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            margin-right: 1vw;
+        }
+
+        .logo-container img {
+            height: 32px; /* Logo height */
+            margin-right: 0.5vw;
+        }
+
+        header h1 {
+            font-size: 1.5em;
+            margin: 0;
+            color: #000; /* Ensure title is black */
+        }
+
+        main {
+            margin-top: 8vh; /* Below header */
+            margin-bottom: 4vh; /* Above footer */
+            height: 88vh; /* Remaining height */
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            padding: 1vw;
+            box-sizing: border-box;
+        }
+
+        .controls-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1vh;
+            padding: 1vh 0;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .filters, .simulation-controls {
+            display: flex;
+            align-items: center;
+            gap: 1vw; /* Space between elements */
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        select, button {
+            padding: 0.5vh 0.5vw;
+            border: 1px solid #000;
+            background-color: #fff;
+            font-family: monospace;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            border-color: var(--green-accent);
+            color: var(--green-accent);
+        }
+
+        button:active:not(:disabled) {
+            background-color: var(--green-accent);
+            color: #fff;
+            border-color: var(--green-accent);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .feedback-area {
+            height: 3vh; /* Fixed height for explanation */
+            display: flex;
+            align-items: center;
+            font-style: italic;
+            margin-bottom: 1vh;
+            white-space: nowrap; /* Prevent line breaks */
+            overflow: hidden; /* Hide overflow if text is too long */
+            text-overflow: ellipsis; /* Show ellipsis if text is truncated */
+        }
+
+        .question-list-area {
+            flex-grow: 1; /* Takes remaining vertical space */
+            overflow-y: auto; /* Allow scrolling *within* this area if needed, but body is hidden */
+            border: 1px solid var(--light-gray);
+            padding: 1vw;
+        }
+
+        #question-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .question-item {
+            padding: 0.5vh 0;
+            border-bottom: 1px dotted #eee;
+            display: list-item; /* Ensure it's a list item */
+        }
+
+        .question-item:last-child {
+            border-bottom: none;
+        }
+
+        .question-item.hidden {
+            display: none; /* Hide non-matching items */
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 4vh; /* Footer height */
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            border-top: 1px solid var(--light-gray);
+        }
+
+        footer a {
+            color: #000; /* Default link color */
+            text-decoration: none;
+            margin: 0 1vw;
+            transition: color 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--green-accent); /* Green on hover */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+             <!-- GeeksforGeeks Logo -->
+            <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+            <h1>Coding Question Filter Explorer</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="controls-panel">
+            <div class="filters">
+                <label for="company-filter">Company:</label>
+                <select id="company-filter">
+                    <option value="all">All Companies</option>
+                </select>
+
+                <label for="difficulty-filter">Difficulty:</label>
+                <select id="difficulty-filter">
+                    <option value="all">All Difficulties</option>
+                </select>
+            </div>
+
+            <div class="simulation-controls">
+                <button id="reset-btn">Reset</button>
+                <button id="randomize-btn">Randomize Filter</button>
+                <button id="auto-run-btn">Auto-Run Demo</button>
+                <button id="next-step-btn">Next Step</button>
+            </div>
+        </div>
+
+        <div class="feedback-area">
+            <p id="explanation-text">Select a company and difficulty to filter the questions.</p>
+        </div>
+
+        <div class="question-list-area">
+            <ul id="question-list">
+                <!-- Question items will be populated by JavaScript -->
+            </ul>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const questions = [
+            { title: "Two Sum", company: "amazon", difficulty: "easy" },
+            { title: "Longest Substring Without Repeating Characters", company: "google", difficulty: "medium" },
+            { title: "Median of Two Sorted Arrays", company: "microsoft", difficulty: "hard" },
+            { title: "Merge Two Sorted Lists", company: "amazon", difficulty: "medium" },
+            { title: "Valid Parentheses", company: "google", difficulty: "easy" },
+            { title: "Maximum Subarray", company: "microsoft", difficulty: "easy" },
+            { title: "Merge Intervals", company: "google", difficulty: "medium" },
+            { title: "Rotate Image", company: "amazon", difficulty: "medium" },
+            { title: "Jump Game", company: "microsoft", difficulty: "medium" },
+            { title: "Decode Ways", company: "google", difficulty: "hard" },
+            { title: "Word Break", company: "microsoft", difficulty: "hard" },
+            { title: "Longest Palindromic Substring", company: "amazon", difficulty: "medium" },
+            { title: "Reverse Linked List", company: "amazon", difficulty: "easy" },
+            { title: "Binary Tree Level Order Traversal", company: "google", difficulty: "medium" },
+            { title: "Serialize and Deserialize Binary Tree", company: "google", difficulty: "hard" },
+            { title: "Climbing Stairs", company: "microsoft", difficulty: "easy" },
+            { title: "Container With Most Water", company: "amazon", difficulty: "medium" },
+            { title: "3Sum", company: "microsoft", difficulty: "medium" },
+            { title: "Group Anagrams", company: "amazon", difficulty: "medium" },
+            { title: "Search in Rotated Sorted Array", company: "google", difficulty: "medium" }
+            // Add more questions as needed
+        ];
+
+        const companyFilter = document.getElementById('company-filter');
+        const difficultyFilter = document.getElementById('difficulty-filter');
+        const questionList = document.getElementById('question-list');
+        const explanationText = document.getElementById('explanation-text');
+        const resetButton = document.getElementById('reset-btn');
+        const randomizeButton = document.getElementById('randomize-btn');
+        const autoRunButton = document.getElementById('auto-run-btn');
+        const nextStepButton = document.getElementById('next-step-btn');
+
+        let simulationRunning = false;
+        let simulationStep = 0;
+        const simulationSequence = [
+            { company: 'all', difficulty: 'all', text: 'Showing all questions.' },
+            { company: 'amazon', difficulty: 'all', text: 'Showing questions from Amazon.' },
+            { company: 'all', difficulty: 'medium', text: 'Showing Medium difficulty questions.' },
+            { company: 'google', difficulty: 'hard', text: 'Showing Hard questions from Google.' },
+            { company: 'microsoft', difficulty: 'easy', text: 'Showing Easy questions from Microsoft.' },
+            { company: 'amazon', difficulty: 'medium', text: 'Showing Medium questions from Amazon.' },
+            { company: 'all', difficulty: 'all', text: 'Resetting filters - showing all questions.' }
+        ];
+
+        // Populate filter options based on questions data
+        function populateFilters() {
+            const companies = new Set(questions.map(q => q.company));
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company.charAt(0).toUpperCase() + company.slice(1);
+                companyFilter.appendChild(option);
+            });
+
+            const difficulties = new Set(questions.map(q => q.difficulty));
+            difficulties.forEach(difficulty => {
+                const option = document.createElement('option');
+                option.value = difficulty;
+                option.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+                difficultyFilter.appendChild(option);
+            });
+        }
+
+        // Render the list of questions
+        function renderQuestions(questionData) {
+            questionList.innerHTML = ''; // Clear current list
+            questionData.forEach(q => {
+                const li = document.createElement('li');
+                li.classList.add('question-item');
+                li.dataset.company = q.company;
+                li.dataset.difficulty = q.difficulty;
+                li.textContent = `${q.title} (${q.company.charAt(0).toUpperCase() + q.company.slice(1)}, ${q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)})`;
+                questionList.appendChild(li);
+            });
+        }
+
+        // Apply the current filters
+        function applyFilters() {
+            const selectedCompany = companyFilter.value;
+            const selectedDifficulty = difficultyFilter.value;
+
+            let explanation = '';
+            if (selectedCompany === 'all' && selectedDifficulty === 'all') {
+                explanation = 'Showing all questions.';
+            } else if (selectedCompany !== 'all' && selectedDifficulty === 'all') {
+                explanation = `Showing questions from ${selectedCompany.charAt(0).toUpperCase() + selectedCompany.slice(1)}.`;
+            } else if (selectedCompany === 'all' && selectedDifficulty !== 'all') {
+                explanation = `Showing ${selectedDifficulty.charAt(0).toUpperCase() + selectedDifficulty.slice(1)} difficulty questions.`;
+            } else {
+                explanation = `Showing ${selectedDifficulty.charAt(0).toUpperCase() + selectedDifficulty.slice(1)} questions from ${selectedCompany.charAt(0).toUpperCase() + selectedCompany.slice(1)}.`;
+            }
+            explanationText.textContent = explanation;
+
+            const listItems = questionList.querySelectorAll('.question-item');
+            listItems.forEach(item => {
+                const itemCompany = item.dataset.company;
+                const itemDifficulty = item.dataset.difficulty;
+
+                const companyMatch = (selectedCompany === 'all' || itemCompany === selectedCompany);
+                const difficultyMatch = (selectedDifficulty === 'all' || itemDifficulty === selectedDifficulty);
+
+                if (companyMatch && difficultyMatch) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        }
+
+        // Reset filters to default "all"
+        function resetFilters() {
+            companyFilter.value = 'all';
+            difficultyFilter.value = 'all';
+            applyFilters();
+            simulationStep = 0; // Reset simulation step
+        }
+
+        // Set random filters
+        function randomizeFilters() {
+            const companyOptions = Array.from(companyFilter.options).map(opt => opt.value);
+            const difficultyOptions = Array.from(difficultyFilter.options).map(opt => opt.value);
+
+            const randomCompany = companyOptions[Math.floor(Math.random() * companyOptions.length)];
+            const randomDifficulty = difficultyOptions[Math.floor(Math.random() * difficultyOptions.length)];
+
+            companyFilter.value = randomCompany;
+            difficultyFilter.value = randomDifficulty;
+            applyFilters();
+             simulationStep = 0; // Reset simulation step
+        }
+
+        // Auto-run simulation sequence
+        function runSimulationStep(stepIndex) {
+            if (stepIndex >= simulationSequence.length) {
+                // End of sequence
+                enableSimulationButtons();
+                simulationRunning = false;
+                simulationStep = 0; // Reset step for next manual/auto run
+                explanationText.textContent = 'Demo finished. Select filters or use controls.';
+                return;
+            }
+
+            simulationRunning = true;
+            disableSimulationButtons();
+
+            const step = simulationSequence[stepIndex];
+            companyFilter.value = step.company;
+            difficultyFilter.value = step.difficulty;
+            applyFilters(); // Updates explanation text based on values
+
+            // Override explanation text for the demo step
+            explanationText.textContent = `Demo Step ${stepIndex + 1}: ${step.text}`;
+
+            simulationStep = stepIndex + 1;
+
+            // Use a small delay before next step
+            setTimeout(() => runSimulationStep(simulationStep), 2000); // 2 second delay
+        }
+
+        function disableSimulationButtons() {
+             resetButton.disabled = true;
+             randomizeButton.disabled = true;
+             autoRunButton.disabled = true;
+             nextStepButton.disabled = true;
+        }
+
+        function enableSimulationButtons() {
+             resetButton.disabled = false;
+             randomizeButton.disabled = false;
+             autoRunButton.disabled = false;
+             nextStepButton.disabled = false;
+        }
+
+
+        // Manual Next Step
+        function nextSimulationStep() {
+            if (simulationRunning) return; // Don't interfere with auto-run
+
+            if (simulationStep >= simulationSequence.length) {
+                 simulationStep = 0; // Loop back to beginning
+            }
+
+            const step = simulationSequence[simulationStep];
+            companyFilter.value = step.company;
+            difficultyFilter.value = step.difficulty;
+            applyFilters(); // Updates explanation text based on values
+
+            // Override explanation text for the step
+             explanationText.textContent = `Manual Step ${simulationStep + 1}: ${step.text}`;
+
+
+            simulationStep++; // Move to the next step
+             if (simulationStep >= simulationSequence.length) {
+                 // Indicate that the next step will reset or loop
+                  // No change needed, it loops naturally
+             }
+        }
+
+
+        // Event Listeners
+        companyFilter.addEventListener('change', () => {
+            applyFilters();
+            simulationStep = 0; // Reset simulation step on manual filter change
+        });
+        difficultyFilter.addEventListener('change', () => {
+            applyFilters();
+            simulationStep = 0; // Reset simulation step on manual filter change
+        });
+
+        resetButton.addEventListener('click', resetFilters);
+        randomizeButton.addEventListener('click', randomizeFilters);
+        autoRunButton.addEventListener('click', () => {
+            if (!simulationRunning) {
+                runSimulationStep(0); // Start from the first step
+            }
+        });
+        nextStepButton.addEventListener('click', nextSimulationStep);
+
+        // Initial setup on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            populateFilters();
+            renderQuestions(questions); // Render all questions initially
+            applyFilters(); // Apply default 'all' filters and set initial text
+        });
+
+    </script>
+</body>
+</html>

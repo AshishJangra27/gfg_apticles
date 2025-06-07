@@ -1,0 +1,691 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DFS Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: #FFFFFF;
+            color: #000000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure body takes full viewport height */
+            width: 100vw;  /* Ensure body takes full viewport width */
+        }
+
+        header {
+            height: 8vh;
+            width: 100vw;
+            background-color: #f0f0f0; /* Light gray background for header */
+            display: flex;
+            align-items: center;
+            padding: 0 1vw;
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        #gfg-logo {
+            height: 3.2vh; /* Scale logo height relative to header height */
+            margin-right: 1vw;
+        }
+
+        header h1 {
+            font-size: 2.5vh; /* Scale font size */
+            margin: 0;
+            color: #2f8d46; /* GeeksforGeeks Green */
+        }
+
+        #main-content {
+            height: 88vh;
+            width: 100vw;
+            display: flex;
+        }
+
+        #left-panel, #right-panel {
+            width: 25vw;
+            padding: 1vh 1vw; /* Padding relative to viewport */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #cccccc; /* Subtle separator */
+            border-left: 1px solid #cccccc; /* Subtle separator */
+            overflow-y: auto; /* Allow scrolling within panels if content overflows */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #right-panel {
+             border-left: none; /* Only right border on left, left border on right */
+        }
+
+        #central-panel {
+            width: 50vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f9f9f9; /* Very light gray background */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            border: 1px solid #cccccc;
+            box-sizing: border-box;
+            width: 100%; /* Canvas dimensions set by JS based on panel size */
+            height: 100%;
+        }
+
+        footer {
+            height: 4vh;
+            width: 100vw;
+            background-color: #f0f0f0; /* Light gray background for footer */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5vh; /* Scale font size */
+        }
+
+        footer a {
+            color: #2f8d46; /* GeeksforGeeks Green */
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        h2 {
+            font-size: 2vh; /* Scale font size */
+            margin: 1vh 0;
+            color: #2f8d46; /* GeeksforGeeks Green */
+        }
+
+        label {
+             display: block;
+             margin-bottom: 0.5vh;
+             font-size: 1.8vh;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 0.5vh;
+            margin-bottom: 1vh;
+            box-sizing: border-box;
+            border: 1px solid #cccccc;
+            font-family: monospace;
+            font-size: 1.7vh;
+        }
+
+        textarea {
+            height: 15vh; /* Fixed height for textarea */
+            resize: vertical; /* Allow vertical resize within its container */
+        }
+
+        button {
+            padding: 1vh 1vw;
+            margin-bottom: 1vh;
+            cursor: pointer;
+            border: 1px solid #2f8d46;
+            background-color: #fff;
+            color: #2f8d46;
+            font-size: 1.8vh;
+            transition: background-color 0.1s, color 0.1s;
+        }
+
+        button:hover {
+            background-color: #2f8d46;
+            color: #fff;
+        }
+
+        button:disabled {
+            border-color: #cccccc;
+            color: #cccccc;
+            cursor: not-allowed;
+            background-color: #f0f0f0;
+        }
+
+        #controls button {
+             width: 100%; /* Make buttons full width */
+        }
+
+        #traversal-order ol {
+            padding-left: 2vw; /* Indent list */
+            margin-top: 0;
+        }
+
+        #traversal-order li {
+            margin-bottom: 0.5vh;
+            font-size: 1.8vh;
+        }
+
+        #step-explanation {
+            margin-top: 1vh;
+            padding: 1vh;
+            border-top: 1px solid #cccccc;
+            min-height: 4vh; /* Ensure space for 2 lines */
+            font-size: 1.8vh;
+            line-height: 1.4;
+        }
+
+        /* Canvas drawing styles handled by JS */
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <img id="gfg-logo" src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>DFS Visualization</h1>
+    </header>
+
+    <div id="main-content">
+
+        <div id="left-panel">
+            <h2>Graph Input</h2>
+            <label for="graphInput">Adjacency List (e.g., A: B, C)</label>
+            <textarea id="graphInput" placeholder="Enter graph here...">
+A: B, C
+B: D, E
+C: F, G
+D: H
+E: I
+F: J
+G: K
+H:
+I:
+J:
+K:</textarea>
+
+            <label for="startNodeInput">Start Node</label>
+            <input type="text" id="startNodeInput" value="A" placeholder="Enter start node">
+
+            <button id="loadGraphBtn">Load Graph</button>
+            <button id="randomizeGraphBtn">Randomize Graph</button>
+
+            <h2>Controls</h2>
+            <div id="controls">
+                <button id="resetBtn" disabled>Reset</button>
+                <button id="nextStepBtn" disabled>Next Step</button>
+                <button id="autoRunBtn" disabled>Auto-Run</button>
+            </div>
+        </div>
+
+        <div id="central-panel">
+            <canvas id="graphCanvas"></canvas>
+        </div>
+
+        <div id="right-panel">
+            <h2>Traversal Order</h2>
+            <div id="traversal-order">
+                <ol></ol>
+            </div>
+
+            <h2>Step Explanation</h2>
+            <div id="step-explanation">
+                Load a graph and click 'Next Step' or 'Auto-Run'.
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Constants and Configuration ---
+        const NODE_RADIUS = 15;
+        const NODE_COLOR_DEFAULT = '#fff';
+        const NODE_BORDER_DEFAULT = '#000';
+        const NODE_BORDER_VISITING = '#2f8d46'; // Green border for currently processing
+        const NODE_FILL_VISITED = '#2f8d46';   // Green fill for fully visited
+        const EDGE_COLOR_DEFAULT = '#000';
+        const EDGE_COLOR_HIGHLIGHT = '#2f8d46'; // Green highlight for current edge
+
+        const TEXT_COLOR = '#000';
+        const FONT_SIZE = '14px monospace';
+        const EXPLANATION_LIMIT = 2; // Max lines for explanation
+
+        // --- DOM Elements ---
+        const graphInput = document.getElementById('graphInput');
+        const startNodeInput = document.getElementById('startNodeInput');
+        const loadGraphBtn = document.getElementById('loadGraphBtn');
+        const randomizeGraphBtn = document.getElementById('randomizeGraphBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const autoRunBtn = document.getElementById('autoRunBtn');
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const traversalOrderElement = document.querySelector('#traversal-order ol');
+        const explanationElement = document.getElementById('step-explanation');
+        const centralPanel = document.getElementById('central-panel');
+
+        // --- Graph Data and State ---
+        let graph = new Map(); // Adjacency list: Map<string, string[]>
+        let nodePositions = new Map(); // Map<string, {x: number, y: number}>
+        let visitedSet = new Set(); // Set<string> of visited nodes
+        let dfsOrder = []; // string[] of nodes in traversal order
+        let stack = []; // string[] - The DFS stack (iterative approach)
+        let animationFrameId = null; // For auto-run
+        let autoRunDelay = 700; // milliseconds
+        let isAutoRunning = false;
+
+        // State for step-by-step execution
+        // We use stack for nodes to visit, and internal state to track which neighbor edge is being processed
+        let currentNode = null; // The node whose neighbors we are currently exploring (visual cue)
+        let neighborIndex = 0; // Index of the neighbor being considered for currentNode
+
+
+        // --- Canvas Drawing Functions ---
+
+        function resizeCanvas() {
+            // Match canvas size to parent panel size
+            canvas.width = centralPanel.clientWidth;
+            canvas.height = centralPanel.clientHeight;
+            if (graph.size > 0) {
+                calculateNodePositions();
+                drawGraph();
+            } else {
+                 ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear if no graph
+            }
+        }
+
+        function calculateNodePositions() {
+            if (graph.size === 0) {
+                nodePositions.clear();
+                return;
+            }
+
+            const nodes = Array.from(graph.keys());
+            const numNodes = nodes.length;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const maxRadius = Math.min(centerX, centerY) * 0.8;
+
+            nodePositions.clear(); // Clear previous positions
+
+            if (numNodes === 1) {
+                 nodePositions.set(nodes[0], { x: centerX, y: centerY });
+                 return;
+            }
+
+            nodes.forEach((node, i) => {
+                const angle = (i / numNodes) * 2 * Math.PI;
+                const x = centerX + maxRadius * Math.cos(angle);
+                const y = centerY + maxRadius * Math.sin(angle);
+                nodePositions.set(node, { x, y });
+            });
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw edges first
+            ctx.lineWidth = 2;
+            for (const [u, neighbors] of graph.entries()) {
+                const posU = nodePositions.get(u);
+                if (!posU) continue; // Skip if node position not calculated
+
+                for (const v of neighbors) {
+                    const posV = nodePositions.get(v);
+                    if (!posV) continue; // Skip if target node position not calculated
+
+                    // Determine edge color
+                    ctx.strokeStyle = EDGE_COLOR_DEFAULT;
+                    // Highlight edge if it's the current one being explored
+                    if (currentNode === u) {
+                        const currentNeighbors = graph.get(u) || [];
+                        if (neighborIndex > 0 && neighborIndex <= currentNeighbors.length) {
+                            const exploredNeighbor = currentNeighbors[neighborIndex - 1];
+                            if (exploredNeighbor === v) {
+                                ctx.strokeStyle = EDGE_COLOR_HIGHLIGHT;
+                            }
+                        }
+                    }
+
+
+                    ctx.beginPath();
+                    ctx.moveTo(posU.x, posU.y);
+                    ctx.lineTo(posV.x, posV.y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw nodes and labels
+            ctx.lineWidth = 2;
+            ctx.font = FONT_SIZE;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (const [node, pos] of nodePositions.entries()) {
+                // Draw Node Circle
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, NODE_RADIUS, 0, Math.PI * 2);
+
+                // Determine node fill and border color
+                if (visitedSet.has(node)) {
+                    ctx.fillStyle = NODE_FILL_VISITED;
+                    ctx.strokeStyle = NODE_FILL_VISITED; // Border same as fill if visited
+                } else {
+                    ctx.fillStyle = NODE_COLOR_DEFAULT;
+                    ctx.strokeStyle = NODE_BORDER_DEFAULT;
+                     if (stack.length > 0 && stack[stack.length - 1] === node && currentNode !== node) {
+                        // Optional: Highlight node currently at top of stack? Maybe too much info.
+                        // ctx.strokeStyle = '#ffcc00'; // Example: yellow for stack top
+                     }
+                }
+
+                // Highlight border if it's the current node being processed for neighbors
+                 if (currentNode === node) {
+                     ctx.strokeStyle = NODE_BORDER_VISITING;
+                 }
+
+
+                ctx.fill();
+                ctx.stroke();
+
+                // Draw Node Label
+                ctx.fillStyle = TEXT_COLOR;
+                ctx.fillText(node, pos.x, pos.y);
+            }
+        }
+
+
+        // --- Graph and Control Functions ---
+
+        function parseGraphInput() {
+            const input = graphInput.value.trim();
+            const newGraph = new Map();
+            const lines = input.split('\n');
+
+            try {
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (line === '') return;
+
+                    const parts = line.split(':');
+                    if (parts.length > 2) throw new Error("Invalid format on line: " + line);
+
+                    const node = parts[0].trim();
+                    if (node === '') throw new Error("Node name cannot be empty on line: " + line);
+
+                    const neighborsString = parts[1] ? parts[1].trim() : '';
+                    const neighbors = neighborsString === '' ? [] : neighborsString.split(',').map(n => n.trim()).filter(n => n !== '');
+
+                    // Basic validation: check neighbor format if needed, ensure nodes are valid strings
+                    neighbors.forEach(neighbor => {
+                         if (neighbor === '') throw new Error("Empty neighbor name on line: " + line);
+                    });
+
+                    // Add node even if it has no neighbors to ensure it appears in the graph
+                    if (!newGraph.has(node)) {
+                         newGraph.set(node, []);
+                    }
+
+                    // Add edges
+                    newGraph.set(node, neighbors);
+                });
+
+                // Ensure all referenced neighbors also exist as nodes (add them with empty neighbor lists if not present)
+                 const allNodes = new Set(newGraph.keys());
+                 newGraph.forEach(neighbors => {
+                     neighbors.forEach(neighbor => {
+                         if (!allNodes.has(neighbor)) {
+                             newGraph.set(neighbor, []);
+                             allNodes.add(neighbor);
+                         }
+                     });
+                 });
+
+
+            } catch (e) {
+                alert("Error parsing graph input:\n" + e.message);
+                return null;
+            }
+
+            if (newGraph.size === 0) {
+                 alert("Graph is empty after parsing.");
+                 return null;
+            }
+
+            return newGraph;
+        }
+
+        function loadGraph() {
+            stopAutoRun(); // Stop any ongoing auto-run
+
+            const newGraph = parseGraphInput();
+            if (!newGraph) {
+                // Keep previous graph if parsing fails
+                explanationElement.textContent = "Failed to load graph. Check input format.";
+                return;
+            }
+
+            graph = newGraph;
+            resetDFSState(); // Reset algorithm state
+            calculateNodePositions(); // Calculate positions for the new graph
+            drawGraph(); // Draw the initial state
+
+            // Check if start node exists
+            const startNode = startNodeInput.value.trim();
+            if (!graph.has(startNode)) {
+                 explanationElement.textContent = `Start node "${startNode}" not found in graph. Cannot start DFS.`;
+                 resetBtn.disabled = true; // Cannot reset if no valid start
+                 nextStepBtn.disabled = true;
+                 autoRunBtn.disabled = true;
+                 return;
+            }
+
+            // Initialize DFS state for the new graph
+            stack = [startNode]; // Push start node onto stack
+            explanationElement.textContent = `Graph loaded. Starting DFS from node "${startNode}". Click 'Next Step'.`;
+
+            // Enable relevant controls
+            resetBtn.disabled = false;
+            nextStepBtn.disabled = false;
+            autoRunBtn.disabled = false;
+        }
+
+        function randomizeGraph() {
+            const numNodes = Math.floor(Math.random() * 6) + 5; // 5 to 10 nodes
+            const nodes = Array.from({ length: numNodes }, (_, i) => String.fromCharCode(65 + i)); // A, B, C...
+            const newGraph = new Map();
+
+            nodes.forEach(node => newGraph.set(node, []));
+
+            // Add random edges (ensure some connectivity, maybe not strictly connected always)
+            const numEdges = Math.floor(Math.random() * numNodes * 1.5) + numNodes; // N to 2.5N edges
+
+            for (let i = 0; i < numEdges; i++) {
+                const u = nodes[Math.floor(Math.random() * numNodes)];
+                const v = nodes[Math.floor(Math.random() * numNodes)];
+                if (u !== v) { // Avoid self-loops
+                     const neighbors = newGraph.get(u);
+                     if (!neighbors.includes(v)) { // Avoid duplicate edges
+                         neighbors.push(v);
+                         neighbors.sort(); // Keep neighbors sorted (optional, helps consistency)
+                     }
+                }
+            }
+
+            // Convert to adjacency list string format for the textarea
+            const graphString = Array.from(newGraph.entries())
+                .map(([node, neighbors]) => `${node}: ${neighbors.join(', ')}`)
+                .join('\n');
+
+            graphInput.value = graphString;
+            startNodeInput.value = nodes[0] || ''; // Start from the first node
+            loadGraph(); // Load the randomized graph
+        }
+
+
+        function resetDFSState() {
+            visitedSet.clear();
+            dfsOrder = [];
+            stack = []; // Re-initialize stack based on start node in loadGraph
+            currentNode = null;
+            neighborIndex = 0;
+            traversalOrderElement.innerHTML = ''; // Clear traversal list
+            explanationElement.textContent = "DFS state reset.";
+            drawGraph(); // Redraw graph to initial state
+            stopAutoRun(); // Ensure auto-run is off
+            // Re-disable controls if graph isn't loaded or start node is invalid
+             if (!graph.has(startNodeInput.value.trim())) {
+                 resetBtn.disabled = true;
+                 nextStepBtn.disabled = true;
+                 autoRunBtn.disabled = true;
+                 autoRunBtn.textContent = 'Auto-Run';
+             } else {
+                 // If graph is valid, re-enable but not 'Auto-Run' until started
+                 resetBtn.disabled = false;
+                 nextStepBtn.disabled = false;
+                 autoRunBtn.disabled = false;
+                 autoRunBtn.textContent = 'Auto-Run';
+             }
+        }
+
+
+        function nextStepDFS() {
+            if (stack.length === 0 && currentNode === null) {
+                 explanationElement.textContent = "DFS Complete.";
+                 stopAutoRun();
+                 return; // DFS is complete
+            }
+
+            // State 1: Need to select the next node to process from the stack
+            if (currentNode === null) {
+                const nodeToProcess = stack.pop(); // Get node from stack
+
+                if (!nodeToProcess) { // Should not happen if stack.length > 0, but defensive
+                     explanationElement.textContent = "Error: Stack is empty unexpectedly.";
+                     stopAutoRun();
+                     return;
+                }
+
+                // If node was already visited (might happen in some stack orders, or if graph has cycles processed differently)
+                if (visitedSet.has(nodeToProcess)) {
+                    explanationElement.textContent = "Backtracking: Node " + nodeToProcess + " already fully processed.";
+                     // Visual: Ensure nodeToProcess is marked as Visited
+                    drawGraph(); // Redraw to confirm states
+                     // Stay in State 1, next step will pop next item
+                     if (stack.length === 0) nextStepDFS(); // If stack empty, immediately check completion state
+                     return;
+                }
+
+                // If node is not visited: Process it
+                dfsOrder.push(nodeToProcess); // Add to traversal order
+                visitedSet.add(nodeToProcess); // Mark as visited
+                currentNode = nodeToProcess; // Set as current node to explore neighbors
+                neighborIndex = 0; // Start checking neighbors from index 0
+
+                explanationElement.textContent = `Visited node ${nodeToProcess}. Added to traversal order.`;
+                 // Update traversal order display
+                const listItem = document.createElement('li');
+                listItem.textContent = nodeToProcess;
+                traversalOrderElement.appendChild(listItem);
+
+                drawGraph(); // Redraw to show node as visited/processing
+
+            }
+            // State 2: Currently processing neighbors of currentNode
+            else {
+                const neighbors = graph.get(currentNode) || [];
+                 // Sort neighbors alphabetically for consistent steps
+                const sortedNeighbors = [...neighbors].sort();
+
+                // Finished exploring neighbors of currentNode
+                if (neighborIndex >= sortedNeighbors.length) {
+                    explanationElement.textContent = `Finished exploring neighbors of ${currentNode}. Backtracking.`;
+                    currentNode = null; // Clear current node state
+                    neighborIndex = 0; // Reset neighbor index
+                    drawGraph(); // Redraw to ensure state is clear
+                     // Next step will go back to State 1 and pop from stack
+                    return;
+                }
+
+                // Explore the next neighbor
+                const neighbor = sortedNeighbors[neighborIndex];
+                neighborIndex++; // Move to the next neighbor for the *next* step
+
+                // Visual: Highlight the edge being considered
+                drawGraph(); // Draw state *before* processing this neighbor
+
+                if (visitedSet.has(neighbor)) {
+                    explanationElement.textContent = `Edge ${currentNode} -> ${neighbor}: ${neighbor} already visited.`;
+                    // Stay in State 2, neighborIndex is already incremented, next step checks next neighbor
+                } else {
+                    // Push the unvisited neighbor onto the stack
+                    stack.push(neighbor);
+                    explanationElement.textContent = `Edge ${currentNode} -> ${neighbor}: Pushing ${neighbor} onto stack.`;
+                    // Stay in State 2, neighborIndex is already incremented, next step checks next neighbor
+                     // We don't clear currentNode here. We continue showing edges from currentNode.
+                     // The next step will *still* try to explore the next neighbor from currentNode's list.
+                     // When we finish neighbors (neighborIndex >= sortedNeighbors.length), THEN we backtrack by setting currentNode = null.
+                }
+
+            }
+
+             // Check for completion after the step
+            if (stack.length === 0 && currentNode === null) {
+                 explanationElement.textContent += "\nDFS Complete."; // Add completion message
+                 stopAutoRun();
+                 nextStepBtn.disabled = true; // Disable manual step
+            }
+        }
+
+
+        function toggleAutoRun() {
+            if (isAutoRunning) {
+                stopAutoRun();
+            } else {
+                startAutoRun();
+            }
+        }
+
+        function startAutoRun() {
+            if (stack.length === 0 && currentNode === null) {
+                 explanationElement.textContent = "DFS Complete. Cannot start auto-run.";
+                 return; // Cannot auto-run if already complete
+            }
+            isAutoRunning = true;
+            autoRunBtn.textContent = 'Pause';
+            nextStepBtn.disabled = true; // Disable manual step during auto-run
+            // Use requestAnimationFrame for potentially smoother updates, but setTimeout is simpler
+            animationFrameId = setInterval(nextStepDFS, autoRunDelay);
+        }
+
+        function stopAutoRun() {
+            if (isAutoRunning) {
+                isAutoRunning = false;
+                autoRunBtn.textContent = 'Auto-Run';
+                nextStepBtn.disabled = false; // Re-enable manual step
+                if (animationFrameId !== null) {
+                    clearInterval(animationFrameId);
+                    animationFrameId = null;
+                }
+            }
+        }
+
+
+        // --- Event Listeners ---
+        loadGraphBtn.addEventListener('click', loadGraph);
+        randomizeGraphBtn.addEventListener('click', randomizeGraph);
+        resetBtn.addEventListener('click', resetDFSState);
+        nextStepBtn.addEventListener('click', nextStepDFS);
+        autoRunBtn.addEventListener('click', toggleAutoRun);
+
+        // Initial setup
+        window.addEventListener('resize', resizeCanvas); // Handle resize (though prompt implies fixed viewport)
+        resizeCanvas(); // Set initial canvas size
+
+        // Load default graph on page load
+        loadGraph();
+
+
+    </script>
+
+</body>
+</html>

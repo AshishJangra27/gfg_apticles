@@ -1,0 +1,449 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Coding Challenges by Company</title>
+    <style>
+        :root {
+            --gfg-green: #2f8d46;
+            --light-gray: #cccccc;
+            --header-height: 9vh;
+            --footer-height: 6vh;
+            --main-height: calc(100vh - var(--header-height) - var(--footer-height));
+            --left-panel-width: 35vw;
+            --right-panel-width: 65vw;
+            --explanation-height: 5vh;
+            --controls-height: 10vh; /* Adjust based on content */
+            --question-display-height: calc(var(--main-height) - var(--explanation-height) - var(--controls-height));
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: #ffffff;
+            color: #000000;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Crucial for non-scrolling */
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: var(--header-height);
+            background-color: #ffffff;
+            color: #000000;
+            display: flex;
+            align-items: center;
+            padding: 0 1vw;
+            box-sizing: border-box;
+            border-bottom: 1px solid #000000;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        header img {
+            height: 32px;
+            margin-right: 1vw;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8vh; /* Responsive font size */
+            font-weight: normal;
+        }
+
+        main {
+            height: var(--main-height);
+            display: flex;
+            flex-grow: 1; /* Occupy remaining space */
+            box-sizing: border-box;
+        }
+
+        .left-panel {
+            width: var(--left-panel-width);
+            border-right: 1px solid #000000;
+            padding: 1vh 1vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Ensure no scrolling */
+        }
+
+        .left-panel h2 {
+             margin-top: 0;
+             margin-bottom: 1vh;
+             font-size: 1.5vh;
+             font-weight: normal;
+        }
+
+        .company-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Align items to the top */
+        }
+
+        .company-item {
+            padding: 1vh 0.5vw;
+            margin-bottom: 0.5vh;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 1.5vh;
+            display: flex;
+            align-items: center;
+            height: calc((var(--main-height) - 2vh - 1.5vh - (5 * 0.5vh)) / 6); /* Distribute height */
+            box-sizing: border-box;
+        }
+
+        .company-item:hover {
+            background-color: rgba(47, 141, 70, 0.1); /* Light green hover */
+        }
+
+        .company-item.selected {
+            background-color: var(--gfg-green);
+            color: #ffffff;
+            border-color: var(--gfg-green);
+        }
+
+        .right-panel {
+            width: var(--right-panel-width);
+            display: flex;
+            flex-direction: column;
+            padding: 1vh 1vw;
+            box-sizing: border-box;
+            overflow: hidden; /* Ensure no scrolling */
+        }
+
+        .explanation-area {
+            height: var(--explanation-height);
+            margin-bottom: 1vh;
+            display: flex;
+            align-items: center;
+            font-size: 1.8vh;
+            font-weight: bold;
+            text-align: center;
+            justify-content: center;
+            word-wrap: break-word;
+            white-space: normal; /* Allow wrapping */
+            line-height: 1.2;
+        }
+
+        .question-display {
+            flex-grow: 1; /* Take remaining height */
+            padding: 1vh 1vw;
+            border: 1px solid var(--light-gray);
+            box-sizing: border-box;
+            font-size: 1.6vh;
+            line-height: 1.5;
+            overflow: hidden; /* Ensure no scrolling */
+        }
+
+        .question-display h3 {
+            margin-top: 0;
+            margin-bottom: 1vh;
+            font-size: 1.7vh;
+            font-weight: normal;
+        }
+
+        .question-display ul {
+            margin: 0;
+            padding-left: 2vw;
+        }
+
+         .question-display li {
+            margin-bottom: 0.5vh;
+         }
+
+        .controls {
+            height: var(--controls-height);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1vw;
+            margin-top: 1vh;
+        }
+
+        .controls button {
+            padding: 1vh 1.5vw;
+            font-family: monospace;
+            font-size: 1.5vh;
+            cursor: pointer;
+            border: 1px solid #000000;
+            background-color: #ffffff;
+            color: #000000;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        .controls button:hover:not(:disabled) {
+            background-color: var(--gfg-green);
+            color: #ffffff;
+            border-color: var(--gfg-green);
+        }
+
+        .controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            height: var(--footer-height);
+            background-color: var(--gfg-green);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5vh;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: #ffffff;
+            text-decoration: none;
+            margin: 0 1vw;
+            transition: text-decoration 0.2s;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>Explore Coding Challenges by Company</h1>
+    </header>
+
+    <main>
+        <div class="left-panel">
+            <h2>Companies</h2>
+            <ul class="company-list" id="company-list">
+                <!-- Company list items will be populated by JS -->
+            </ul>
+        </div>
+        <div class="right-panel">
+            <div id="explanation-area" class="explanation-area">Select a company from the left to explore challenges.</div>
+            <div id="question-display" class="question-display">
+                 <!-- Question topics will be displayed here -->
+            </div>
+            <div class="controls">
+                <button id="reset-btn">Reset</button>
+                <button id="randomize-btn">Randomize</button>
+                <button id="auto-run-btn">Auto-Run Demo</button>
+                <button id="next-step-btn">Next Step</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const companiesData = [
+            { name: "Google", questions: ["Arrays & Strings", "Trees & Graphs", "Dynamic Programming", "System Design Basics"] },
+            { name: "Amazon", questions: ["Arrays & Strings", "Linked Lists", "Trees", "Sorting & Searching", "System Design"] },
+            { name: "Microsoft", questions: ["Arrays & Strings", "Trees", "Graphs", "Dynamic Programming", "Concurrency"] },
+            { name: "Apple", questions: ["Arrays", "Graphs", "Data Structures", "Algorithms", "Object-Oriented Design"] },
+            { name: "Meta", questions: ["Graphs", "Trees", "Dynamic Programming", "Arrays & Strings", "System Design"] },
+            { name: "Netflix", questions: ["System Design", "Scalability", "Distributed Systems", "Algorithms"] }
+        ];
+
+        const companyListEl = document.getElementById('company-list');
+        const questionDisplayEl = document.getElementById('question-display');
+        const explanationAreaEl = document.getElementById('explanation-area');
+        const resetBtn = document.getElementById('reset-btn');
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const autoRunBtn = document.getElementById('auto-run-btn');
+        const nextStepBtn = document.getElementById('next-step-btn');
+
+        let selectedCompanyIndex = -1;
+        let autoRunInterval = null;
+        let autoRunStep = 0; // 0: initial, 1..N: select company N, N+1: finished cycle
+
+        // Populate company list
+        function populateCompanyList() {
+            companyListEl.innerHTML = '';
+            companiesData.forEach((company, index) => {
+                const li = document.createElement('li');
+                li.classList.add('company-item');
+                li.textContent = company.name;
+                li.dataset.index = index;
+                li.addEventListener('click', () => selectCompany(index));
+                companyListEl.appendChild(li);
+            });
+        }
+
+        // Select a company by index
+        function selectCompany(index) {
+            if (autoRunInterval) return; // Prevent interaction during auto-run
+
+            // Deselect previous
+            if (selectedCompanyIndex !== -1) {
+                const prevSelectedEl = companyListEl.querySelector(`.company-item[data-index="${selectedCompanyIndex}"]`);
+                if (prevSelectedEl) prevSelectedEl.classList.remove('selected');
+            }
+
+            selectedCompanyIndex = index;
+            const company = companiesData[index];
+
+            // Highlight new selection
+            const selectedEl = companyListEl.querySelector(`.company-item[data-index="${index}"]`);
+            if (selectedEl) selectedEl.classList.add('selected');
+
+            // Update question display
+            updateQuestionDisplay(company);
+
+            // Update explanation
+            explanationAreaEl.textContent = `Showing sample challenges for ${company.name}.`;
+
+            // Enable/Disable controls
+            resetBtn.disabled = false;
+            autoRunStep = 0; // Reset auto-run step when user interacts manually
+        }
+
+        // Update question display area
+        function updateQuestionDisplay(company) {
+            let html = company ? `<h3>Sample Challenge Topics:</h3><ul>` : '';
+            if (company && company.questions) {
+                company.questions.forEach(q => {
+                    html += `<li>${q}</li>`;
+                });
+                html += `</ul>`;
+            } else {
+                 html = '<p>Select a company to see sample challenge topics.</p>';
+            }
+            questionDisplayEl.innerHTML = html;
+        }
+
+        // Reset application state
+        function resetApp() {
+            stopAutoRun();
+            if (selectedCompanyIndex !== -1) {
+                const prevSelectedEl = companyListEl.querySelector(`.company-item[data-index="${selectedCompanyIndex}"]`);
+                if (prevSelectedEl) prevSelectedEl.classList.remove('selected');
+            }
+            selectedCompanyIndex = -1;
+            updateQuestionDisplay(null); // Clear display
+            explanationAreaEl.textContent = 'Select a company from the left to explore challenges.';
+            resetBtn.disabled = true;
+            autoRunStep = 0;
+            enableControls();
+        }
+
+        // Randomly select a company
+        function randomizeCompany() {
+             if (autoRunInterval) return;
+            const randomIndex = Math.floor(Math.random() * companiesData.length);
+            selectCompany(randomIndex);
+        }
+
+        // Start Auto-Run demo
+        function startAutoRun() {
+             if (autoRunInterval) return;
+
+            disableControls();
+            autoRunBtn.disabled = true; // Disable auto-run button itself
+
+            autoRunStep = 0; // Start from step 0 (initial state)
+
+            // Use nextStep logic for each step in auto-run
+            autoRunInterval = setInterval(() => {
+                nextStep();
+            }, 1500); // Adjust timing as needed
+
+             // Run the first step immediately
+            nextStep();
+        }
+
+        // Stop Auto-Run demo
+        function stopAutoRun() {
+            if (autoRunInterval) {
+                clearInterval(autoRunInterval);
+                autoRunInterval = null;
+                enableControls();
+                autoRunBtn.disabled = false; // Re-enable auto-run button
+            }
+        }
+
+        // Advance to the next step in demo sequence
+        function nextStep() {
+            stopAutoRun(); // Stop auto-run if Next Step is clicked manually
+            enableControls(); // Ensure controls are enabled if stopped by Next Step
+
+            const totalSteps = companiesData.length + 1; // +1 for the reset step
+
+            if (autoRunStep >= companiesData.length) {
+                 // Last step: Reset
+                resetApp();
+                autoRunStep = 0; // Reset step counter for the next cycle
+                explanationAreaEl.textContent = 'Demo finished. Select a company or run again.';
+                return;
+            }
+
+             // Select the next company in sequence
+            const nextIndex = autoRunStep;
+            selectCompany(nextIndex);
+            explanationAreaEl.textContent = `Step ${autoRunStep + 1}/${companiesData.length}: Exploring ${companiesData[nextIndex].name}.`;
+
+            autoRunStep++; // Move to the next step
+        }
+
+
+        // Disable relevant controls during Auto-Run
+        function disableControls() {
+            resetBtn.disabled = true;
+            randomizeBtn.disabled = true;
+            // autoRunBtn remains active to potentially stop? No, brief says disable.
+            autoRunBtn.disabled = true;
+            nextStepBtn.disabled = true;
+             // Disable company items as well
+            companyListEl.querySelectorAll('.company-item').forEach(item => {
+                item.style.pointerEvents = 'none';
+                item.style.opacity = '0.8';
+            });
+        }
+
+        // Enable controls after Auto-Run stops or manually
+        function enableControls() {
+            resetBtn.disabled = selectedCompanyIndex === -1; // Only enable reset if something is selected
+            randomizeBtn.disabled = false;
+            autoRunBtn.disabled = false;
+            nextStepBtn.disabled = false;
+             // Enable company items
+            companyListEl.querySelectorAll('.company-item').forEach(item => {
+                item.style.pointerEvents = 'auto';
+                 item.style.opacity = '1';
+            });
+        }
+
+
+        // Initialize the app
+        function init() {
+            populateCompanyList();
+            resetApp(); // Start in a clean state
+            resetBtn.disabled = true; // Reset is disabled initially
+        }
+
+        // Add event listeners
+        resetBtn.addEventListener('click', resetApp);
+        randomizeBtn.addEventListener('click', randomizeCompany);
+        autoRunBtn.addEventListener('click', startAutoRun);
+        nextStepBtn.addEventListener('click', nextStep);
+
+        // Run initialization
+        init();
+
+    </script>
+
+</body>
+</html>

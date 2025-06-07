@@ -1,0 +1,572 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Depth First Search Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: #ffffff;
+            color: #000000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        header {
+            height: 8vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            padding: 0 2vw;
+            box-sizing: border-box;
+            border-bottom: 1px solid #cccccc;
+            position: relative; /* Needed for potential z-index */
+            z-index: 1; /* Ensure header is above main content if needed */
+        }
+
+        header img {
+            height: 3.2vh; /* Adjusted from 32px to vh for scaling */
+            margin-right: 1vw;
+        }
+
+        header h1 {
+            font-size: 2.5vh; /* Adjusted font size to vh */
+            margin: 0;
+            font-weight: normal;
+        }
+
+        main {
+            flex-grow: 1;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1vh 2vw;
+            box-sizing: border-box;
+            overflow: hidden; /* Prevent scrolling within main */
+            position: relative; /* Needed for child positioning if any */
+        }
+
+        .canvas-container {
+            flex-grow: 1; /* Take up available space */
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1vh;
+        }
+
+        canvas {
+            width: 96vw; /* Fill container width, minus padding */
+            height: 100%; /* Fill container height */
+            border: 1px solid #cccccc;
+            box-sizing: border-box;
+            display: block; /* Remove extra space below canvas */
+        }
+
+        .controls-panel {
+            width: 100%;
+            height: 15vh; /* Fixed height for controls and text */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1vh 0;
+            box-sizing: border-box;
+        }
+
+        .controls-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1vw; /* Spacing between buttons */
+            margin-bottom: 1.5vh; /* Space between buttons and text */
+            flex-wrap: wrap; /* Allow wrapping if screen is too narrow */
+        }
+
+        button {
+            padding: 1vh 1.5vw; /* Padding using vh/vw */
+            font-size: 1.8vh; /* Font size using vh */
+            cursor: pointer;
+            border: 1px solid #000000;
+            background-color: #ffffff;
+            color: #000000;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #2f8d46;
+            color: #ffffff;
+            border-color: #2f8d46;
+        }
+
+        button:active:not(:disabled) {
+            background-color: #257438;
+            border-color: #257438;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .explanation-text {
+            font-size: 2vh; /* Font size using vh */
+            text-align: center;
+            min-height: 4vh; /* Reserve space for 2 lines */
+            padding: 0.5vh 1vw;
+            box-sizing: border-box;
+        }
+
+
+        footer {
+            height: 5vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid #cccccc;
+            position: relative; /* Needed for potential z-index */
+            z-index: 1; /* Ensure footer is above main content if needed */
+        }
+
+        footer a {
+            color: #2f8d46;
+            text-decoration: none;
+            margin: 0 1vw; /* Spacing between links */
+            font-size: 1.8vh; /* Font size using vh */
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GFG Logo">
+        <h1>Depth First Search Visualizer</h1>
+    </header>
+
+    <main>
+        <div class="canvas-container">
+            <canvas id="graphCanvas"></canvas>
+        </div>
+        <div class="controls-panel">
+            <div class="controls-buttons">
+                <button id="resetBtn">Reset</button>
+                <!-- Randomize removed for simplicity with fixed graph -->
+                <button id="nextBtn">Next Step</button>
+                <button id="autoRunBtn">Auto-Run</button>
+            </div>
+            <div id="explanationText" class="explanation-text">
+                Click 'Next Step' or 'Auto-Run' to begin DFS.
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('resetBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const autoRunBtn = document.getElementById('autoRunBtn');
+        const explanationText = document.getElementById('explanationText');
+        const canvasContainer = document.querySelector('.canvas-container');
+
+        let autoRunInterval = null;
+        const AUTO_RUN_DELAY = 1000; // 1 second delay
+
+        // Graph definition (Nodes with positions, Edges)
+        // Positions are percentages (0 to 1) of canvas width/height
+        const nodes = [
+            { id: 'A', x: 0.15, y: 0.2 },
+            { id: 'B', x: 0.4, y: 0.5 },
+            { id: 'C', x: 0.4, y: 0.1 },
+            { id: 'D', x: 0.65, y: 0.7 },
+            { id: 'E', x: 0.75, y: 0.4 },
+            { id: 'F', x: 0.65, y: 0.1 },
+            { id: 'G', x: 0.9, y: 0.3 }
+        ];
+
+        // Adjacency list (Undirected graph)
+        const adjList = {
+            'A': ['B', 'C'],
+            'B': ['A', 'D', 'E'],
+            'C': ['A', 'F'],
+            'D': ['B', 'E'],
+            'E': ['B', 'D', 'G'],
+            'F': ['C'],
+            'G': ['E']
+        };
+
+        // Pre-computed sequence of steps for the visualization
+        // This simplifies step-by-step execution and explanation
+        let dfsSteps = [];
+        let currentStepIndex = 0;
+
+        // Visualization state
+        let visitedNodes = new Set(); // Nodes whose exploration is complete
+        let visitingNode = null;     // The node currently being processed
+        let traversalEdge = null;    // The edge currently being traversed
+
+        // Colors and styles
+        const NODE_RADIUS = 20; // Pixels, adjust dynamically if needed
+        const NODE_COLOR_DEFAULT = '#ffffff';
+        const NODE_BORDER_DEFAULT = '#000000';
+        const NODE_COLOR_VISITED = '#cccccc';
+        const NODE_BORDER_VISITED = '#cccccc';
+        const NODE_COLOR_CURRENT = '#ffffff'; // Current node is white fill
+        const NODE_BORDER_CURRENT = '#2f8d46'; // GFG green border
+        const EDGE_COLOR_DEFAULT = '#000000';
+        const EDGE_COLOR_TRAVERSAL = '#2f8d46'; // GFG green for active edge
+        const TEXT_COLOR = '#000000';
+        const FONT_SIZE = 16; // Pixels
+
+        // Function to resize canvas based on container
+        function resizeCanvas() {
+            canvas.width = canvasContainer.clientWidth;
+            canvas.height = canvasContainer.clientHeight;
+            drawGraph(); // Redraw graph after resize
+        }
+
+        // Function to draw the graph based on the current state
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Edges
+            ctx.lineWidth = 2;
+            for (const [u, neighbors] of Object.entries(adjList)) {
+                 // Use a Set to avoid drawing duplicate edges in undirected graph
+                const drawnEdges = new Set();
+                const nodeU = nodes.find(n => n.id === u);
+
+                for (const v of neighbors) {
+                    const edgeId1 = `${u}-${v}`;
+                    const edgeId2 = `${v}-${u}`;
+                    // Only draw if not already drawn (for undirected)
+                    if (!drawnEdges.has(edgeId1) && !drawnEdges.has(edgeId2)) {
+                        const nodeV = nodes.find(n => n.id === v);
+
+                        ctx.strokeStyle = (traversalEdge && ((traversalEdge[0] === u && traversalEdge[1] === v) || (traversalEdge[0] === v && traversalEdge[1] === u)))
+                                          ? EDGE_COLOR_TRAVERSAL : EDGE_COLOR_DEFAULT;
+
+                        ctx.beginPath();
+                        ctx.moveTo(nodeU.x * canvas.width, nodeU.y * canvas.height);
+                        ctx.lineTo(nodeV.x * canvas.width, nodeV.y * canvas.height);
+                        ctx.stroke();
+
+                        drawnEdges.add(edgeId1);
+                    }
+                }
+            }
+
+            // Draw Nodes
+            nodes.forEach(node => {
+                const x = node.x * canvas.width;
+                const y = node.y * canvas.height;
+
+                // Node body
+                ctx.beginPath();
+                ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
+
+                if (visitedNodes.has(node.id)) {
+                    ctx.fillStyle = NODE_COLOR_VISITED;
+                    ctx.strokeStyle = NODE_BORDER_VISITED;
+                } else if (visitingNode === node.id) {
+                    ctx.fillStyle = NODE_COLOR_CURRENT;
+                    ctx.strokeStyle = NODE_BORDER_CURRENT;
+                } else {
+                    ctx.fillStyle = NODE_COLOR_DEFAULT;
+                    ctx.strokeStyle = NODE_BORDER_DEFAULT;
+                }
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+
+                // Node text (ID)
+                ctx.fillStyle = TEXT_COLOR;
+                ctx.font = `${FONT_SIZE}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.id, x, y);
+            });
+        }
+
+        // Function to perform DFS and generate steps
+        function computeDFSSteps(startNodeId) {
+            dfsSteps = [];
+            currentStepIndex = 0;
+            const visited = new Set();
+            const stack = [];
+
+            // Need to handle potential disconnected components, though our graph is connected.
+            // For simplicity, we assume a single start node covers the component of interest.
+            // If the graph could be disconnected, we'd need a loop over all nodes.
+
+            dfsSteps.push({ type: 'start', node: startNodeId, text: `Starting DFS at Node ${startNodeId}.` });
+
+            function dfs(nodeId) {
+                dfsSteps.push({ type: 'visit', node: nodeId, text: `Visiting Node ${nodeId}.` });
+                visited.add(nodeId);
+                stack.push(nodeId); // Add to conceptual stack state for visualization
+
+                const neighbors = adjList[nodeId] || [];
+                // Sort neighbors for deterministic step generation
+                neighbors.sort();
+
+                for (const neighborId of neighbors) {
+                     // Find the index of the step where we explore this edge
+                     const exploreStepIndex = dfsSteps.length;
+                     dfsSteps.push({ type: 'explore', from: nodeId, to: neighborId, text: `Exploring edge ${nodeId} -> ${neighborId}.` });
+
+                    if (!visited.has(neighborId)) {
+                        dfs(neighborId); // Recurse
+                         // After recursive call returns, we are "backtracking" from the neighbor
+                        dfsSteps.push({ type: 'backtrack_from_neighbor', from: nodeId, to: neighborId, text: `Finished exploring branch from ${neighborId}. Backtracking.` });
+
+                    } else {
+                         // If visited, the 'explore' step is still relevant visually,
+                         // but we immediately state it's visited and move on conceptually.
+                         // We can update the text of the previous 'explore' step or add a new one.
+                         // Let's update the text of the previous 'explore' step for brevity.
+                         dfsSteps[exploreStepIndex].text = `Edge ${nodeId} -> ${neighborId} leads to visited Node ${neighborId}. Skipping.`;
+                    }
+                }
+                // When loop finishes, all neighbors explored from nodeId. Pop from conceptual stack.
+                 dfsSteps.push({ type: 'finish_node', node: nodeId, text: `All neighbors of ${nodeId} explored. Backtracking from ${nodeId}.` });
+                 // No explicit pop visualization needed, just state change
+            }
+
+            // Start DFS from the chosen node
+            dfs(startNodeId);
+
+            dfsSteps.push({ type: 'complete', text: 'DFS complete.' });
+
+             // For undirected graph visualization, consolidate backtracking steps slightly
+            // A node is 'visited' (greyed out) when ALL its neighbors have been explored *from that node*.
+            // The previous logic marks visited eagerly. Let's refine the state updates.
+            // A node is 'visiting' (green border) when it's the current node being explored FROM.
+            // A node is 'visited' (greyed out) when it's popped from the conceptual stack, meaning all reachable nodes from it have been visited.
+
+            // Re-computing steps with clearer state transitions for visualization
+             dfsSteps = [];
+             const visitedSet = new Set(); // Nodes we have *entered*
+             const finishedSet = new Set(); // Nodes from which we have *fully explored*
+             const stackVis = []; // Conceptual stack for visualization
+
+             function dfsVis(nodeId) {
+                 visitedSet.add(nodeId);
+                 stackVis.push(nodeId); // Add to conceptual stack for visualization
+                 dfsSteps.push({
+                     type: 'enter',
+                     node: nodeId,
+                     text: `Visiting Node ${nodeId}.`,
+                     state: { visiting: nodeId, visited: new Set(visitedSet), stack: [...stackVis], edge: null }
+                 });
+
+                 const neighbors = adjList[nodeId] || [];
+                 neighbors.sort();
+
+                 for (const neighborId of neighbors) {
+                      // Avoid traversing back immediately in undirected graph unless it's the only path
+                     // Simple check: if neighbor is the immediate parent on stack (not applicable with this simple state tracking)
+                     // Let's rely on the visited check to avoid infinite loops.
+                     // The visualization shows traversal regardless, the logic just decides *not* to recurse.
+
+                     // Show exploring the edge
+                     dfsSteps.push({
+                         type: 'explore',
+                         from: nodeId,
+                         to: neighborId,
+                         text: `Exploring edge ${nodeId} -> ${neighborId}.`,
+                         state: { visiting: nodeId, visited: new Set(visitedSet), stack: [...stackVis], edge: [nodeId, neighborId] }
+                     });
+
+
+                     if (!visitedSet.has(neighborId)) {
+                         // If neighbor is not visited, recurse
+                         dfsVis(neighborId);
+                         // When recursion returns, we are back at nodeId, clear the active edge
+                         dfsSteps.push({
+                             type: 'backtrack_edge',
+                             from: neighborId,
+                             to: nodeId,
+                             text: `Finished exploring branch from ${neighborId}. Backtracking to ${nodeId}.`,
+                             state: { visiting: nodeId, visited: new Set(visitedSet), finished: new Set(finishedSet), stack: [...stackVis], edge: null } // Edge is cleared
+                         });
+
+                     } else {
+                         // If neighbor is visited, just note it and continue loop
+                         dfsSteps.push({
+                             type: 'skip_visited',
+                             from: nodeId,
+                             to: neighborId,
+                             text: `Edge ${nodeId} -> ${neighborId} leads to visited Node ${neighborId}. Skipping.`,
+                             state: { visiting: nodeId, visited: new Set(visitedSet), finished: new Set(finishedSet), stack: [...stackVis], edge: null } // Edge is cleared after check
+                         });
+                     }
+                 }
+
+                 // After exploring all neighbors, node is finished
+                 finishedSet.add(nodeId);
+                 stackVis.pop(); // Pop from conceptual stack
+                  dfsSteps.push({
+                     type: 'finish_node',
+                     node: nodeId,
+                     text: `All neighbors of ${nodeId} explored. Backtracking from ${nodeId}.`,
+                     state: { visiting: stackVis.length > 0 ? stackVis[stackVis.length - 1] : null, visited: new Set(visitedSet), finished: new Set(finishedSet), stack: [...stackVis], edge: null } // Visiting is parent or null
+                 });
+             }
+
+             // Initial state before starting
+             dfsSteps.push({
+                 type: 'initial',
+                 text: "Click 'Next Step' or 'Auto-Run' to begin DFS.",
+                 state: { visiting: null, visited: new Set(), finished: new Set(), stack: [], edge: null }
+             });
+
+             // Start the process
+             dfsVis(startNodeId);
+
+             // Final state
+             dfsSteps.push({
+                 type: 'complete',
+                 text: 'DFS complete.',
+                 state: { visiting: null, visited: new Set(visitedSet), finished: new Set(finishedSet), stack: [], edge: null }
+             });
+
+        }
+
+
+        // Function to apply a step's state and redraw
+        function applyStep(step) {
+             if (!step || !step.state) {
+                console.error("Invalid step:", step);
+                return;
+            }
+            visitingNode = step.state.visiting;
+            // Note: In this visualization, 'visited' Set will represent nodes we've *entered*.
+            // The 'finished' Set represents nodes fully explored from.
+            visitedNodes = step.state.finished; // Use 'finished' set for greyed out state
+            traversalEdge = step.state.edge;
+            explanationText.textContent = step.text;
+            drawGraph();
+        }
+
+        // Function to move to the next step
+        function nextStep() {
+            if (currentStepIndex < dfsSteps.length - 1) {
+                currentStepIndex++;
+                applyStep(dfsSteps[currentStepIndex]);
+                updateButtonStates();
+            }
+        }
+
+        // Function to reset the visualization
+        function reset() {
+            stopAutoRun();
+            currentStepIndex = 0; // Start from the initial state step
+            visitingNode = null;
+            visitedNodes = new Set();
+            traversalEdge = null;
+            explanationText.textContent = "Click 'Next Step' or 'Auto-Run' to begin DFS.";
+            drawGraph();
+            updateButtonStates();
+        }
+
+        // Function to start auto-run
+        function autoRun() {
+            if (currentStepIndex >= dfsSteps.length - 1) {
+                // Already finished, reset first
+                reset();
+            }
+            stopAutoRun(); // Ensure no multiple intervals running
+            autoRunBtn.textContent = 'Pause'; // Optional: Change button text
+            // autoRunBtn.disabled = true; // Disable itself while running
+            // nextBtn.disabled = true; // Disable next step while running
+
+            autoRunInterval = setInterval(() => {
+                if (currentStepIndex < dfsSteps.length - 1) {
+                    nextStep();
+                } else {
+                    stopAutoRun();
+                }
+            }, AUTO_RUN_DELAY);
+            updateButtonStates(); // Update based on running state
+        }
+
+        // Function to stop auto-run
+        function stopAutoRun() {
+            if (autoRunInterval !== null) {
+                clearInterval(autoRunInterval);
+                autoRunInterval = null;
+                autoRunBtn.textContent = 'Auto-Run'; // Optional: Reset button text
+                updateButtonStates(); // Update based on stopped state
+            }
+        }
+
+        // Function to update button disabled states
+        function updateButtonStates() {
+            const isFinished = currentStepIndex >= dfsSteps.length - 1;
+            const isRunning = autoRunInterval !== null;
+
+            resetBtn.disabled = false; // Reset is always available
+
+            nextBtn.disabled = isFinished || isRunning;
+            autoRunBtn.disabled = isFinished || isRunning; // Disable auto-run/pause button while running or finished
+
+            // Re-enable buttons if paused
+             if (!isRunning && currentStepIndex < dfsSteps.length - 1) {
+                 nextBtn.disabled = false;
+                 autoRunBtn.disabled = false;
+             }
+              if (isRunning) {
+                 // While running, the button acts as pause (though we just stop interval)
+                 autoRunBtn.disabled = false; // Keep it enabled to allow clicking again
+                 // Revert button text if needed, but simple disable/enable is cleaner
+              }
+
+             if (isFinished) {
+                 nextBtn.disabled = true;
+                 autoRunBtn.disabled = true;
+                 stopAutoRun(); // Ensure interval stops if somehow still running
+             }
+
+        }
+
+
+        // --- Initialization ---
+        window.addEventListener('resize', resizeCanvas);
+        resetBtn.addEventListener('click', reset);
+        nextBtn.addEventListener('click', nextStep);
+        autoRunBtn.addEventListener('click', () => {
+             if (autoRunInterval) {
+                 stopAutoRun(); // Clicking while running stops it
+             } else {
+                 autoRun(); // Clicking while stopped starts it
+             }
+        });
+
+
+        // Initial setup
+        computeDFSSteps(nodes[0].id); // Compute steps starting from the first node ('A')
+        applyStep(dfsSteps[0]); // Apply the initial state (step 0)
+        resizeCanvas(); // Set initial canvas size and draw
+
+
+    </script>
+
+</body>
+</html>

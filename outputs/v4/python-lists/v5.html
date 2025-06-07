@@ -1,0 +1,792 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python List Explorer</title>
+    <style>
+        /* Global Styles */
+        :root {
+            --gfg-green: #2f8d46;
+            --light-gray: #cccccc;
+            --black: #000000;
+            --white: #ffffff;
+            font-family: monospace;
+            color: var(--black);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Strict no scrolling */
+            background-color: var(--white);
+            display: flex;
+            flex-direction: column;
+        }
+
+        button {
+            font-family: monospace;
+            padding: 0.5vh 0.8vw;
+            margin: 0.5vh 0.2vw;
+            border: 1px solid var(--black);
+            background-color: var(--white);
+            cursor: pointer;
+            font-size: 1.8vh; /* Relative to viewport height */
+            line-height: 1; /* Minimal line height */
+            transition: background-color 0.1s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--light-gray);
+        }
+
+         button:active:not(:disabled) {
+            background-color: var(--gfg-green);
+            color: var(--white);
+            border-color: var(--gfg-green);
+        }
+
+        button:disabled {
+             opacity: 0.6;
+             cursor: not-allowed;
+        }
+
+        input[type="text"], input[type="number"] {
+            font-family: monospace;
+            padding: 0.4vh 0.5vw;
+            margin: 0.5vh 0.2vw;
+            border: 1px solid var(--black);
+            font-size: 1.8vh;
+            line-height: 1;
+            width: 8vw; /* Example width, adjust as needed */
+            min-width: 60px; /* Minimum width to prevent crushing */
+        }
+
+         input:disabled {
+            background-color: var(--light-gray);
+         }
+
+        label {
+             font-size: 1.8vh;
+             margin-left: 0.5vw;
+        }
+
+
+        /* Layout Structure */
+        #header {
+            height: 8vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--light-gray);
+            padding: 0 2vw;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #header img {
+            height: 4vh; /* Adjusted based on brief (32px height approx 3vh) */
+            margin-right: 2vw;
+        }
+
+        #header h1 {
+            font-size: 3vh;
+            flex-grow: 1; /* Title takes available space */
+            text-align: center;
+             /* Keep title from overflowing into logo/edge */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #main-panel {
+            height: 87vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            padding: 1vh 2vw;
+            flex-grow: 1; /* Take remaining height */
+        }
+
+        #list-visualization-area {
+            height: 40vh;
+            width: 100%;
+            border: 1px solid var(--light-gray);
+            margin-bottom: 1vh;
+            display: flex;
+            align-items: flex-start; /* Align items to top */
+            padding: 2vh 1vw;
+            overflow-x: auto; /* Allow horizontal scrolling for list if needed */
+            overflow-y: hidden; /* Hide vertical scrolling */
+            white-space: nowrap; /* Prevent wrapping of list elements */
+             scrollbar-width: thin; /* Make scrollbar thinner */
+             scrollbar-color: var(--gfg-green) var(--light-gray);
+        }
+         /* Style scrollbar for Chrome/Safari */
+        #list-visualization-area::-webkit-scrollbar {
+            height: 0.8vh;
+        }
+        #list-visualization-area::-webkit-scrollbar-track {
+            background: var(--light-gray);
+        }
+        #list-visualization-area::-webkit-scrollbar-thumb {
+            background-color: var(--gfg-green);
+            border-radius: 20px;
+            border: 1px solid var(--light-gray);
+        }
+
+
+        /* Style for list elements */
+        .list-element-container {
+            display: inline-flex; /* Use inline-flex to keep elements side-by-side */
+            flex-direction: column;
+            align-items: center;
+            margin: 0 0.5vw; /* Space between elements */
+            min-width: 5vw; /* Minimum width for an element */
+            max-width: 8vw; /* Maximum width */
+            overflow: hidden; /* Hide overflow text */
+            text-overflow: ellipsis; /* Add ellipsis if text overflows */
+            border: 2px solid transparent; /* Placeholder for highlight */
+            padding: 0.5vh 0.2vw; /* Add padding inside border */
+            transition: border-color 0.2s ease;
+        }
+
+         .list-element-container.highlight {
+            border-color: var(--gfg-green);
+        }
+
+        .element-index {
+            font-size: 1.6vh;
+            color: var(--black);
+            margin-bottom: 0.5vh;
+            min-height: 2vh; /* Reserve space */
+            text-align: center;
+            width: 100%; /* Center index over box */
+        }
+
+        .element-value {
+            width: 100%; /* Make value box fill container width */
+            height: 6vh; /* Fixed height for value box */
+            border: 1px solid var(--black);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5vh;
+            background-color: var(--white);
+            overflow: hidden;
+            text-overflow: ellipsis;
+             white-space: nowrap; /* Prevent value from wrapping */
+        }
+
+        #controls-area {
+            height: 35vh;
+            width: 100%;
+            border: 1px solid var(--light-gray);
+            margin-bottom: 1vh;
+            padding: 1vh 1vw;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Space between control groups */
+            overflow-y: auto; /* Allow controls to scroll if many wrap */
+             scrollbar-width: thin;
+             scrollbar-color: var(--gfg-green) var(--light-gray);
+        }
+
+         #controls-area::-webkit-scrollbar {
+            width: 0.8vw;
+         }
+         #controls-area::-webkit-scrollbar-track {
+            background: var(--light-gray);
+         }
+         #controls-area::-webkit-scrollbar-thumb {
+            background-color: var(--gfg-green);
+            border-radius: 20px;
+            border: 1px solid var(--light-gray);
+         }
+
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* Allow controls to wrap if needed */
+        }
+         .control-group label {
+            margin-right: 0.5vw;
+         }
+        .control-group input {
+            margin-right: 0.5vw;
+        }
+
+
+        #explanation-area {
+            height: 12vh;
+            width: 100%;
+            border: 1px solid var(--light-gray);
+            padding: 1vh 1vw;
+            font-size: 2vh;
+            overflow-y: auto; /* Allow scrolling if explanation gets long */
+            flex-shrink: 0; /* Prevent shrinking */
+             scrollbar-width: thin;
+             scrollbar-color: var(--gfg-green) var(--light-gray);
+        }
+         #explanation-area::-webkit-scrollbar {
+             width: 0.8vw;
+         }
+         #explanation-area::-webkit-scrollbar-track {
+            background: var(--light-gray);
+         }
+         #explanation-area::-webkit-scrollbar-thumb {
+            background-color: var(--gfg-green);
+            border-radius: 20px;
+            border: 1px solid var(--light-gray);
+         }
+
+
+        #footer {
+            height: 5vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid var(--light-gray);
+            flex-shrink: 0; /* Prevent shrinking */
+            font-size: 1.8vh;
+        }
+
+        #footer a {
+            color: var(--gfg-green);
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        #footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Specific control layout adjustments */
+        #demo-controls {
+             margin-top: 2vh;
+             border-top: 1px solid var(--light-gray);
+             padding-top: 1.5vh;
+             justify-content: center; /* Center demo buttons */
+        }
+         #demo-controls button {
+             min-width: 12vw; /* Give demo buttons more space */
+         }
+
+
+    </style>
+</head>
+<body>
+
+    <header id="header">
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>Python List Explorer</h1>
+    </header>
+
+    <main id="main-panel">
+        <section id="list-visualization-area">
+            <!-- List elements will be rendered here by JavaScript -->
+        </section>
+
+        <section id="controls-area">
+            <div class="control-group">
+                <label for="append-value">Append:</label>
+                <input type="text" id="append-value" placeholder="Value">
+                <button id="append-btn">Append</button>
+            </div>
+
+            <div class="control-group">
+                <label for="insert-index">Insert:</label>
+                <input type="number" id="insert-index" placeholder="Index">
+                <input type="text" id="insert-value" placeholder="Value">
+                <button id="insert-btn">Insert</button>
+            </div>
+
+            <div class="control-group">
+                <label for="remove-value">Remove First:</label>
+                <input type="text" id="remove-value" placeholder="Value">
+                <button id="remove-btn">Remove</button>
+            </div>
+
+             <div class="control-group">
+                <label for="pop-index">Pop:</label>
+                <input type="number" id="pop-index" placeholder="Index (optional)">
+                <button id="pop-btn">Pop</button>
+            </div>
+
+             <div class="control-group">
+                <label for="access-index">Get Element:</label>
+                <input type="number" id="access-index" placeholder="Index">
+                <button id="access-btn">Get</button>
+            </div>
+
+            <div class="control-group">
+                <label for="modify-index">Set Element:</label>
+                <input type="number" id="modify-index" placeholder="Index">
+                <input type="text" id="modify-value" placeholder="New Value">
+                <button id="modify-btn">Set</button>
+            </div>
+
+            <div id="demo-controls" class="control-group">
+                 <button id="reset-btn">Reset</button>
+                 <button id="randomize-btn">Randomize</button>
+                 <button id="auto-run-btn">Start Demo</button>
+                 <button id="next-step-btn" disabled>Next Step</button>
+            </div>
+
+        </section>
+
+        <section id="explanation-area">
+            <div id="explanation-text">Ready to explore Python lists!</div>
+        </section>
+    </main>
+
+    <footer id="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <span>|</span>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        let myList = [10, 20, 30];
+        const listVisArea = document.getElementById('list-visualization-area');
+        const explanationText = document.getElementById('explanation-text');
+
+        // Operation Inputs
+        const appendValueInput = document.getElementById('append-value');
+        const insertIndexInput = document.getElementById('insert-index');
+        const insertValueInput = document.getElementById('insert-value');
+        const removeValueInput = document.getElementById('remove-value');
+        const popIndexInput = document.getElementById('pop-index');
+        const accessIndexInput = document.getElementById('access-index');
+        const modifyIndexInput = document.getElementById('modify-index');
+        const modifyValueInput = document.getElementById('modify-value');
+
+        // Operation Buttons
+        const appendBtn = document.getElementById('append-btn');
+        const insertBtn = document.getElementById('insert-btn');
+        const removeBtn = document.getElementById('remove-btn');
+        const popBtn = document.getElementById('pop-btn');
+        const accessBtn = document.getElementById('access-btn');
+        const modifyBtn = document.getElementById('modify-btn');
+
+        // Demo Buttons
+        const resetBtn = document.getElementById('reset-btn');
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const autoRunBtn = document.getElementById('auto-run-btn');
+        const nextStepBtn = document.getElementById('next-step-btn');
+
+        let autoRunSequence = [];
+        let autoRunIndex = 0;
+        let isAutoRunning = false;
+        // No automatic delay, user presses 'Next Step' for each step
+
+
+        function renderList() {
+            listVisArea.innerHTML = ''; // Clear current visualization
+            if (myList.length === 0) {
+                 listVisArea.innerHTML = '<div style="font-size: 2vh; color: var(--light-gray); width: 100%; text-align: center;">List is empty []</div>';
+                 return;
+            }
+
+            myList.forEach((item, index) => {
+                const container = document.createElement('div');
+                container.classList.add('list-element-container');
+                 // Store index on the element for easy access during highlight
+                container.dataset.index = index;
+
+                const indexSpan = document.createElement('div');
+                indexSpan.classList.add('element-index');
+                indexSpan.textContent = index;
+
+                const valueDiv = document.createElement('div');
+                valueDiv.classList.add('element-value');
+                // Truncate value if too long for display
+                const displayValue = String(item);
+                valueDiv.textContent = displayValue; // Let CSS ellipsis handle it
+
+
+                container.appendChild(indexSpan);
+                container.appendChild(valueDiv);
+
+                listVisArea.appendChild(container);
+            });
+             // Scroll list visualization area to the end if list grows
+             listVisArea.scrollLeft = listVisArea.scrollWidth;
+        }
+
+        function updateExplanation(text) {
+            explanationText.textContent = text;
+        }
+
+        function getNumericInput(inputElement, name) {
+            const value = parseInt(inputElement.value, 10);
+            if (isNaN(value)) {
+                if (!isAutoRunning) updateExplanation(`Error: Invalid ${name}. Please enter a number.`);
+                return NaN;
+            }
+            return value;
+        }
+
+        function getValueInput(inputElement) {
+             const value = inputElement.value.trim();
+             if (value === "") {
+                 // Allow empty string as a valid value
+                 return "";
+             }
+             // Simple type conversion attempt - Python lists can hold mixed types
+             if (!isNaN(value) && String(parseFloat(value)) === value) { // Check if it's a valid number (int or float)
+                 return parseFloat(value);
+             }
+             return value; // Otherwise, treat as string
+        }
+
+
+        // --- Operation Implementations ---
+
+        function handleAppend(value = getValueInput(appendValueInput)) {
+             if (!isAutoRunning) appendValueInput.value = ''; // Clear if manual
+            myList.push(value);
+            renderList();
+            updateExplanation(`Appended ${JSON.stringify(value)}.`);
+        }
+
+        function handleInsert(index = getNumericInput(insertIndexInput, 'index'), value = getValueInput(insertValueInput)) {
+            if (isNaN(index)) return false; // Indicate failure for auto-run
+
+            if (!isAutoRunning) { // Clear if manual
+                 insertIndexInput.value = '';
+                 insertValueInput.value = '';
+            }
+
+            // Python insert allows inserting at list length (same as append)
+            if (index < 0 || index > myList.length) {
+                updateExplanation(`Error: Index ${index} is out of bounds.`);
+                return false; // Indicate failure
+            }
+
+            myList.splice(index, 0, value);
+            renderList();
+            updateExplanation(`Inserted ${JSON.stringify(value)} at index ${index}.`);
+            return true; // Indicate success
+        }
+
+         function handleRemove(value = getValueInput(removeValueInput)) {
+            if (!isAutoRunning) removeValueInput.value = ''; // Clear if manual
+
+            const index = myList.indexOf(value);
+            if (index === -1) {
+                updateExplanation(`Error: Value ${JSON.stringify(value)} not found.`);
+                return false; // Indicate failure
+            }
+
+            myList.splice(index, 1);
+            renderList();
+            updateExplanation(`Removed first occurrence of ${JSON.stringify(value)}.`);
+            return true; // Indicate success
+         }
+
+
+        function handlePop(indexInput = popIndexInput.value.trim()) {
+             if (!isAutoRunning) popIndexInput.value = ''; // Clear if manual
+
+             let poppedValue;
+             let index;
+
+             if (indexInput === "") {
+                 // Pop last element
+                 if (myList.length === 0) {
+                     updateExplanation(`Error: Cannot pop from an empty list.`);
+                     return false; // Indicate failure
+                 }
+                 index = myList.length - 1; // Index of the last element
+                 poppedValue = myList.pop();
+                 renderList();
+                 updateExplanation(`Popped element ${JSON.stringify(poppedValue)} from the end (index ${index}).`);
+             } else {
+                 // Pop at specific index
+                 index = parseInt(indexInput, 10);
+                 if (isNaN(index) || index < 0 || index >= myList.length) {
+                     updateExplanation(`Error: Index ${index} is out of bounds.`);
+                     return false; // Indicate failure
+                 }
+                 poppedValue = myList.splice(index, 1)[0];
+                 renderList();
+                 updateExplanation(`Popped element ${JSON.stringify(poppedValue)} at index ${index}.`);
+             }
+            return true; // Indicate success
+        }
+
+
+        function handleAccess(index = getNumericInput(accessIndexInput, 'index')) {
+             if (isNaN(index)) return false; // Indicate failure
+
+             if (!isAutoRunning) accessIndexInput.value = ''; // Clear if manual
+
+             if (index < 0 || index >= myList.length) {
+                 updateExplanation(`Error: Index ${index} is out of bounds.`);
+                 return false; // Indicate failure
+             }
+
+             const element = myList[index];
+             updateExplanation(`Element at index ${index} is ${JSON.stringify(element)}.`);
+
+             // Highlight the element
+             const elementContainers = listVisArea.querySelectorAll('.list-element-container');
+             // Find the container by data-index instead of DOM index, safer if elements are re-rendered
+             const targetElement = Array.from(elementContainers).find(container => parseInt(container.dataset.index, 10) === index);
+
+             if (targetElement) {
+                 targetElement.classList.add('highlight');
+                 // Scroll into view if not visible
+                 targetElement.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+                 // Remove highlight after a delay (even if manually stepping)
+                 setTimeout(() => {
+                     targetElement.classList.remove('highlight');
+                      if (isAutoRunning) runNextStep(); // Schedule next step AFTER highlight animation ends
+                 }, 1000); // Highlight for 1 second
+
+             } else if (isAutoRunning) {
+                 // If element wasn't found but in auto-run, something is wrong with rendering,
+                 // but still attempt to move to the next step after the standard delay.
+                 setTimeout(runNextStep, 500); // Short delay before next step if no element to highlight
+             }
+             return true; // Indicate success (even if highlight fails)
+        }
+
+        function handleModify(index = getNumericInput(modifyIndexInput, 'index'), newValue = getValueInput(modifyValueInput)) {
+             if (isNaN(index)) return false; // Indicate failure
+
+             if (!isAutoRunning) { // Clear if manual
+                modifyIndexInput.value = '';
+                modifyValueInput.value = '';
+             }
+
+             if (index < 0 || index >= myList.length) {
+                 updateExplanation(`Error: Index ${index} is out of bounds.`);
+                 return false; // Indicate failure
+             }
+
+             myList[index] = newValue;
+             renderList();
+             updateExplanation(`Set element at index ${index} to ${JSON.stringify(newValue)}.`);
+             return true; // Indicate success
+        }
+
+        // --- Demo Control Implementations ---
+
+        function resetList() {
+             myList = [10, 20, 30];
+             renderList();
+             updateExplanation("List reset to default [10, 20, 30].");
+             if(isAutoRunning) setTimeout(runNextStep, 500); // Short delay after reset in demo
+        }
+
+        function randomizeList() {
+             myList = [];
+             const numElements = Math.floor(Math.random() * 5) + 3; // 3 to 7 elements
+             for (let i = 0; i < numElements; i++) {
+                 // Random values: integers 0-100, or sometimes strings
+                 const randomValue = Math.random();
+                 if (randomValue < 0.7) { // 70% chance of number
+                     myList.push(Math.floor(Math.random() * 101));
+                 } else { // 30% chance of string
+                     const randomStrLength = Math.floor(Math.random() * 4) + 3; // 3 to 6 chars
+                     let randomString = '';
+                     const chars = 'abcdefghijklmnopqrstuvwxyz';
+                     for (let j = 0; j < randomStrLength; j++) {
+                         randomString += chars.charAt(Math.floor(Math.random() * chars.length));
+                     }
+                      myList.push(randomString);
+                 }
+             }
+             renderList();
+             updateExplanation("List randomized.");
+             if(isAutoRunning) setTimeout(runNextStep, 500); // Short delay after randomize in demo
+        }
+
+        function setupAutoRunSequence() {
+             // Clear and reset for a clean start to the demo
+             myList = [10, 'hello', 20, 'world']; // Starting list for demo
+
+             autoRunSequence = [
+                 { op: 'append', value: 40 },
+                 { op: 'insert', index: 1, value: 'new' },
+                 { op: 'access', index: 0 },
+                 { op: 'access', index: 3 },
+                 { op: 'remove', value: 'hello' },
+                 { op: 'modify', index: 2, value: 'modified' },
+                 { op: 'pop', index: 0 },
+                 { op: 'pop' }, // Pop last
+                 { op: 'randomize' }, // Include randomize in sequence
+                 { op: 'reset' } // End with reset
+             ];
+             renderList(); // Render initial state of the sequence
+             updateExplanation("Auto-run demo sequence ready. Press 'Next Step' to begin.");
+        }
+
+
+        function runNextStep() {
+             if (autoRunIndex >= autoRunSequence.length) {
+                 endAutoRun();
+                 return;
+             }
+
+             const step = autoRunSequence[autoRunIndex];
+             autoRunIndex++; // Increment before performing action
+
+             // Clear inputs before setting for the step visualization
+             clearOperationInputs();
+
+
+             // Set input values visually for the current step, then perform action
+             let stepSuccessful = true; // Track if the operation reported success
+
+             switch (step.op) {
+                 case 'append':
+                     appendValueInput.value = step.value;
+                     updateExplanation(`Auto-run Step ${autoRunIndex}: Appending ${JSON.stringify(step.value)}...`);
+                     // Append doesn't fail based on input validity (empty string is valid)
+                     setTimeout(() => { handleAppend(step.value); runNextStep(); }, 800); // Short delay
+                     break;
+                 case 'insert':
+                      insertIndexInput.value = step.index;
+                      insertValueInput.value = step.value;
+                      updateExplanation(`Auto-run Step ${autoRunIndex}: Inserting ${JSON.stringify(step.value)} at index ${step.index}...`);
+                      // Insert *can* fail (index out of bounds)
+                      stepSuccessful = handleInsert(step.index, step.value);
+                      if (stepSuccessful) setTimeout(runNextStep, 800); else endAutoRun("Auto-run stopped due to Insert error.");
+                      break;
+                 case 'remove':
+                      removeValueInput.value = step.value;
+                      updateExplanation(`Auto-run Step ${autoRunIndex}: Removing first occurrence of ${JSON.stringify(step.value)}...`);
+                       // Remove *can* fail (value not found)
+                      stepSuccessful = handleRemove(step.value);
+                      if (stepSuccessful) setTimeout(runNextStep, 800); else endAutoRun("Auto-run stopped due to Remove error.");
+                      break;
+                 case 'pop':
+                      popIndexInput.value = step.index !== undefined ? step.index : '';
+                      updateExplanation(`Auto-run Step ${autoRunIndex}: Popping element at index ${step.index !== undefined ? step.index : 'end'}...`);
+                      // Pop *can* fail (empty list, out of bounds)
+                      stepSuccessful = handlePop(step.index !== undefined ? String(step.index) : ""); // Pass string to handle empty case in handlePop
+                       if (stepSuccessful) setTimeout(runNextStep, 800); else endAutoRun("Auto-run stopped due to Pop error.");
+                      break;
+                 case 'access':
+                      accessIndexInput.value = step.index;
+                      updateExplanation(`Auto-run Step ${autoRunIndex}: Accessing element at index ${step.index}...`);
+                       // Access *can* fail (out of bounds), highlight takes time
+                      stepSuccessful = handleAccess(step.index); // handleAccess schedules next step *after* highlight timer
+                      if (!stepSuccessful) endAutoRun("Auto-run stopped due to Access error.");
+                      // Note: runNextStep() is called by handleAccess after its internal timeout if successful
+                      break;
+                 case 'modify':
+                      modifyIndexInput.value = step.index;
+                      modifyValueInput.value = step.value;
+                      updateExplanation(`Auto-run Step ${autoRunIndex}: Setting element at index ${step.index} to ${JSON.stringify(step.value)}...`);
+                       // Modify *can* fail (out of bounds)
+                      stepSuccessful = handleModify(step.index, step.value);
+                      if (stepSuccessful) setTimeout(runNextStep, 800); else endAutoRun("Auto-run stopped due to Modify error.");
+                      break;
+                 case 'reset':
+                      updateExplanation(`Auto-run Step ${autoRunIndex}: Resetting list...`);
+                      resetList(); // resetList schedules next step
+                      break;
+                 case 'randomize':
+                     updateExplanation(`Auto-run Step ${autoRunIndex}: Randomizing list...`);
+                     randomizeList(); // randomizeList schedules next step
+                     break;
+                 default:
+                     updateExplanation(`Auto-run Step ${autoRunIndex}: Unknown operation, skipping.`);
+                     setTimeout(runNextStep, 500); // Short delay for unknown step
+             }
+             // For operations that don't have built-in delay/scheduling (append, insert, remove, pop, modify, reset, randomize),
+             // the timeout before the next runNextStep is added after the operation call.
+             // Access handles its own timing.
+        }
+
+        function clearOperationInputs() {
+            appendValueInput.value = '';
+            insertIndexInput.value = '';
+            insertValueInput.value = '';
+            removeValueInput.value = '';
+            popIndexInput.value = '';
+            accessIndexInput.value = '';
+            modifyIndexInput.value = '';
+            modifyValueInput.value = '';
+        }
+
+
+        function startAutoRun() {
+             if (isAutoRunning) return; // Already running
+
+             isAutoRunning = true;
+             setupAutoRunSequence(); // Setup sequence and initial list state
+             autoRunIndex = 0;
+
+             // Disable all controls except 'Next Step'
+             setControlsDisabled(true);
+             autoRunBtn.disabled = true; // Disable Start button itself
+             nextStepBtn.disabled = false; // Enable user to drive
+
+             // User must press next step to begin
+        }
+
+        function endAutoRun(message = "Auto-run demo finished.") {
+             isAutoRunning = false;
+             autoRunIndex = 0; // Reset index
+             setControlsDisabled(false); // Re-enable controls
+             autoRunBtn.disabled = false; // Enable Auto-Run button
+             nextStepBtn.disabled = true; // Disable Next Step
+             updateExplanation(message);
+             clearOperationInputs(); // Clear inputs at the end
+        }
+
+         function setControlsDisabled(disabled) {
+            const controls = [
+                appendValueInput, insertIndexInput, insertValueInput,
+                removeValueInput, popIndexInput, accessIndexInput,
+                modifyIndexInput, modifyValueInput,
+                appendBtn, insertBtn, removeBtn, popBtn, accessBtn, modifyBtn,
+                resetBtn, randomizeBtn
+            ];
+            controls.forEach(control => control.disabled = disabled);
+        }
+
+        function handleNextStepClick() {
+             if (isAutoRunning) {
+                  runNextStep(); // Execute the next step in the sequence
+             } else {
+                  // Should not happen if button is disabled when not isAutoRunning,
+                  // but as a fallback:
+                  updateExplanation("Press 'Start Demo' first to begin.");
+             }
+        }
+
+
+        // --- Event Listeners ---
+        appendBtn.addEventListener('click', () => { if (!isAutoRunning) handleAppend(); });
+        insertBtn.addEventListener('click', () => { if (!isAutoRunning) handleInsert(); });
+        removeBtn.addEventListener('click', () => { if (!isAutoRunning) handleRemove(); });
+        popBtn.addEventListener('click', () => { if (!isAutoRunning) handlePop(); });
+        accessBtn.addEventListener('click', () => { if (!isAutoRunning) handleAccess(); });
+        modifyBtn.addEventListener('click', () => { if (!isAutoRunning) handleModify(); });
+
+        resetBtn.addEventListener('click', () => { if (!isAutoRunning) resetList(); });
+        randomizeBtn.addEventListener('click', () => { if (!isAutoRunning) randomizeList(); });
+
+        autoRunBtn.addEventListener('click', startAutoRun); // Button to start the demo *setup*
+        nextStepBtn.addEventListener('click', handleNextStepClick); // Button to execute *each* step
+
+        // Initial render
+        renderList();
+
+    </script>
+</body>
+</html>

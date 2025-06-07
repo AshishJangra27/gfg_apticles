@@ -1,0 +1,675 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Depth First Search Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: #ffffff; /* White background */
+            color: #000000; /* Black text */
+        }
+
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 8vh;
+            background-color: #ffffff;
+            color: #000000;
+            display: flex;
+            align-items: center;
+            padding: 0 1vw; /* Add some horizontal padding */
+            box-sizing: border-box;
+            border-bottom: 1px solid #cccccc; /* Subtle separator */
+        }
+
+        #header img {
+            height: 32px; /* Fixed height as per instructions */
+            margin-right: 1vw;
+        }
+
+        #header h1 {
+            margin: 0;
+            font-size: 1.8vh; /* Size relative to viewport */
+            flex-grow: 1; /* Allow title to take space */
+            text-align: center; /* Center the title */
+        }
+
+        #main-content {
+            position: fixed;
+            top: 8vh; /* Below header */
+            left: 0;
+            width: 100vw;
+            height: 87vh; /* Main content area */
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls vertically */
+        }
+
+        #graph-area {
+            width: 100vw;
+            height: calc(87vh * 0.7); /* 70% of main content height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #dfsCanvas {
+            width: 100%; /* Fill parent div width */
+            height: 100%; /* Fill parent div height */
+            /* Canvas resolution set in JS */
+        }
+
+        #controls-area {
+            width: 100vw;
+            height: calc(87vh * 0.3); /* 30% of main content height */
+            background-color: #ffffff;
+            border-top: 1px solid #cccccc; /* Subtle separator */
+            padding: 1vh 1vw; /* Padding inside controls */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column; /* Stack controls and status */
+            justify-content: space-around; /* Distribute space */
+        }
+
+        #buttons {
+            display: flex;
+            justify-content: center; /* Center buttons */
+            gap: 1vw; /* Space between buttons */
+            margin-bottom: 1vh;
+        }
+
+        button {
+            padding: 1vh 1.5vw;
+            font-size: 1.5vh; /* Size relative to viewport */
+            cursor: pointer;
+            border: 1px solid #000000;
+            background-color: #ffffff;
+            color: #000000;
+            transition: background-color 0.1s, color 0.1s, border-color 0.1s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #e0e0e0; /* Light gray hover */
+            border-color: #2f8d46; /* Green border on hover */
+            color: #000000;
+        }
+
+         button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        button.highlight {
+             border-color: #2f8d46;
+             color: #2f8d46;
+             font-weight: bold;
+        }
+
+        #status-area {
+            flex-grow: 1; /* Take remaining space */
+            font-size: 1.5vh; /* Size relative to viewport */
+            text-align: center;
+            display: flex;
+            align-items: center; /* Vertically center text */
+            justify-content: center; /* Horizontally center text */
+            color: #000000;
+            min-height: 3vh; /* Ensure minimum height */
+        }
+
+        #footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 5vh;
+            background-color: #ffffff;
+            color: #000000;
+            display: flex;
+            justify-content: center; /* Center links */
+            align-items: center;
+            border-top: 1px solid #2f8d46; /* Green border */
+        }
+
+        #footer a {
+            margin: 0 1vw;
+            color: #2f8d46; /* Green links */
+            text-decoration: none;
+            font-size: 1.5vh; /* Size relative to viewport */
+        }
+
+        #footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>Depth First Search Visualizer</h1>
+    </div>
+
+    <div id="main-content">
+        <div id="graph-area">
+            <canvas id="dfsCanvas"></canvas>
+        </div>
+        <div id="controls-area">
+            <div id="buttons">
+                <button id="randomizeBtn">Randomize Graph</button>
+                <button id="resetBtn">Reset</button>
+                <button id="nextBtn" disabled>Next Step</button>
+                <button id="autoRunBtn" disabled>Auto-Run</button>
+            </div>
+            <div id="status-area">
+                 Click a node to set it as the starting point for DFS.
+            </div>
+        </div>
+    </div>
+
+    <div id="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        // --- Constants and Configuration ---
+        const CANVAS = document.getElementById('dfsCanvas');
+        const CTX = CANVAS.getContext('2d');
+        const STATUS_AREA = document.getElementById('status-area');
+        const RANDOMIZE_BTN = document.getElementById('randomizeBtn');
+        const RESET_BTN = document.getElementById('resetBtn');
+        const NEXT_BTN = document.getElementById('nextBtn');
+        const AUTO_RUN_BTN = document.getElementById('autoRunBtn');
+
+        const NODE_RADIUS = Math.min(1.5 * window.innerWidth / 100, 1.5 * window.innerHeight / 100); // Node size relative to viewport
+        const NODE_COLOR_UNVISITED_FILL = '#FFFFFF'; // White
+        const NODE_COLOR_ON_PATH_FILL = '#FFFFFF'; // White
+        const NODE_COLOR_CURRENT_FILL = '#2f8d46'; // Green
+        const NODE_COLOR_VISITED_FILL = '#c8e6c9'; // Light Green
+        const NODE_COLOR_BORDER = '#000000'; // Black
+        const NODE_COLOR_ON_PATH_BORDER = '#2f8d46'; // Green
+        const NODE_COLOR_SELECTED_BORDER = '#2f8d46'; // Green
+        const NODE_BORDER_WIDTH = 2;
+        const NODE_BORDER_WIDTH_SELECTED = 3;
+
+        const EDGE_COLOR_DEFAULT = '#000000'; // Black
+        const EDGE_COLOR_EXPLORING = '#2f8d46'; // Green
+        const EDGE_WIDTH = 2;
+
+        const GRAPH_PADDING = Math.min(5 * window.innerWidth / 100, 5 * window.innerHeight / 100); // Padding within canvas
+        const NUM_NODES = 20; // Number of nodes in random graph
+        const MAX_EDGES_PER_NODE = 4; // Limit degree for clarity
+        const AUTO_RUN_DELAY_MS = 700; // Milliseconds delay for auto-run
+
+        // --- Graph Data Structures ---
+        let nodes = []; // Array of { x, y }
+        let adjList = []; // Adjacency list
+        let originalNodes = []; // Store original nodes for reset
+        let originalAdjList = []; // Store original adjList for reset
+
+        // --- DFS State ---
+        let visited = new Set(); // Nodes added to stack or popped
+        let dfsPathStack = []; // Stores [nodeIndex, nextNeighborIndex]
+        let nodeStates = new Map(); // Map<nodeIndex, 'unvisited' | 'on_path' | 'current' | 'visited'>
+        let currentEdge = null; // [u, v] for edge being explored
+        let traversalComplete = false;
+        let startNodeIndex = null;
+        let autoRunInterval = null;
+        let isSelectingStartNode = true; // State flag for user interaction
+
+        // --- Canvas and Drawing Functions ---
+
+        function resizeCanvas() {
+            const graphArea = document.getElementById('graph-area');
+            CANVAS.width = graphArea.offsetWidth;
+            CANVAS.height = graphArea.offsetHeight;
+             // Re-calculate NODE_RADIUS and GRAPH_PADDING based on new size if needed, or rely on vh/vw calc
+            drawGraph(); // Redraw on resize
+        }
+
+        function drawNode(nodeIndex, state, isSelected = false) {
+            const { x, y } = nodes[nodeIndex];
+            CTX.beginPath();
+            CTX.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
+
+            CTX.fillStyle = NODE_COLOR_UNVISITED_FILL; // Default
+            let borderColor = NODE_COLOR_BORDER;
+            let borderWidth = NODE_BORDER_WIDTH;
+
+            if (state === 'current') {
+                CTX.fillStyle = NODE_COLOR_CURRENT_FILL;
+            } else if (state === 'on_path') {
+                 CTX.fillStyle = NODE_COLOR_ON_PATH_FILL;
+                 borderColor = NODE_COLOR_ON_PATH_BORDER;
+            } else if (state === 'visited') {
+                CTX.fillStyle = NODE_COLOR_VISITED_FILL;
+            }
+
+            CTX.fill();
+
+            CTX.lineWidth = isSelected ? NODE_BORDER_WIDTH_SELECTED : borderWidth;
+            CTX.strokeStyle = isSelected ? NODE_COLOR_SELECTED_BORDER : borderColor;
+            CTX.stroke();
+
+             // Draw node index
+             CTX.fillStyle = '#000000'; // Black text
+             CTX.textAlign = 'center';
+             CTX.textBaseline = 'middle';
+             CTX.font = `${NODE_RADIUS * 0.8}px monospace`; // Adjust font size based on radius
+             CTX.fillText(nodeIndex + 1, x, y); // Use 1-based indexing for display
+        }
+
+        function drawEdge(uIndex, vIndex, isExploring = false) {
+            const u = nodes[uIndex];
+            const v = nodes[vIndex];
+
+            CTX.beginPath();
+            CTX.moveTo(u.x, u.y);
+            CTX.lineTo(v.x, v.y);
+            CTX.lineWidth = EDGE_WIDTH;
+            CTX.strokeStyle = isExploring ? EDGE_COLOR_EXPLORING : EDGE_COLOR_DEFAULT;
+            CTX.stroke();
+        }
+
+        function drawGraph() {
+            if (!CANVAS || !CTX) return;
+            CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
+
+            // Draw edges first
+            for (let u = 0; u < adjList.length; u++) {
+                for (const v of adjList[u]) {
+                     // Only draw edge once in undirected graph
+                    if (u < v) {
+                        const isExploring = currentEdge && ((currentEdge[0] === u && currentEdge[1] === v) || (currentEdge[0] === v && currentEdge[1] === u));
+                        drawEdge(u, v, isExploring);
+                    }
+                }
+            }
+
+             // Draw nodes
+            for (let i = 0; i < nodes.length; i++) {
+                const state = nodeStates.get(i) || 'unvisited';
+                const isSelected = i === startNodeIndex && isSelectingStartNode;
+                drawNode(i, state, isSelected);
+            }
+        }
+
+        // --- Graph Generation ---
+
+        function generateRandomGraph() {
+             nodes = [];
+             adjList = [];
+             const width = CANVAS.width;
+             const height = CANVAS.height;
+             const maxAttempts = 100; // Prevent infinite loops if positions are too crowded
+
+            // Generate nodes with random positions (attempting to avoid overlap)
+            for (let i = 0; i < NUM_NODES; i++) {
+                let newNode;
+                let attempts = 0;
+                do {
+                    newNode = {
+                        x: Math.random() * (width - 2 * GRAPH_PADDING) + GRAPH_PADDING,
+                        y: Math.random() * (height - 2 * GRAPH_PADDING) + GRAPH_PADDING
+                    };
+                    let overlapping = false;
+                    // Check distance from existing nodes
+                    for (const node of nodes) {
+                        const dx = node.x - newNode.x;
+                        const dy = node.y - newNode.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < NODE_RADIUS * 3) { // Ensure minimum distance
+                            overlapping = true;
+                            break;
+                        }
+                    }
+                    if (!overlapping) {
+                         nodes.push(newNode);
+                         adjList.push([]);
+                         break; // Node added successfully
+                    }
+                    attempts++;
+                } while (attempts < maxAttempts);
+
+                 if(attempts === maxAttempts) {
+                     // Fallback: just add the node if too many attempts fail
+                     if (nodes.length < NUM_NODES) {
+                          newNode = {
+                                x: Math.random() * (width - 2 * GRAPH_PADDING) + GRAPH_PADDING,
+                                y: Math.random() * (height - 2 * GRAPH_PADDING) + GRAPH_PADDING
+                           };
+                           nodes.push(newNode);
+                           adjList.push([]);
+                     }
+                 }
+                 nodeStates.set(i, 'unvisited'); // Initialize state for the new node
+            }
+
+            // Add random edges
+            for (let i = 0; i < nodes.length; i++) {
+                const numEdges = Math.floor(Math.random() * (MAX_EDGES_PER_NODE + 1));
+                let edgesAdded = 0;
+                let attempts = 0;
+                 const maxEdgeAttempts = nodes.length * nodes.length; // Prevent infinite loop
+
+                while (edgesAdded < numEdges && attempts < maxEdgeAttempts) {
+                    const j = Math.floor(Math.random() * nodes.length);
+                    // No self-loops, no duplicate edges (check both directions for undirected)
+                    if (i !== j && !adjList[i].includes(j)) {
+                         // Check if neighbor j already has max edges
+                         if (adjList[j].length < MAX_EDGES_PER_NODE) {
+                            adjList[i].push(j);
+                            adjList[j].push(i); // Undirected graph
+                            edgesAdded++;
+                         }
+                    }
+                    attempts++;
+                }
+            }
+             // Sort adjacency lists to ensure consistent neighbor ordering for steps
+             adjList.forEach(neighbors => neighbors.sort((a, b) => a - b));
+
+             // Store original for reset
+             originalAdjList = adjList.map(arr => [...arr]); // Deep copy
+             originalNodes = nodes.map(node => ({...node})); // Deep copy
+
+             console.log("Generated Graph:", {nodes: nodes.length, edges: adjList.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2});
+
+             resetTraversalState(true); // Reset state and indicate a new graph was generated
+        }
+
+        // --- DFS Algorithm and Step Logic ---
+
+        function resetTraversalState(isNewGraph = false) {
+            stopAutoRun();
+            visited.clear();
+            dfsPathStack = [];
+            currentEdge = null;
+            traversalComplete = false;
+
+            // Restore original graph structure but reset node states
+            if (isNewGraph) {
+                // Graph structure was just generated in generateRandomGraph
+                // nodeStates were also initialized there
+            } else {
+                // Restore nodes and adjList from original
+                nodes = originalNodes.map(node => ({...node}));
+                adjList = originalAdjList.map(arr => [...arr]);
+
+                // Reset all node states to unvisited
+                nodeStates.clear();
+                for(let i = 0; i < nodes.length; i++) {
+                    nodeStates.set(i, 'unvisited');
+                }
+            }
+
+
+            if (isSelectingStartNode || isNewGraph) {
+                 // App is waiting for a start node click or a new graph was loaded
+                 startNodeIndex = null; // Ensure no node is selected visually yet
+                 setStatus("Click a node to set it as the starting point for DFS.");
+                 enableControls(false, false, false, true); // Next/Auto disabled, Reset/Randomize enabled
+                 isSelectingStartNode = true;
+            } else {
+                 // A start node was previously selected, prepare for traversal from it again
+                 if (startNodeIndex !== null) {
+                     setStatus(`Reset. Start node: ${startNodeIndex + 1}. Ready to traverse.`);
+                     enableControls(true, true, true, true); // Next/Auto enabled, Reset/Randomize enabled
+                 } else {
+                      // Should not happen if !isSelectingStartNode but startNodeIndex is null, fallback:
+                      setStatus("Click a node to set it as the starting point for DFS.");
+                      enableControls(false, false, false, true);
+                      isSelectingStartNode = true;
+                 }
+            }
+
+            drawGraph(); // Draw the graph in its reset state
+        }
+
+
+        function dfsNextStep() {
+            // Step 0: Clear temporary edge highlight from previous step
+            currentEdge = null;
+
+            // Step 1: Check if traversal is already complete
+            if (traversalComplete) {
+                setStatus("Traversal complete.");
+                enableControls(false, false, false, true); // Disable Next/Auto, enable Reset/Randomize
+                stopAutoRun();
+                return;
+            }
+
+            // Step 2: Handle starting a new component or initial start node if stack is empty
+            if (dfsPathStack.length === 0) {
+                let nextStartNode = null;
+
+                 // If a start node was explicitly selected, use it if unvisited
+                 if (startNodeIndex !== null && nodeStates.get(startNodeIndex) === 'unvisited') {
+                     nextStartNode = startNodeIndex;
+                 } else {
+                    // Find the first unvisited node to start a new component
+                    for (let i = 0; i < nodes.length; i++) {
+                        if (nodeStates.get(i) === 'unvisited') {
+                            nextStartNode = i;
+                            break;
+                        }
+                    }
+                 }
+
+                if (nextStartNode !== null) {
+                    // Start a new component's traversal
+                    dfsPathStack.push([nextStartNode, 0]); // [nodeIndex, neighborIndex]
+                    visited.add(nextStartNode); // Mark as visited when pushed onto stack
+                    nodeStates.set(nextStartNode, 'visiting'); // Mark current node
+                    setStatus(`Starting DFS from node ${nextStartNode + 1}${startNodeIndex !== null && nextStartNode !== startNodeIndex ? ' (Disconnected component)' : ''}.`);
+                } else {
+                    // No unvisited nodes left, traversal is complete
+                    traversalComplete = true;
+                    setStatus("Traversal complete.");
+                    enableControls(false, false, false, true); // Disable Next/Auto, enable Reset/Randomize
+                    stopAutoRun();
+                }
+                 drawGraph();
+                return; // Step finished
+            }
+
+            // Step 3: Continue exploring the current node (top of stack)
+            let [u, neighborIndex] = dfsPathStack[dfsPathStack.length - 1];
+            const neighbors = adjList[u];
+
+            // Ensure the node on stack top is marked 'visiting' (unless it was just popped)
+             if (nodeStates.get(u) !== 'visited') {
+                 nodeStates.set(u, 'visiting');
+             }
+
+
+            // Step 4: Find the next neighbor to explore
+            let nextNeighbor = null;
+            let foundNeighborIndex = -1;
+
+            for (let i = neighborIndex; i < neighbors.length; i++) {
+                const v = neighbors[i];
+                if (!visited.has(v)) {
+                   nextNeighbor = v;
+                   foundNeighborIndex = i;
+                   break;
+                }
+            }
+
+            // Update neighbor index on stack for the *next* exploration from u
+            dfsPathStack[dfsPathStack.length - 1][1] = neighborIndex + 1;
+
+
+            if (nextNeighbor !== null) {
+                // Found an unvisited neighbor 'v'
+                const v = nextNeighbor;
+
+                 // Add v to visited set *before* pushing it
+                 visited.add(v);
+
+                 // Push v onto stack for the next step's processing
+                 dfsPathStack.push([v, 0]); // Start exploring v's neighbors from index 0
+
+                 // Update node states for drawing
+                 nodeStates.set(u, 'on_path'); // u is now on the path, but not the current 'visiting' node
+                 nodeStates.set(v, 'visiting'); // v is the new current 'visiting' node
+
+                 // Highlight the edge traversed to get here
+                 currentEdge = [u, v];
+
+                setStatus(`Exploring edge from node ${u + 1} to node ${v + 1}.`);
+
+            } else {
+                // No unvisited neighbors from u left to explore
+                // Pop u from stack
+                const finishedNode = dfsPathStack.pop()[0]; // Get the node index that was just popped
+
+                // Mark the popped node as fully visited
+                nodeStates.set(finishedNode, 'visited');
+
+                 // If the stack is not empty, the new top is now the node being explored
+                 if (dfsPathStack.length > 0) {
+                     const newCurrentNode = dfsPathStack[dfsPathStack.length - 1][0];
+                     // If the new current node wasn't already marked 'visiting' (should be 'on_path'), mark it 'visiting'
+                     if (nodeStates.get(newCurrentNode) !== 'visited') {
+                          nodeStates.set(newCurrentNode, 'visiting');
+                     }
+                     setStatus(`Finished exploring node ${finishedNode + 1}. Backtracking to node ${newCurrentNode + 1}.`);
+                 } else {
+                      // Stack is empty, this component is done. Check for other components in the next step.
+                      setStatus(`Finished exploring node ${finishedNode + 1}. Component complete. Preparing for next component.`);
+                 }
+            }
+
+             drawGraph(); // Redraw after state changes
+        }
+
+        // --- Control Functions ---
+
+        function setStatus(message) {
+            STATUS_AREA.textContent = message;
+        }
+
+        function enableControls(next, auto, reset, randomize) {
+            NEXT_BTN.disabled = !next;
+            AUTO_RUN_BTN.disabled = !auto;
+            RESET_BTN.disabled = !reset;
+            RANDOMIZE_BTN.disabled = !randomize;
+
+             // Add highlight class if enabled (and not currently running auto)
+             NEXT_BTN.classList.toggle('highlight', next && autoRunInterval === null);
+             AUTO_RUN_BTN.classList.toggle('highlight', auto && autoRunInterval === null);
+             RESET_BTN.classList.toggle('highlight', reset);
+             RANDOMIZE_BTN.classList.toggle('highlight', randomize);
+
+             // Special handling for auto-run button when active
+             if(autoRunInterval !== null) {
+                 AUTO_RUN_BTN.classList.add('highlight');
+                 NEXT_BTN.classList.remove('highlight'); // Disable Next while auto-running
+             }
+        }
+
+        function startAutoRun() {
+            if (autoRunInterval === null && !traversalComplete) {
+                autoRunInterval = setInterval(dfsNextStep, AUTO_RUN_DELAY_MS);
+                AUTO_RUN_BTN.textContent = 'Pause';
+                 enableControls(false, true, true, true); // Disable Next, Auto enabled (as Pause), Reset/Randomize enabled
+            }
+        }
+
+        function stopAutoRun() {
+            if (autoRunInterval !== null) {
+                clearInterval(autoRunInterval);
+                autoRunInterval = null;
+                AUTO_RUN_BTN.textContent = 'Auto-Run';
+                 if (!traversalComplete) {
+                     enableControls(true, true, true, true); // Enable Next, Auto, Reset/Randomize
+                 } else {
+                      enableControls(false, false, true, true); // Disable Next/Auto, Enable Reset/Randomize
+                 }
+            }
+        }
+
+        // --- Event Listeners ---
+
+        RANDOMIZE_BTN.addEventListener('click', generateRandomGraph);
+
+        RESET_BTN.addEventListener('click', () => {
+            // If auto-run is active, stop it before resetting
+            stopAutoRun();
+             // If no start node was selected OR if traversal is complete, reset fully
+            const fullReset = isSelectingStartNode || traversalComplete;
+            resetTraversalState(false); // Pass false, indicating not a new graph generation
+            if (fullReset) {
+                // Ensure we go back to selecting state if it was a full reset scenario
+                 isSelectingStartNode = true;
+                 startNodeIndex = null;
+                 setStatus("Click a node to set it as the starting point for DFS.");
+                 enableControls(false, false, true, true);
+                 drawGraph(); // Redraw to clear any lingering highlight if startNodeIndex was not null
+            }
+        });
+
+
+        NEXT_BTN.addEventListener('click', dfsNextStep);
+
+        AUTO_RUN_BTN.addEventListener('click', () => {
+            if (autoRunInterval === null) {
+                startAutoRun();
+            } else {
+                stopAutoRun();
+            }
+        });
+
+        CANVAS.addEventListener('click', (event) => {
+             if (!isSelectingStartNode || traversalComplete) return; // Only allow node selection before start/after completion (for new traversal)
+
+            const rect = CANVAS.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // Find clicked node
+            let clickedNode = null;
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                const dx = node.x - x;
+                const dy = node.y - y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < NODE_RADIUS) {
+                    clickedNode = i;
+                    break;
+                }
+            }
+
+            if (clickedNode !== null) {
+                 startNodeIndex = clickedNode;
+                 isSelectingStartNode = false; // Node selected
+                 setStatus(`Start node: ${startNodeIndex + 1}. Ready to traverse.`);
+                 enableControls(true, true, true, true); // Enable Next, Auto, Reset, Randomize
+                 // Reset state but keep the selected start node highlighted for the *next* draw
+                 resetTraversalState(false); // Reset traversal state for the selected graph
+                 // The drawGraph() call inside resetTraversalState will draw with the selected node highlight
+            }
+        });
+
+         // Handle window resize
+         window.addEventListener('resize', resizeCanvas);
+
+
+        // --- Initialization ---
+        function init() {
+            resizeCanvas(); // Set initial canvas size
+            generateRandomGraph(); // Generate the first random graph and reset state
+        }
+
+        init(); // Start the application
+
+    </script>
+
+</body>
+</html>

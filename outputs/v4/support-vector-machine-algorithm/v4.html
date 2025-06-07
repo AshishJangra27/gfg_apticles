@@ -1,0 +1,498 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coding Question Filter Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent main page scrolling */
+        }
+
+        .header, .footer {
+            background-color: white;
+            flex-shrink: 0;
+            padding: 0 1vw;
+            box-sizing: border-box;
+        }
+
+        .header {
+            height: 8vh;
+            border-bottom: 2px solid #2f8d46;
+            display: flex;
+            align-items: center;
+        }
+
+        .header .logo {
+             height: 32px; /* Fixed logo height */
+             margin-right: 1vw;
+        }
+
+         .header h1 {
+             margin: 0;
+             font-size: 1.5em; /* Adjust size to fit header */
+         }
+
+
+        .footer {
+            height: 5vh;
+            border-top: 2px solid #2f8d46;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2vw;
+        }
+
+        .footer a {
+            color: black;
+            text-decoration: none;
+            padding: 0.5vh 1vw;
+            border-radius: 4px;
+        }
+
+        .footer a:hover {
+            background-color: rgba(47, 141, 70, 0.1);
+            text-decoration: underline;
+        }
+
+        .main-area {
+            flex-grow: 1;
+            height: 87vh; /* Explicit height for flex item */
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        .control-panel, .results-panel {
+            height: 100%;
+            padding: 1vw;
+            box-sizing: border-box;
+            overflow-y: auto; /* Allow internal scrolling if content exceeds height */
+        }
+
+        .control-panel {
+            width: 30vw;
+            border-right: 1px solid #cccccc;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Spacing between sections */
+        }
+
+        .results-panel {
+            width: 70vw;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 1vh;
+            border-bottom: 1px solid #cccccc;
+            padding-bottom: 0.5vh;
+        }
+
+        .filter-group {
+            margin-bottom: 1.5vh;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5vh;
+            font-weight: bold;
+        }
+
+        select, button {
+            font-family: monospace;
+            padding: 0.5vh 1vw;
+            margin-right: 0.5vw;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: white;
+            color: black;
+        }
+
+        button {
+             margin-top: 0.5vh;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #2f8d46;
+            color: white;
+            border-color: #2f8d46;
+        }
+
+         button:active:not(:disabled) {
+            background-color: #1e5d30;
+            border-color: #1e5d30;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Specific style for radio buttons layout */
+        .filter-group .radio-options {
+            display: flex;
+            gap: 1vw;
+            flex-wrap: wrap; /* Allow wrapping if space is tight */
+        }
+
+        .filter-group .radio-options label {
+            font-weight: normal;
+            margin-bottom: 0;
+            display: flex; /* Align radio button and text */
+            align-items: center;
+            cursor: pointer;
+        }
+
+         .filter-group .radio-options input[type="radio"] {
+             margin-right: 0.3vw;
+             cursor: pointer;
+         }
+
+        #explanation-area {
+            min-height: 3vh; /* Reserve space */
+            border: 1px dashed #cccccc;
+            padding: 1vh;
+            margin-top: auto; /* Push to bottom in flex container */
+            font-size: 0.9em;
+            white-space: pre-wrap; /* Respect newlines */
+            background-color: #f9f9f9; /* Subtle background */
+        }
+
+        #question-list div {
+            padding: 0.8vh 0;
+            border-bottom: 1px dashed #eee;
+            word-break: break-word; /* Prevent overflow of long text */
+        }
+
+         #question-list div:last-child {
+            border-bottom: none;
+         }
+
+        #question-list .empty-state {
+            padding: 2vh 0;
+            text-align: center;
+            color: #555;
+        }
+
+        /* Highlighting for demo steps */
+        .filter-group.highlight {
+            border: 1px solid #2f8d46; /* Highlight the container */
+            box-shadow: 0 0 5px rgba(47, 141, 70, 0.5);
+            padding: 0.8vh; /* Add padding when highlighted */
+            margin: 0.7vh 0; /* Adjust margin to keep flow */
+            border-radius: 4px;
+        }
+
+        /* Ensure select/inputs inside highlighted group don't get default border */
+        .filter-group.highlight select,
+        .filter-group.highlight .radio-options {
+             border: none;
+             box-shadow: none;
+             padding: 0;
+             margin: 0;
+        }
+
+         .filter-group.highlight .radio-options label {
+             color: #1e5d30; /* Darker green text for highlighted radios */
+         }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo" class="logo">
+        <h1>Coding Question Filter Demo</h1>
+    </div>
+
+    <div class="main-area">
+        <div class="control-panel">
+            <h2>Filter Options</h2>
+
+            <div class="filter-group" id="company-filter-group">
+                <label for="company-select">Company:</label>
+                <select id="company-select">
+                    <option value="All Companies">All Companies</option>
+                    <option value="Google">Google</option>
+                    <option value="Amazon">Amazon</option>
+                    <option value="Microsoft">Microsoft</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Apple">Apple</option>
+                </select>
+            </div>
+
+            <div class="filter-group" id="difficulty-filter-group">
+                <label>Difficulty:</label>
+                <div class="radio-options">
+                    <label><input type="radio" name="difficulty" value="All Difficulties" checked> All Difficulties</label>
+                    <label><input type="radio" name="difficulty" value="Easy"> Easy</label>
+                    <label><input type="radio" name="difficulty" value="Medium"> Medium</label>
+                    <label><input type="radio" name="difficulty" value="Hard"> Hard</label>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button id="reset-button">Reset Filters</button>
+                <button id="auto-run-button">Auto-Run</button>
+                <button id="next-step-button">Next Step</button>
+            </div>
+
+            <div id="explanation-area">
+                Select filters or use the controls below to see how the list updates.
+            </div>
+
+        </div>
+
+        <div class="results-panel">
+            <h2>Filtered Questions</h2>
+            <div id="question-list">
+                <!-- Questions will be listed here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        const questions = [
+            { id: 1, company: 'Google', difficulty: 'Easy', text: 'Find pair with sum in array' },
+            { id: 2, company: 'Amazon', difficulty: 'Medium', text: 'Validate BST' },
+            { id: 3, company: 'Microsoft', difficulty: 'Hard', text: 'Serialize/Deserialize Binary Tree' },
+            { id: 4, company: 'Facebook', difficulty: 'Easy', text: 'Merge Sorted Arrays' },
+            { id: 5, company: 'Apple', difficulty: 'Medium', text: 'Longest Substring Without Repeating Characters' },
+            { id: 6, company: 'Google', difficulty: 'Medium', text: 'Search in Rotated Sorted Array' },
+            { id: 7, company: 'Amazon', difficulty: 'Easy', text: 'Two Sum' },
+            { id: 8, company: 'Microsoft', difficulty: 'Medium', text: 'Swap Nodes in Pairs' },
+            { id: 9, company: 'Facebook', difficulty: 'Hard', text: 'Alien Dictionary' },
+            { id: 10, company: 'Apple', difficulty: 'Easy', text: 'Remove Duplicates from Sorted Array' },
+            { id: 11, company: 'Google', difficulty: 'Hard', text: 'Median of Two Sorted Arrays' },
+            { id: 12, company: 'Amazon', difficulty: 'Hard', text: 'Word Break II' },
+            { id: 13, company: 'Microsoft', difficulty: 'Easy', text: 'Reverse Linked List' },
+            { id: 14, company: 'Facebook', difficulty: 'Medium', text: 'Lowest Common Ancestor of a BST' },
+            { id: 15, company: 'Apple', difficulty: 'Hard', text: 'Trapping Rain Water' },
+            { id: 16, company: 'Google', difficulty: 'Easy', text: 'Valid Parentheses' },
+             { id: 17, company: 'Amazon', difficulty: 'Medium', text: 'K Closest Points to Origin' },
+             { id: 18, company: 'Microsoft', difficulty: 'Hard', text: 'Largest Rectangle in Histogram' },
+             { id: 19, company: 'Facebook', difficulty: 'Easy', text: 'Implement Stack using Queues' },
+             { id: 20, company: 'Apple', difficulty: 'Medium', text: 'Course Schedule' }
+        ];
+
+        const companySelect = document.getElementById('company-select');
+        const difficultyRadios = document.querySelectorAll('input[name="difficulty"]');
+        const questionListDiv = document.getElementById('question-list');
+        const explanationArea = document.getElementById('explanation-area');
+        const resetButton = document.getElementById('reset-button');
+        const autoRunButton = document.getElementById('auto-run-button');
+        const nextStepButton = document.getElementById('next-step-button');
+
+        const companyFilterGroup = document.getElementById('company-filter-group');
+        const difficultyFilterGroup = document.getElementById('difficulty-filter-group');
+
+
+        let autoRunInterval = null;
+        const demoSteps = [
+             { company: 'All Companies', difficulty: 'All Difficulties', explanation: 'Step 1: Showing all questions.' },
+             { company: 'Google', difficulty: 'All Difficulties', explanation: 'Step 2: Filtering by Company: Google.' },
+             { company: 'Google', difficulty: 'Medium', explanation: 'Step 3: Filtering by Company: Google AND Difficulty: Medium.' },
+             { company: 'All Companies', difficulty: 'Medium', explanation: 'Step 4: Filtering by Difficulty: Medium (cleared company filter).' },
+             { company: 'All Companies', difficulty: 'All Difficulties', explanation: 'Step 5: Resetting filters to show all questions again.' }, // Reset step
+        ];
+        let currentStepIndex = 0;
+
+        function renderQuestions(filteredQuestions) {
+            questionListDiv.innerHTML = ''; // Clear current list
+            if (filteredQuestions.length === 0) {
+                questionListDiv.innerHTML = '<div class="empty-state">No questions match the current filters.</div>';
+                return;
+            }
+
+            filteredQuestions.forEach(q => {
+                const questionElement = document.createElement('div');
+                questionElement.textContent = `${q.company} - ${q.difficulty} - ${q.text}`;
+                questionListDiv.appendChild(questionElement);
+            });
+        }
+
+        function updateExplanation(company, difficulty, customText = null) {
+             if (customText) {
+                 explanationArea.textContent = customText;
+                 return;
+             }
+
+            let text = 'Currently filtering by: ';
+            const filtersApplied = [];
+
+            if (company !== 'All Companies') {
+                filtersApplied.push(`Company: ${company}`);
+            }
+            if (difficulty !== 'All Difficulties') {
+                filtersApplied.push(`Difficulty: ${difficulty}`);
+            }
+
+            if (filtersApplied.length === 0) {
+                text += 'All questions shown (no filters applied).';
+            } else {
+                 text += filtersApplied.join(' AND ');
+                 text += '.';
+            }
+            explanationArea.textContent = text;
+        }
+
+         function removeHighlights() {
+             companyFilterGroup.classList.remove('highlight');
+             difficultyFilterGroup.classList.remove('highlight');
+         }
+
+         function applyHighlights(company, difficulty) {
+             removeHighlights();
+             if (company !== 'All Companies') {
+                 companyFilterGroup.classList.add('highlight');
+             }
+              if (difficulty !== 'All Difficulties') {
+                  difficultyFilterGroup.classList.add('highlight');
+              }
+         }
+
+        function filterQuestions() {
+            const selectedCompany = companySelect.value;
+            const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
+
+            const filtered = questions.filter(q => {
+                const companyMatch = selectedCompany === 'All Companies' || q.company === selectedCompany;
+                const difficultyMatch = selectedDifficulty === 'All Difficulties' || q.difficulty === selectedDifficulty;
+                return companyMatch && difficultyMatch;
+            });
+
+            renderQuestions(filtered);
+            updateExplanation(selectedCompany, selectedDifficulty);
+
+             // Apply visual highlights based on active filters
+             applyHighlights(selectedCompany, selectedDifficulty);
+        }
+
+        function resetFilters() {
+            companySelect.value = 'All Companies';
+            document.querySelector('input[name="difficulty"][value="All Difficulties"]').checked = true;
+            filterQuestions();
+            updateExplanation('All Companies', 'All Difficulties', 'Filters reset. Showing all questions.');
+            removeHighlights();
+            currentStepIndex = 0; // Reset demo steps
+        }
+
+        function applyStep(stepIndex) {
+             if (stepIndex >= demoSteps.length) {
+                 // Demo finished
+                 stopAutoRun();
+                 currentStepIndex = 0; // Reset for next run
+                 resetFilters(); // Explicitly reset at the end
+                 updateExplanation('All Companies', 'All Difficulties', 'Demonstration finished. Filters reset.');
+                 return;
+             }
+
+             const step = demoSteps[stepIndex];
+
+             // Update controls based on step
+             companySelect.value = step.company;
+             document.querySelector(`input[name="difficulty"][value="${step.difficulty}"]`).checked = true;
+
+             filterQuestions(); // This call also updates explanation and highlights
+
+             // Use specific step explanation
+             explanationArea.textContent = step.explanation;
+
+             currentStepIndex = stepIndex; // Update index after applying
+         }
+
+
+        function nextStep() {
+             // If auto-run is active, pause it first
+             if (autoRunInterval) {
+                 stopAutoRun();
+                 updateExplanation('','', 'Auto-run paused. Manual step.');
+             }
+             applyStep(currentStepIndex + 1); // Apply the step *after* the current one
+         }
+
+         function startAutoRun() {
+             if (autoRunInterval) return; // Already running
+
+             autoRunButton.textContent = 'Pause';
+             nextStepButton.disabled = true;
+             resetButton.disabled = true; // Disable during auto-run
+
+             // Start from the beginning if demo was finished or manually changed
+             if (currentStepIndex >= demoSteps.length -1 || currentStepIndex < 0) {
+                 currentStepIndex = -1; // applyStep(0) will start from the first step
+             } else {
+                 // If paused mid-demo, resume from the next step
+             }
+
+
+             autoRunInterval = setInterval(() => {
+                 applyStep(currentStepIndex + 1);
+             }, 2500); // 2.5 second delay per step
+         }
+
+         function stopAutoRun() {
+             if (!autoRunInterval) return; // Not running
+
+             clearInterval(autoRunInterval);
+             autoRunInterval = null;
+             autoRunButton.textContent = 'Auto-Run';
+             nextStepButton.disabled = false;
+             resetButton.disabled = false;
+         }
+
+
+        // Event Listeners
+        companySelect.addEventListener('change', () => {
+             stopAutoRun(); // Stop auto-run if manual change occurs
+             currentStepIndex = 0; // Reset demo sequence index
+             filterQuestions();
+        });
+
+        difficultyRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                stopAutoRun(); // Stop auto-run if manual change occurs
+                currentStepIndex = 0; // Reset demo sequence index
+                filterQuestions();
+            });
+        });
+
+        resetButton.addEventListener('click', () => {
+             stopAutoRun(); // Stop auto-run on reset
+             resetFilters();
+        });
+
+         autoRunButton.addEventListener('click', () => {
+             if (autoRunInterval) {
+                 stopAutoRun();
+                 updateExplanation('','', `Auto-run paused at Step ${currentStepIndex + 1}.`); // Add a pause message
+             } else {
+                 startAutoRun();
+             }
+         });
+
+         nextStepButton.addEventListener('click', nextStep);
+
+
+        // Initial render
+        resetFilters(); // Start with all filters reset and showing all questions
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,764 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KNN Explorer</title>
+    <style>
+        /* Global styles */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: #ffffff;
+            color: #000000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure body takes full viewport height */
+        }
+
+        a {
+            color: #2f8d46;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: monospace;
+            transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+            border-color: #2f8d46;
+            color: #2f8d46;
+        }
+
+        select, input[type="range"] {
+            font-family: monospace;
+            border: 1px solid #cccccc;
+            padding: 3px;
+        }
+
+        input[type="range"] {
+             -webkit-appearance: none;
+             appearance: none;
+             height: 5px;
+             background: #cccccc;
+             outline: none;
+             opacity: 0.7;
+             transition: opacity .2s;
+        }
+
+        input[type="range"]:hover {
+             opacity: 1;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+             -webkit-appearance: none;
+             appearance: none;
+             width: 15px;
+             height: 15px;
+             background: #2f8d46;
+             cursor: pointer;
+             border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+             width: 15px;
+             height: 15px;
+             background: #2f8d46;
+             cursor: pointer;
+             border-radius: 50%;
+        }
+
+
+        /* Layout */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8vh;
+            background-color: #ffffff;
+            border-bottom: 1px solid #cccccc;
+            display: flex;
+            align-items: center;
+            padding: 0 1vw;
+            box-sizing: border-box;
+            z-index: 10; /* Ensure header is on top */
+        }
+
+        #header img {
+            height: calc(8vh - 20px); /* Adjust based on padding */
+            max-height: 32px; /* Max size constraint */
+            margin-right: 1vw;
+        }
+
+        #header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            flex-grow: 1; /* Take remaining space */
+            text-align: center; /* Center the title */
+            padding-right: calc(32px + 1vw); /* Balance space taken by logo */
+        }
+
+        #canvas-area {
+            position: fixed;
+            top: 8vh;
+            left: 0;
+            right: 0;
+            /* Calc height: 100vh - header - controls/status - footer */
+            height: calc(100vh - 8vh - 18vh - 5vh);
+            display: block;
+            z-index: 5; /* Below header, above controls */
+        }
+
+        #myCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls-status-area {
+            position: fixed;
+            bottom: 5vh;
+            left: 0;
+            right: 0;
+            height: 18vh;
+            background-color: #ffffff;
+            border-top: 1px solid #cccccc;
+            display: flex;
+            z-index: 8; /* Below canvas, above footer */
+        }
+
+        #controls {
+            width: 35vw;
+            padding: 1vw;
+            box-sizing: border-box;
+            border-right: 1px solid #cccccc;
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* Spacing between control groups */
+            overflow-y: auto; /* Allow scrolling if controls overflow height */
+        }
+
+        .control-group {
+             display: flex;
+             align-items: center;
+             gap: 10px;
+             flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+
+        .control-group label {
+            width: 90px; /* Fixed width for alignment */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+         .control-group input[type="range"],
+         .control-group select {
+             flex-grow: 1; /* Allow control elements to take space */
+             max-width: 150px; /* Max width for inputs */
+         }
+
+         #controls button {
+             flex-grow: 1; /* Make buttons fill space */
+             max-width: 150px; /* Max width for buttons */
+         }
+
+
+        #status {
+            flex-grow: 1;
+            padding: 1vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto; /* Allow scrolling if status text overflows height */
+        }
+
+        #status p {
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        #footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 5vh;
+            background-color: #ffffff;
+            border-top: 1px solid #cccccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1vw;
+            box-sizing: border-box;
+            color: #2f8d46;
+            font-size: 0.9em;
+            z-index: 10; /* Ensure footer is on top */
+        }
+
+        /* Highlight styling for demo steps */
+        .highlight {
+            outline: 2px solid #2f8d46;
+            box-shadow: 0 0 8px rgba(47, 141, 70, 0.5);
+            z-index: 100; /* Bring highlighted element to front */
+            position: relative; /* Needed for z-index */
+        }
+         /* Specific highlighting for controls within flex/grid */
+         #controls .control-group.highlight {
+             outline: none; /* Remove outline from container */
+             box-shadow: none;
+         }
+         #controls .control-group .highlight-element {
+             outline: 2px solid #2f8d46;
+             box-shadow: 0 0 8px rgba(47, 141, 70, 0.5);
+             z-index: 100; /* Bring highlighted element to front */
+             position: relative; /* Needed for z-index */
+         }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>KNN Explorer</h1>
+    </div>
+
+    <div id="canvas-area">
+        <canvas id="myCanvas"></canvas>
+    </div>
+
+    <div id="controls-status-area">
+        <div id="controls">
+            <div class="control-group" id="k-control-group">
+                <label for="k-slider">Select k:</label>
+                <input type="range" id="k-slider" min="1" max="15" value="5">
+                <span id="k-value">5</span>
+            </div>
+            <div class="control-group" id="metric-control-group">
+                 <label for="metric-select">Metric:</label>
+                <select id="metric-select">
+                    <option value="euclidean">Euclidean</option>
+                    <option value="manhattan">Manhattan</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="predict-control-group">
+                <button id="predict-btn">Predict Class</button>
+                <button id="reset-btn">Clear Prediction</button>
+            </div>
+            <div class="control-group" id="action-buttons-group">
+                 <button id="randomize-btn">Randomize Data</button>
+                 <button id="auto-run-btn">Auto-Run Demo</button>
+                 <button id="next-step-btn">Next Step</button>
+            </div>
+        </div>
+        <div id="status">
+            <p id="main-status">Adjust 'k' and Metric, then Predict, or run Demo.</p>
+            <p id="detail-status"></p>
+        </div>
+    </div>
+
+    <div id="footer">
+        <span><a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a></span>
+        <span><a href="https://www.linkedin.com/in/ashish-jangra/">LinkedIn</a></span>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const CANVAS_WIDTH = 800; // Internal canvas drawing dimensions
+        const CANVAS_HEIGHT = 600;
+        const POINT_RADIUS = 5;
+        const TEST_POINT_SIZE = 10; // Increased size for visibility
+        const CLASS_COLORS = ['#007bff', '#dc3545']; // Blue, Red for classes
+        const TEST_POINT_COLOR_INITIAL = '#000000'; // Black initially
+        const NEIGHBOR_HIGHLIGHT_COLOR = '#2f8d46';
+        const NEIGHBOR_HIGHLIGHT_WIDTH = 2;
+        const NUM_DATA_POINTS = 50;
+        const MAX_K_SLIDER = 20; // Max value for the K slider
+        const DEMO_AUTO_RUN_DELAY = 3000; // Milliseconds between auto-run steps
+
+        // --- Global State ---
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        let dataPoints = [];
+        let testPoint = { x: 0, y: 0, predictedClass: null };
+        let nearestNeighbors = []; // Array of *references* to neighbor points
+        let currentK = parseInt(document.getElementById('k-slider').value);
+        let currentMetric = document.getElementById('metric-select').value;
+        let isPredicted = false; // Flag to track if prediction has been run
+
+        // Demo State
+        let demoSteps = [];
+        let currentDemoStepIndex = -1;
+        let isAutoRunning = false;
+        let autoRunInterval = null;
+        let demoElementsToHighlight = []; // Store elements to highlight in current step
+
+        // --- UI Elements ---
+        const kSlider = document.getElementById('k-slider');
+        const kValueSpan = document.getElementById('k-value');
+        const metricSelect = document.getElementById('metric-select');
+        const predictBtn = document.getElementById('predict-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const autoRunBtn = document.getElementById('auto-run-btn');
+        const nextStepBtn = document.getElementById('next-step-btn');
+        const mainStatus = document.getElementById('main-status');
+        const detailStatus = document.getElementById('detail-status');
+
+        // --- Canvas Setup ---
+        function resizeCanvas() {
+            const canvasArea = document.getElementById('canvas-area');
+            const rect = canvasArea.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            // Redraw after resize
+            drawCanvas();
+        }
+
+        // Initial resize
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Drawing Functions ---
+        // Scales coordinates from internal CANVAS_WIDTH/HEIGHT to actual canvas size
+        function scalePoint(p) {
+            const scaleX = canvas.width / CANVAS_WIDTH;
+            const scaleY = canvas.height / CANVAS_HEIGHT;
+            return { x: p.x * scaleX, y: p.y * scaleY };
+        }
+
+        function drawPoint(point, color, radius, outlineColor = null, outlineWidth = 0) {
+            const scaled = scalePoint(point);
+            ctx.beginPath();
+            ctx.arc(scaled.x, scaled.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            if (outlineColor && outlineWidth > 0) {
+                ctx.strokeStyle = outlineColor;
+                ctx.lineWidth = outlineWidth;
+                ctx.stroke();
+            }
+        }
+
+        function drawTestPoint(point, color, size, outlineColor = null, outlineWidth = 0) {
+             const scaled = scalePoint(point);
+             ctx.beginPath();
+             // Draw as a triangle centered roughly at point.x, point.y
+             ctx.moveTo(scaled.x, scaled.y - size / 2); // Top vertex
+             ctx.lineTo(scaled.x - size / 2, scaled.y + size / 2); // Bottom-left vertex
+             ctx.lineTo(scaled.x + size / 2, scaled.y + size / 2); // Bottom-right vertex
+             ctx.closePath();
+             ctx.fillStyle = color;
+             ctx.fill();
+             if (outlineColor && outlineWidth > 0) {
+                ctx.strokeStyle = outlineColor;
+                ctx.lineWidth = outlineWidth;
+                ctx.stroke();
+            }
+        }
+
+
+        function drawCanvas() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw data points
+            dataPoints.forEach(point => {
+                // Check if the point is one of the nearest neighbors
+                const isNeighbor = nearestNeighbors.some(neighbor => neighbor === point);
+                drawPoint(point, CLASS_COLORS[point.class], POINT_RADIUS,
+                          isNeighbor ? NEIGHBOR_HIGHLIGHT_COLOR : null,
+                          isNeighbor ? NEIGHBOR_HIGHLIGHT_WIDTH : 0);
+            });
+
+            // Draw test point
+            const testPointColor = isPredicted && testPoint.predictedClass !== null ? CLASS_COLORS[testPoint.predictedClass] : TEST_POINT_COLOR_INITIAL;
+            drawTestPoint(testPoint, testPointColor, TEST_POINT_SIZE);
+        }
+
+        // --- Data Generation ---
+        function generateRandomData() {
+            dataPoints = [];
+            const margin = 50; // Keep points away from edges in internal coordinates
+            const width = CANVAS_WIDTH - 2 * margin;
+            const height = CANVAS_HEIGHT - 2 * margin;
+
+            if (width <= 0 || height <= 0) { // Handle very small canvas sizes
+                 console.error("Canvas area too small to generate data.");
+                 // Generate minimal data near center if area is tiny
+                 dataPoints.push({ x: CANVAS_WIDTH/2, y: CANVAS_HEIGHT/2 - 20, class: 0 });
+                 dataPoints.push({ x: CANVAS_WIDTH/2, y: CANVAS_HEIGHT/2 + 20, class: 1 });
+            } else {
+                for (let i = 0; i < NUM_DATA_POINTS; i++) {
+                    dataPoints.push({
+                        x: margin + Math.random() * width,
+                        y: margin + Math.random() * height,
+                        class: Math.floor(Math.random() * CLASS_COLORS.length) // 0 or 1
+                    });
+                }
+            }
+
+
+            testPoint = {
+                 x: margin + Math.random() * width,
+                 y: margin + Math.random() * height,
+                 predictedClass: null
+            };
+
+            // Ensure test point is not on top of a data point
+            let collision = true;
+             while (collision) {
+                 collision = false;
+                 for (const point of dataPoints) {
+                     if (getDistance(testPoint, point, 'euclidean') < POINT_RADIUS + TEST_POINT_SIZE) {
+                         testPoint.x = margin + Math.random() * width;
+                         testPoint.y = margin + Math.random() * height;
+                         collision = true;
+                         break;
+                     }
+                 }
+             }
+
+
+            nearestNeighbors = [];
+            isPredicted = false;
+             // Update kSlider max based on new data size (min 1 neighbor, max dataPoints-1)
+             kSlider.max = Math.max(1, Math.min(dataPoints.length - 1, MAX_K_SLIDER));
+             // Ensure currentK is not more than the new max
+             currentK = Math.min(currentK, parseInt(kSlider.max));
+             kSlider.value = currentK;
+             kValueSpan.textContent = currentK;
+        }
+
+        // --- Distance Metrics ---
+        function euclideanDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        function manhattanDistance(p1, p2) {
+            return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        }
+
+        function getDistance(p1, p2, metric) {
+            if (metric === 'euclidean') {
+                return euclideanDistance(p1, p2);
+            } else if (metric === 'manhattan') {
+                return manhattanDistance(p1, p2);
+            }
+            return 0; // Default or error
+        }
+
+        // --- KNN Logic ---
+        function performKNN(k, metric) {
+            if (dataPoints.length === 0) {
+                mainStatus.textContent = "No data points to analyze.";
+                detailStatus.textContent = "";
+                 return;
+            }
+             if (k <= 0 || k > dataPoints.length) {
+                 mainStatus.textContent = `Invalid k value: ${k}. Must be between 1 and ${dataPoints.length}.`;
+                 detailStatus.textContent = "";
+                 return;
+            }
+             if (k > dataPoints.length - 1 && dataPoints.length > 1) {
+                  mainStatus.textContent = `Warning: k=${k} is >= total points (${dataPoints.length}). Using all points.`;
+                  detailStatus.textContent = "";
+             }
+
+
+            // Calculate distances and store with original points
+            const distances = dataPoints.map(point => ({
+                point: point,
+                distance: getDistance(testPoint, point, metric)
+            }));
+
+            // Sort by distance
+            distances.sort((a, b) => a.distance - b.distance);
+
+            // Get the k nearest neighbors (or all points if k is >= total points)
+            const neighborsWithDistance = distances.slice(0, Math.min(k, dataPoints.length));
+            nearestNeighbors = neighborsWithDistance.map(d => d.point);
+
+            // Count majority class
+            const classCounts = {};
+            // Initialize counts for all possible classes
+            CLASS_COLORS.forEach((_, i) => { classCounts[i] = 0; });
+
+            nearestNeighbors.forEach(neighbor => {
+                if (neighbor.class in classCounts) {
+                     classCounts[neighbor.class]++;
+                }
+            });
+
+            let predictedClass = null;
+            let maxCount = -1;
+            // Determine the majority class. Handle ties by picking the class with the smallest index.
+            const classes = Object.keys(classCounts).map(Number).sort((a, b) => a - b); // Sort class keys numerically
+            for (const className of classes) {
+                 if (classCounts[className] > maxCount) {
+                     maxCount = classCounts[className];
+                     predictedClass = className;
+                 }
+            }
+
+
+            testPoint.predictedClass = predictedClass;
+            isPredicted = true;
+
+            // Update status
+            let classSummary = classes.map(c => `Class ${c + 1}: ${classCounts[c]}`).join(', ');
+            mainStatus.textContent = `Predicted Class: Class ${predictedClass + 1}`;
+            detailStatus.textContent = `(k=${k}, Metric=${metric}). Neighbors: ${classSummary}`;
+
+            // Redraw canvas with results
+            drawCanvas();
+        }
+
+        // --- Control Event Handlers ---
+        kSlider.addEventListener('input', (event) => {
+            currentK = parseInt(event.target.value);
+            kValueSpan.textContent = currentK;
+            // Clear prediction visualization when controls change, ready for a new prediction
+            resetPredictionVisualization();
+             // Clear any demo highlighting
+             clearHighlighting();
+             // Update status to prompt prediction
+             mainStatus.textContent = `Ready to Predict with k=${currentK}, Metric=${currentMetric}.`;
+             detailStatus.textContent = "";
+        });
+
+         metricSelect.addEventListener('change', (event) => {
+            currentMetric = event.target.value;
+             // Clear prediction visualization when controls change
+            resetPredictionVisualization();
+             // Clear any demo highlighting
+             clearHighlighting();
+             // Update status to prompt prediction
+             mainStatus.textContent = `Ready to Predict with k=${currentK}, Metric=${currentMetric}.`;
+             detailStatus.textContent = "";
+        });
+
+        predictBtn.addEventListener('click', () => {
+            stopAutoRun(); // Stop demo if running
+            // Clear any demo highlighting
+             clearHighlighting();
+            mainStatus.textContent = "Calculating...";
+            detailStatus.textContent = "";
+            // Add a small delay to show "Calculating..." before prediction
+            setTimeout(() => {
+                performKNN(currentK, currentMetric);
+            }, 50); // Small delay
+        });
+
+        resetBtn.addEventListener('click', () => {
+             stopAutoRun(); // Stop demo if running
+             resetPredictionVisualization();
+             mainStatus.textContent = "Prediction cleared. Adjust controls and Predict.";
+             detailStatus.textContent = "";
+             // Clear any demo highlighting
+             clearHighlighting();
+        });
+
+        function resetPredictionVisualization() {
+             nearestNeighbors = [];
+             testPoint.predictedClass = null;
+             isPredicted = false;
+             drawCanvas(); // Redraw canvas without prediction results
+        }
+
+        randomizeBtn.addEventListener('click', () => {
+             stopAutoRun(); // Stop demo if running
+            generateRandomData();
+            // Reset controls to default (or keep current values?) - brief implies reset. Let's keep values but update max k.
+            // currentK = 5; // Default k
+            // kSlider.value = currentK;
+            // kValueSpan.textContent = currentK;
+            // currentMetric = 'euclidean'; // Default metric
+            // metricSelect.value = currentMetric;
+
+            resetPredictionVisualization(); // Clear prediction state
+            mainStatus.textContent = "New data randomized. Adjust 'k' and Metric, then Predict, or run Demo.";
+            detailStatus.textContent = "";
+             // Clear any demo highlighting
+             clearHighlighting();
+        });
+
+
+        // --- Guided Demo Logic ---
+        // Demo Steps:
+        // 0: Initial state (random data, no prediction) -> Status text introduction
+        // 1: Point out Randomize button -> Highlight Randomize
+        // 2: Point out data points and test point -> Status text
+        // 3: Point out K slider -> Highlight K slider
+        // 4: Point out Metric select -> Highlight Metric select
+        // 5: Explain prediction setup -> Status text
+        // 6: Point out Predict button -> Highlight Predict
+        // 7: Perform calculation -> Calculate step, redraw
+        // 8: Explain prediction result -> Status text, highlight neighbors visually (already drawn)
+        // 9: Suggest changing controls -> Status text, highlight K and Metric again
+        // 10: Suggest Randomizing or finishing -> Status text
+        // 11: Reset highlights, finish demo -> Reset action
+
+        function generateDemoSteps() {
+             demoSteps = [
+                 { action: 'status', text: "Welcome! This app demonstrates the K-Nearest Neighbors (KNN) algorithm.", detail: "Click 'Next Step' or 'Auto-Run Demo' below." },
+                 { action: 'highlight', element: '#randomize-btn', text: "The canvas shows data points (blue/red) and a test point (black triangle).", detail: "Click 'Randomize Data' anytime for a new set." },
+                 { action: 'status', text: "KNN predicts the test point's class based on its 'k' nearest data points.", detail: ""},
+                 { action: 'highlight', element: '#k-control-group', text: "The 'k' slider selects how many neighbors to consider.", detail: "Current k is " + currentK + "." },
+                 { action: 'highlight', element: '#metric-control-group', text: "The 'Metric' dropdown selects how 'distance' is measured.", detail: "Current metric is " + currentMetric + "." },
+                 { action: 'status', text: "Once k and the Metric are set, we find the k closest neighbors.", detail: "Their majority class becomes the prediction." },
+                 { action: 'highlight', element: '#predict-btn', text: "Click 'Predict Class' to run KNN with the current settings.", detail: ""},
+                 { action: 'calculate', text: "Calculating neighbors and predicting class...", detail: ""}, // This step performs the KNN calculation
+                 { action: 'status', text: `Prediction complete: Class ${testPoint.predictedClass !== null ? (testPoint.predictedClass + 1) : '?'}.`, detail: `The test point changes color to match the predicted class.`},
+                 { action: 'status', text: `Observe the highlighted neighbors. They are the ${currentK} closest points using the ${currentMetric} metric.`, detail: "Their majority class determined the prediction."},
+                 { action: 'highlight', element: '#k-control-group', text: "Try changing 'k' or Metric...", detail: "...and click 'Predict Class' again to see how the result changes."},
+                  { action: 'highlight', element: '#metric-control-group', text: "Try changing 'k' or Metric...", detail: "...and click 'Predict Class' again to see how the result changes."},
+                 { action: 'status', text: "Click 'Randomize Data' to start over with new points.", detail: "Or click 'Clear Prediction' to remove highlights."},
+                 { action: 'reset-highlight', text: "Demo finished. Explore the app manually!", detail: "Adjust controls and click Predict, or Randomize Data."}
+             ];
+        }
+
+        function clearHighlighting() {
+            document.querySelectorAll('.highlight, .highlight-element').forEach(el => {
+                 el.classList.remove('highlight');
+                 el.classList.remove('highlight-element');
+             });
+        }
+
+        function executeDemoStep(stepIndex) {
+            stopAutoRunTimer(); // Stop the current step timer
+            clearHighlighting(); // Clear highlighting from previous step
+
+            if (stepIndex < 0 || stepIndex >= demoSteps.length) {
+                stopAutoRun(); // End the demo run
+                currentDemoStepIndex = -1; // Reset demo state
+                mainStatus.textContent = "Demo finished. Explore the app manually!";
+                detailStatus.textContent = "Adjust controls and click Predict, or Randomize Data.";
+                // Optionally reset prediction state at the end of the demo
+                resetPredictionVisualization();
+                return;
+            }
+
+            const step = demoSteps[stepIndex];
+
+            switch (step.action) {
+                case 'status':
+                    mainStatus.textContent = step.text;
+                    detailStatus.textContent = step.detail;
+                    break;
+                 case 'highlight':
+                    mainStatus.textContent = step.text;
+                    detailStatus.textContent = step.detail;
+                    const element = document.querySelector(step.element);
+                    if (element) {
+                         // Check if element is part of a flex/grid container that needs parent highlighting
+                         if (element.closest('.control-group')) {
+                              element.classList.add('highlight-element'); // Highlight the specific control
+                              // element.closest('.control-group').classList.add('highlight'); // Optionally highlight the parent group
+                         } else {
+                              element.classList.add('highlight'); // Apply standard highlight
+                         }
+                         demoElementsToHighlight = [element]; // Store for potential later clearing (though clearHighlighting handles this)
+                    }
+                    break;
+                 case 'calculate':
+                    mainStatus.textContent = step.text;
+                    detailStatus.textContent = step.detail;
+                    // Perform the actual KNN calculation and update canvas internally
+                    performKNN(currentK, currentMetric);
+                    break;
+                 case 'highlight-prediction':
+                     mainStatus.textContent = step.text;
+                    detailStatus.textContent = step.detail;
+                    // The drawing function already handles highlighting neighbors and test point color based on isPredicted and nearestNeighbors.
+                    // No additional DOM highlighting needed here.
+                    break;
+                 case 'reset-highlight':
+                     mainStatus.textContent = step.text;
+                     detailStatus.textContent = step.detail;
+                     clearHighlighting();
+                     break;
+            }
+
+             currentDemoStepIndex = stepIndex;
+
+             // If auto-running, set timer for the next step
+             if (isAutoRunning) {
+                  autoRunInterval = setTimeout(() => {
+                      executeDemoStep(currentDemoStepIndex + 1);
+                  }, DEMO_AUTO_RUN_DELAY);
+             }
+        }
+
+        function startAutoRun() {
+            if (isAutoRunning) return; // Prevent starting if already running
+            stopAutoRun(); // Ensure any existing run is stopped
+            isAutoRunning = true;
+            currentDemoStepIndex = -1; // Start from the beginning
+
+            // Reset everything before starting the demo
+            randomizeBtn.click(); // Start with fresh data
+            resetBtn.click(); // Clear any prediction state
+            generateDemoSteps(); // Generate fresh steps (important if data affects step details like predicted class)
+
+            // Delay before first step
+            autoRunInterval = setTimeout(() => {
+                 executeDemoStep(0);
+            }, 500); // Initial delay before the very first step
+        }
+
+        function stopAutoRun() {
+            isAutoRunning = false;
+            stopAutoRunTimer(); // Clear the current step timer
+        }
+
+        function stopAutoRunTimer() {
+             if (autoRunInterval) {
+                 clearTimeout(autoRunInterval);
+                 autoRunInterval = null;
+             }
+        }
+
+        function nextStep() {
+            stopAutoRun(); // Stop auto-run if nextStep is clicked
+            generateDemoSteps(); // Ensure steps are generated, especially if starting mid-demo
+            executeDemoStep(currentDemoStepIndex + 1);
+        }
+
+
+        // --- Initial Setup ---
+
+        // Set initial K slider max based on initial data size (which is 0 before generateRandomData)
+        // Set it based on MAX_K_SLIDER config initially, then update after data generation.
+        kSlider.max = MAX_K_SLIDER;
+
+
+        generateRandomData(); // Generate initial data points and test point
+        drawCanvas(); // Draw initial state
+
+        // Generate demo steps AFTER initial data generation
+        generateDemoSteps();
+
+        // --- Attach Event Listeners for Demo Controls ---
+        autoRunBtn.addEventListener('click', startAutoRun);
+        nextStepBtn.addEventListener('click', nextStep);
+
+        // --- Initial Status ---
+        mainStatus.textContent = "Adjust 'k' and Metric, then Predict, or run Demo.";
+        detailStatus.textContent = "";
+
+
+    </script>
+</body>
+</html>

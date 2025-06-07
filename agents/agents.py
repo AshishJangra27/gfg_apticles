@@ -8,18 +8,7 @@ client = genai.Client(api_key= os.getenv("GOOGLE_API_KEY"))
 
 
 def get_clean_summary_from_llm(article_text: str, save: bool = False, output_dir: str = "./") -> dict:
-    """
-    Fetches an article summary using a language model.
-    
-    Parameters:
-    - article_text: str → The content of the article to summarize.
-    - save: bool → Whether to save the summary to a markdown file.
-    - output_dir: str → Directory to save the summary file if save=True.
-    
-    Returns:
-    - dict containing response, token usage info
-    """
-    
+
     clean_summary_prompt = generate_clean_summary_prompt(article_text)
 
     try:
@@ -54,17 +43,6 @@ def get_clean_summary_from_llm(article_text: str, save: bool = False, output_dir
 
 
 def get_webpage_design_from_llm(summarised_article: str, save: bool = False, output_dir: str = "./") -> dict:
-    """
-    Generates a webpage design idea using LLM from a summarised article.
-
-    Parameters:
-    - summarised_article: str → The input text summarizing an article.
-    - save: bool → Whether to save the design idea to a markdown file.
-    - output_dir: str → Directory to save the file if save=True.
-
-    Returns:
-    - dict containing response and token usage information
-    """
 
     webpage_design_prompt = generate_webpage_design_prompt(summarised_article)
 
@@ -102,23 +80,12 @@ def get_webpage_design_from_llm(summarised_article: str, save: bool = False, out
 
 
 def get_webpage_from_llm(design_brief: str, save: bool = False, output_dir: str = "./") -> dict:
-    """
-    Generates a complete webpage code from a design brief using LLM.
-
-    Parameters:
-    - design_brief: str → The textual description of the webpage design.
-    - save: bool → Whether to save the generated webpage code to a file.
-    - output_dir: str → Directory to save the file if save=True.
-
-    Returns:
-    - dict containing response and token usage information
-    """
 
     webpage_builder_prompt = generate_webpage_prompt(design_brief)
 
     try:
         webpage_code = client.models.generate_content(
-            model="gemini-2.5-flash-preview-04-17",
+            model="gemini-2.5-pro-preview-06-05",
             contents=webpage_builder_prompt
         )
 

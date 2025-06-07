@@ -1,0 +1,691 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Nearest Neighbors (KNN) Interactive Explainer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: #fff;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        header {
+            height: 5vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 2vw;
+            box-sizing: border-box;
+            border-bottom: 1px solid #cccccc;
+            justify-content: space-between;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        #logo-area {
+            font-weight: bold;
+            color: #2f8d46;
+            font-size: 1.2em;
+            margin-right: 1vw;
+            flex-shrink: 0;
+            border: 1px solid #2f8d46;
+            padding: 0.2em 0.5em;
+            line-height: 1;
+        }
+
+        header h1 {
+            font-size: 1.2em;
+            margin: 0 1vw;
+            flex-grow: 1;
+            text-align: center;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden; /* Hide overflow */
+            text-overflow: ellipsis; /* Add ellipsis */
+        }
+        /* Empty div to balance flex space */
+        header > div:last-child:not(#logo-area) {
+             width: 100px; /* Give empty div a fixed width for balance, adjust as needed */
+             flex-shrink: 0;
+        }
+
+
+        main {
+            height: 90vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 1vh;
+            box-sizing: border-box;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        #visualization-panel {
+            width: 96vw;
+            height: 65vh;
+            border: 2px solid #000;
+            margin-bottom: 1vh;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        #knnCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background-color: #fff;
+        }
+
+        #controls-panel {
+            width: 96vw;
+            height: 23vh; /* Adjusted based on header/footer/main padding/margin */
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 1vh 0;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1vw;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1vh;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+        }
+
+        #explanation {
+            flex-grow: 1;
+            border: 1px solid #cccccc;
+            padding: 1vw;
+            font-size: 0.9em;
+            line-height: 1.4;
+            min-height: 5vh;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+        }
+
+        footer {
+            height: 5vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid #cccccc;
+            background-color: #f0f0f0;
+            flex-shrink: 0;
+        }
+
+        footer a {
+            color: #2f8d46;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            background-color: #fff;
+            border: 1px solid #000;
+            padding: 0.5vh 1vw;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+
+        button:active {
+            background-color: #cccccc;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input[type="number"],
+        select {
+            font-family: monospace;
+            padding: 0.3vh 0.5vw;
+            border: 1px solid #000;
+            font-size: 0.9em;
+        }
+
+        input[type="number"] {
+            width: 4em;
+        }
+
+        label {
+             font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div id="logo-area">GeeksforGeeks</div>
+        <h1>K-Nearest Neighbors (KNN) Interactive Explainer</h1>
+        <div></div> <!-- Empty div for flex balance -->
+    </header>
+    <main>
+        <div id="visualization-panel">
+            <canvas id="knnCanvas"></canvas>
+        </div>
+        <div id="controls-panel">
+            <div id="controls">
+                <div class="control-group">
+                    <label for="k-value">K:</label>
+                    <input type="number" id="k-value" value="5" min="1" max="15" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="distance-metric">Distance:</label>
+                    <select id="distance-metric">
+                        <option value="Euclidean">Euclidean</option>
+                        <option value="Manhattan">Manhattan</option>
+                    </select>
+                </div>
+                <button id="randomize-btn">Randomize Data</button>
+                <button id="reset-btn">Reset</button>
+                <button id="auto-run-btn">Auto-Run Demo</button>
+                <button id="next-step-btn" disabled>Next Step</button>
+            </div>
+            <div id="explanation">
+                Explanation text will appear here.
+            </div>
+        </div>
+    </main>
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kInput = document.getElementById('k-value');
+        const distanceSelect = document.getElementById('distance-metric');
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const autoRunBtn = document.getElementById('auto-run-btn');
+        const nextStepBtn = document.getElementById('next-step-btn');
+        const explanationDiv = document.getElementById('explanation');
+
+        // Config
+        const numDataPoints = 70;
+        const numCategories = 3;
+        const categoryColors = ['#ff6347', '#4682b4', '#ffd700']; // Tomato, Steel Blue, Gold
+        const categoryNames = ['Tomato', 'Steel Blue', 'Gold'];
+
+        // State
+        let trainingData = [];
+        let testPoint = null;
+        let k = parseInt(kInput.value);
+        let distanceMetric = distanceSelect.value;
+        let nearestNeighbors = null;
+        let predictedCategory = null;
+        let voteCounts = null;
+        let demoStep = 0; // 0: initial, 1: point placed, 2: finding neighbors, 3: neighbors highlighted, 4: votes counted/predicting, 5: final
+        let isAutoRunning = false;
+        let autoTimeout = null;
+
+        // --- KNN Logic ---
+
+        function calculateDistance(p1, p2, metric) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            if (metric === 'Euclidean') {
+                return Math.sqrt(dx * dx + dy * dy);
+            } else if (metric === 'Manhattan') {
+                return Math.abs(dx) + Math.abs(dy);
+            }
+            return 0; // Should not happen
+        }
+
+        function findNearestNeighbors(point, data, k, metric) {
+            if (!point || k <= 0 || data.length === 0) return [];
+
+            const distances = data.map(p => ({
+                point: p,
+                distance: calculateDistance(point, p, metric)
+            }));
+
+            // Sort by distance
+            distances.sort((a, b) => a.distance - b.distance);
+
+            // Return top k neighbors (handle case where data.length < k)
+            return distances.slice(0, Math.min(k, data.length)).map(d => d.point);
+        }
+
+        function predictCategory(neighbors) {
+            if (!neighbors || neighbors.length === 0) return null;
+
+            const counts = {};
+            let maxCount = 0;
+            let predictedCat = null;
+            const tieBreakers = []; // Store categories with maxCount for tie-breaking
+
+            neighbors.forEach(neighbor => {
+                const cat = neighbor.category;
+                counts[cat] = (counts[cat] || 0) + 1;
+            });
+
+             voteCounts = counts; // Store for explanation
+
+            // Find max count
+             for (const cat in counts) {
+                 if (counts[cat] > maxCount) {
+                     maxCount = counts[cat];
+                     tieBreakers.length = 0;
+                     tieBreakers.push(parseInt(cat));
+                 } else if (counts[cat] === maxCount) {
+                     tieBreakers.push(parseInt(cat));
+                 }
+             }
+
+
+            // Tie-breaking: if multiple categories have the max count,
+            // pick the category of the first neighbor in the original neighbors list
+            // that belongs to one of the tied categories.
+            if (tieBreakers.length > 0) {
+                 if (tieBreakers.length === 1) {
+                     predictedCat = tieBreakers[0];
+                 } else {
+                     // Iterate through neighbors in their sorted order to break tie
+                     for(const neighbor of neighbors) {
+                         if(tieBreakers.includes(neighbor.category)) {
+                             predictedCat = neighbor.category;
+                             break; // Found the category for tie-breaking
+                         }
+                     }
+                 }
+            }
+
+            return predictedCat;
+        }
+
+        function runKNN() {
+            // This function performs the core calculation but doesn't dictate demo steps
+            if (!testPoint || k <= 0) {
+                nearestNeighbors = null;
+                predictedCategory = null;
+                voteCounts = null;
+                return;
+            }
+            nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, distanceMetric);
+            predictedCategory = predictCategory(nearestNeighbors);
+        }
+
+        // --- Drawing ---
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw training points
+            trainingData.forEach(point => {
+                ctx.fillStyle = categoryColors[point.category];
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, Math.PI * 2); // Draw circle
+                ctx.fill();
+                ctx.strokeStyle = '#000'; // Outline
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // If test point exists
+            if (testPoint) {
+                // Draw test point base shape (square outline)
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.rect(testPoint.x - 7, testPoint.y - 7, 14, 14);
+                ctx.stroke();
+
+                // If demoStep >= 3 (Neighbors highlighted)
+                if (demoStep >= 3 && nearestNeighbors) {
+                     nearestNeighbors.forEach(neighbor => {
+                        // Draw line from test point to neighbor (green)
+                        ctx.strokeStyle = '#2f8d46';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(testPoint.x, testPoint.y);
+                        ctx.lineTo(neighbor.x, neighbor.y);
+                        ctx.stroke();
+
+                        // Draw ring around neighbor (green)
+                        ctx.strokeStyle = '#2f8d46';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(neighbor.x, neighbor.y, 8, 0, Math.PI * 2); // Larger circle outline
+                        ctx.stroke();
+                    });
+                }
+
+                // If demoStep >= 5 (Predicted category shown)
+                if (demoStep >= 5 && predictedCategory !== null) {
+                     // Draw test point filled with predicted color
+                    ctx.fillStyle = categoryColors[predictedCategory];
+                    ctx.beginPath();
+                    ctx.rect(testPoint.x - 7, testPoint.y - 7, 14, 14); // Redraw square
+                    ctx.fill();
+                    ctx.strokeStyle = '#000'; // Outline
+                    ctx.lineWidth = 2;
+                    ctx.stroke(); // Redraw outline
+                }
+            }
+        }
+
+        // --- Explanation ---
+
+        function updateExplanation() {
+            let text = "";
+            let votesDisplay = "";
+
+             if (demoStep >= 4 && voteCounts !== null) {
+                const countsArray = Object.entries(voteCounts).map(([catIndex, count]) =>
+                    `${categoryNames[parseInt(catIndex)]}: ${count} vote${count !== 1 ? 's' : ''}`
+                );
+                 votesDisplay = `Votes: ${countsArray.join(', ')}. `;
+             }
+
+            switch (demoStep) {
+                case 0:
+                    text = "Click on the canvas to place a point to classify.";
+                    break;
+                case 1:
+                    text = `Point placed at (${testPoint.x.toFixed(0)}, ${testPoint.y.toFixed(0)}). Select K (${k}) and Distance (${distanceMetric}), then click Auto-Run or Next Step.`;
+                    break;
+                case 2:
+                    text = `Finding K=${k} nearest points using ${distanceMetric} distance...`;
+                    break;
+                case 3:
+                    text = `The ${k} nearest points are highlighted. Now counting votes...`;
+                    break;
+                case 4:
+                     text = `${votesDisplay} Determining the majority category...`;
+                     if (!isAutoRunning && demoStep < 5) text += " Click Next Step.";
+                    break;
+                case 5:
+                    text = `${votesDisplay} Predicted Category: ${predictedCategory !== null ? categoryNames[predictedCategory] : 'N/A'}. Classification complete. Click canvas for new point or Randomize.`;
+                    break;
+                default:
+                    text = "Ready.";
+            }
+            explanationDiv.textContent = text;
+        }
+
+        // --- Demo Control ---
+
+        function stopAutoRun() {
+            if (isAutoRunning) {
+                isAutoRunning = false;
+                clearTimeout(autoTimeout);
+                autoRunBtn.textContent = 'Auto-Run Demo';
+                autoRunBtn.disabled = false; // Always re-enable after stopping
+                // Re-evaluate next step button based on current state
+                nextStepBtn.disabled = (demoStep === 0 || demoStep >= 5);
+            }
+        }
+
+        function startAutoRun() {
+            stopAutoRun(); // Ensure any existing auto-run is stopped cleanly
+            isAutoRunning = true;
+            autoRunBtn.textContent = 'Stop Auto-Run';
+            autoRunBtn.disabled = true; // Disabled *while* running
+            nextStepBtn.disabled = true; // Disabled *while* running
+
+            // If a point exists and demo is on final step, reset it to step 1 before running
+            if (testPoint && demoStep >= 5) {
+                 demoStep = 1;
+                 // Clear previous results to force re-calc in step 2
+                 nearestNeighbors = null;
+                 predictedCategory = null;
+                 voteCounts = null;
+            } else if (!testPoint) {
+                 // If no point, step 0 -> nextStepDemo will place one and go to step 1
+                 demoStep = 0;
+            } else {
+                // Point exists, not on final step, start from current step or step 1 if needed
+                 if (demoStep === 0) demoStep = 1; // Ensure it starts from at least step 1 if point exists
+                 // No need to clear results if starting from step 1 or higher,
+                 // runKNN will be called in nextStepDemo based on step
+            }
+             nextStepDemo(); // Start the sequence
+        }
+
+
+        function nextStepDemo() {
+            if (!testPoint && demoStep === 0) {
+                // If no test point and demo is at step 0, place one randomly near the center
+                testPoint = {
+                     x: canvas.width / 2 + (Math.random() - 0.5) * 100,
+                     y: canvas.height / 2 + (Math.random() - 0.5) * 100
+                };
+                 demoStep = 1; // Now point is placed
+                 updateExplanation(); // Update explanation for step 1
+                 draw(); // Draw point
+                 // If auto-running, proceed to step 2 after a delay
+                 if (isAutoRunning) {
+                      autoTimeout = setTimeout(nextStepDemo, 1500);
+                 } else {
+                     nextStepBtn.disabled = false; // Manual step: enable next button
+                     autoRunBtn.disabled = false; // Manual step: auto-run is available
+                 }
+                 return; // Exit to wait for next step call (manual or auto)
+            } else if (!testPoint && demoStep > 0) {
+                // Should not happen if state is consistent, but reset if needed
+                resetState();
+                generateRandomData(); // Regenerate data on error reset
+                draw();
+                updateExplanation();
+                return;
+            }
+
+            // If testPoint exists, proceed with demo steps
+            demoStep++;
+
+            if (demoStep > 5) {
+                stopAutoRun(); // Demo finished
+                 demoStep = 5; // Stay on final step
+                 updateExplanation();
+                 draw();
+                 return;
+            }
+
+            // Actions for each step
+            switch (demoStep) {
+                case 2: // Finding neighbors
+                    runKNN(); // Calculates nearestNeighbors and predictedCategory (and voteCounts)
+                    break;
+                case 3: // Highlighting neighbors - drawing handles this based on demoStep >= 3
+                    break;
+                case 4: // Counting votes / Predicting - prediction already done in step 2, update explanation
+                     break;
+                case 5: // Show final prediction - drawing handles this based on demoStep >= 5
+                     break;
+            }
+
+            updateExplanation();
+            draw();
+
+            if (isAutoRunning && demoStep < 5) {
+                autoTimeout = setTimeout(nextStepDemo, 1500); // 1.5 second delay
+            } else if (demoStep >= 5) {
+                stopAutoRun(); // Demo finished
+            }
+
+             // Manage button states after step logic
+             if (!isAutoRunning) {
+                 nextStepBtn.disabled = (demoStep === 0 || demoStep >= 5); // Disable Next Step if demo finished
+             } else {
+                 nextStepBtn.disabled = true; // Disable Next Step during auto-run
+             }
+             // autoRunBtn state handled by stopAutoRun or startAutoRun implicitly
+        }
+
+
+        // --- State Management ---
+
+        function generateRandomData() {
+            trainingData = [];
+            for (let i = 0; i < numDataPoints; i++) {
+                trainingData.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    category: Math.floor(Math.random() * numCategories)
+                });
+            }
+        }
+
+        function resetState() {
+            stopAutoRun();
+            testPoint = null;
+            nearestNeighbors = null;
+            predictedCategory = null;
+            voteCounts = null;
+            demoStep = 0;
+            kInput.value = 5; // Reset K input value
+            k = 5; // Reset internal K state
+            distanceSelect.value = 'Euclidean'; // Reset distance select value
+            distanceMetric = 'Euclidean'; // Reset internal distance state
+             nextStepBtn.disabled = true; // Next Step disabled initially
+             autoRunBtn.disabled = false; // Auto-Run enabled initially
+             autoRunBtn.textContent = 'Auto-Run Demo'; // Ensure button text is correct
+        }
+
+        function randomizeData() {
+            resetState(); // Reset state first
+            generateRandomData(); // Generate new data
+            draw();
+            updateExplanation(); // Update explanation for initial state (step 0)
+        }
+
+
+        // --- Event Listeners ---
+
+        canvas.addEventListener('click', (event) => {
+            stopAutoRun(); // Stop demo if running
+            const rect = canvas.getBoundingClientRect();
+            testPoint = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+            // Clear previous calculation results when a new point is placed
+            nearestNeighbors = null;
+            predictedCategory = null;
+            voteCounts = null;
+            demoStep = 1; // Point placed state
+
+            updateExplanation(); // Update explanation for step 1
+            draw(); // Redraw with the new point
+
+            // Update button states
+            nextStepBtn.disabled = false; // Next Step is now possible
+            autoRunBtn.disabled = false; // Auto-Run is now possible
+             autoRunBtn.textContent = 'Auto-Run Demo'; // Ensure text is correct
+        });
+
+        kInput.addEventListener('change', () => {
+            stopAutoRun(); // Stop demo if running
+            const newK = parseInt(kInput.value);
+            if (!isNaN(newK) && newK >= 1 && newK <= 15) {
+                k = newK; // Update internal K state
+                 if (testPoint) {
+                     // If point exists, reset demo step to 1 to allow re-running calculation steps
+                     demoStep = 1;
+                     // Clear old results as K changed
+                     nearestNeighbors = null;
+                     predictedCategory = null;
+                     voteCounts = null;
+                 } else {
+                      demoStep = 0; // No point, reset to initial state
+                 }
+                 updateExplanation();
+                draw();
+                 // Re-evaluate button states based on new demoStep
+                 nextStepBtn.disabled = (demoStep === 0 || demoStep >= 5);
+                 autoRunBtn.disabled = (demoStep === 0); // Disable auto-run if no point placed
+                 autoRunBtn.textContent = 'Auto-Run Demo'; // Ensure text is correct
+            } else {
+                kInput.value = k; // Revert to last valid K
+            }
+        });
+
+         distanceSelect.addEventListener('change', () => {
+             stopAutoRun(); // Stop demo if running
+             distanceMetric = distanceSelect.value; // Update internal metric state
+             if (testPoint) {
+                 // If point exists, reset demo step to 1
+                 demoStep = 1;
+                 // Clear old results as metric changed
+                 nearestNeighbors = null;
+                 predictedCategory = null;
+                 voteCounts = null;
+             } else {
+                  demoStep = 0; // No point, reset to initial state
+             }
+             updateExplanation();
+             draw();
+              // Re-evaluate button states based on new demoStep
+             nextStepBtn.disabled = (demoStep === 0 || demoStep >= 5);
+             autoRunBtn.disabled = (demoStep === 0); // Disable auto-run if no point placed
+             autoRunBtn.textContent = 'Auto-Run Demo'; // Ensure text is correct
+         });
+
+
+        randomizeBtn.addEventListener('click', randomizeData);
+
+        resetBtn.addEventListener('click', () => {
+            resetState(); // Reset state and controls
+             generateRandomData(); // Generate new data on reset as per brief
+            draw(); // Draw initial state
+            updateExplanation(); // Update explanation for initial state
+        });
+
+        autoRunBtn.addEventListener('click', startAutoRun);
+        nextStepBtn.addEventListener('click', nextStepDemo);
+
+
+        // --- Initialization ---
+
+        function init() {
+            // Set canvas dimensions based on its containing panel.
+            // This makes the canvas match the size allocated by CSS vh/vw units.
+            // This is more reliable than hardcoding pixels based on an assumption
+            // about the exact rendered size of 96vw/65vh.
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            // Set initial state and generate data
+            generateRandomData();
+            resetState(); // This also calls stopAutoRun, sets initial K/Metric, disables NextStep etc.
+            draw();
+            updateExplanation(); // Sets initial explanation
+        }
+
+        // Run initialization when the page loads
+        init();
+
+    </script>
+</body>
+</html>

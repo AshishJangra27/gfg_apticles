@@ -1,0 +1,744 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>k-Nearest Neighbors Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: #ffffff;
+            color: #000000;
+            overflow: hidden; /* Crucial for non-scrolling */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .header {
+            height: 8vh;
+            background-color: #f0f0f0; /* Light gray accent */
+            display: flex;
+            align-items: center;
+            padding: 0 1vw;
+        }
+
+        .header img {
+            height: 3.5vh; /* Adjust logo size based on header height */
+            margin-right: 1vw;
+        }
+
+        .header h1 {
+            font-size: 2vh;
+            margin: 0;
+            flex-grow: 1; /* Allow title to take space */
+            text-align: center;
+        }
+
+        .main-area {
+            flex-grow: 1; /* Takes remaining vertical space */
+            height: 87vh;
+            display: flex;
+        }
+
+        .canvas-panel {
+            width: 65vw;
+            height: 100%; /* Fill parent height (87vh) */
+            background-color: #ffffff;
+            position: relative; /* For potential absolute positioning inside */
+            border-right: 1px solid #cccccc; /* Subtle separator */
+        }
+
+        #knnCanvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%; /* Fill canvas panel width */
+            height: 100%; /* Fill canvas panel height */
+        }
+
+        .controls-panel {
+            width: 35vw;
+            height: 100%; /* Fill parent height (87vh) */
+            background-color: #f9f9f9; /* Slightly different light gray */
+            padding: 2vh 1.5vw; /* Padding inside */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Vertical spacing between control groups */
+            overflow-y: auto; /* Enable scrolling ONLY within controls if needed, but aim to avoid */
+        }
+        
+        /* Try to prevent scrolling if possible by adjusting element heights */
+        .controls-panel > div {
+             margin-bottom: 1.5vh; /* Consistent spacing */
+        }
+
+
+        .control-group h3 {
+            margin: 0 0 1vh 0;
+            font-size: 1.8vh;
+            border-bottom: 1px solid #cccccc;
+            padding-bottom: 0.5vh;
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1vh;
+        }
+
+        .control-item label {
+            font-size: 1.6vh;
+            margin-right: 1vw;
+            min-width: 8vw; /* Align labels */
+        }
+
+        .control-item input[type="range"] {
+            flex-grow: 1;
+            accent-color: #2f8d46; /* Green highlight for slider */
+        }
+
+        .control-item input[type="number"] {
+             width: 3vw;
+             margin-left: 0.5vw;
+             font-size: 1.6vh;
+             padding: 0.2vh;
+        }
+
+        .control-item span.slider-value {
+             margin-left: 1vw;
+             font-size: 1.6vh;
+             font-weight: bold;
+        }
+
+        .control-item input[type="radio"] {
+             margin-right: 0.5vw;
+             accent-color: #2f8d46;
+        }
+
+        .control-item label.radio-label {
+             margin-right: 1vw;
+             min-width: unset; /* Override min-width for radio labels */
+             font-size: 1.6vh;
+        }
+
+
+        button {
+            background-color: #2f8d46;
+            color: white;
+            border: none;
+            padding: 1vh 1.5vw;
+            font-size: 1.6vh;
+            cursor: pointer;
+            border-radius: 0.5vh;
+            transition: background-color 0.2s ease;
+            margin-right: 0.5vw; /* Spacing between buttons */
+        }
+
+        button:last-child {
+            margin-right: 0;
+        }
+
+        button:hover {
+            background-color: #246c35; /* Darker green */
+        }
+         button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+         }
+
+
+        .explanation-area {
+            margin-top: 2vh;
+            padding: 1.5vh;
+            background-color: #e9ffe9; /* Very light green */
+            border: 1px solid #2f8d46;
+            min-height: 5vh; /* Ensure visibility */
+            font-size: 1.6vh;
+            line-height: 1.4;
+        }
+
+        .footer {
+            height: 5vh;
+            background-color: #f0f0f0; /* Light gray accent */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5vh;
+            border-top: 1px solid #cccccc;
+        }
+
+        .footer a {
+            color: #2f8d46;
+            text-decoration: none;
+            margin: 0 1vw;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: #246c35;
+            text-decoration: underline;
+        }
+
+        /* Specific styles for canvas elements */
+        .data-point {
+            border: 1px solid black;
+            border-radius: 50%; /* Circles */
+        }
+
+        .data-point.category-0 {
+            background-color: #ff6347; /* Tomato Red */
+        }
+
+        .data-point.category-1 {
+            background-color: #4682b4; /* Steel Blue */
+        }
+
+        .test-point {
+            background-color: gray;
+            width: 1vh; /* Smaller square */
+            height: 1vh;
+            border: 1px solid black;
+            box-sizing: border-box;
+        }
+        .test-point.predicted-0 {
+             background-color: #ff6347;
+        }
+         .test-point.predicted-1 {
+             background-color: #4682b4;
+        }
+        .test-point.highlight {
+            border: 2px dashed #2f8d46;
+        }
+
+        .neighbor-highlight {
+             border: 2px dashed #2f8d46; /* Green dashed border for k-neighbors */
+        }
+
+        /* Canvas coordinates are tricky to style directly with CSS; drawing handled in JS */
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>k-Nearest Neighbors Explorer</h1>
+    </div>
+
+    <div class="main-area">
+        <div class="canvas-panel">
+            <canvas id="knnCanvas"></canvas>
+        </div>
+
+        <div class="controls-panel">
+
+            <div class="control-group">
+                 <h3>Algorithm Settings</h3>
+                 <div class="control-item">
+                     <label for="kSlider">Select K:</label>
+                     <input type="range" id="kSlider" min="1" max="20" value="5">
+                     <span class="slider-value" id="kValue">5</span>
+                 </div>
+                 <div class="control-item">
+                     <label>Distance Metric:</label>
+                     <input type="radio" id="metricEuclidean" name="distanceMetric" value="euclidean" checked>
+                     <label class="radio-label" for="metricEuclidean">Euclidean</label>
+                     <input type="radio" id="metricManhattan" name="distanceMetric" value="manhattan">
+                     <label class="radio-label" for="metricManhattan">Manhattan</label>
+                 </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Test Point</h3>
+                 <button id="placeTestPointBtn">Place Test Point</button>
+                 <button id="randomizeTestPointBtn">Randomize Test Point</button>
+            </div>
+
+             <div class="control-group">
+                 <h3>Data</h3>
+                 <button id="randomizeDataBtn">Randomize Data</button>
+             </div>
+
+            <div class="control-group">
+                <h3>Guide & Controls</h3>
+                 <button id="resetBtn">Reset</button>
+                 <button id="autoRunBtn">Auto-Run</button>
+                 <button id="nextStepBtn">Next Step</button>
+            </div>
+
+            <div class="explanation-area" id="explanation">
+                 Select "Randomize Data" to begin, or "Place Test Point" to add your own.
+            </div>
+
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kSlider = document.getElementById('kSlider');
+        const kValueSpan = document.getElementById('kValue');
+        const metricRadios = document.querySelectorAll('input[name="distanceMetric"]');
+        const placeTestPointBtn = document.getElementById('placeTestPointBtn');
+        const randomizeTestPointBtn = document.getElementById('randomizeTestPointBtn');
+        const randomizeDataBtn = document.getElementById('randomizeDataBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoRunBtn = document.getElementById('autoRunBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const explanationDiv = document.getElementById('explanation');
+
+        let dataPoints = [];
+        let testPoint = null;
+        let k = parseInt(kSlider.value);
+        let distanceMetric = 'euclidean'; // Default
+        let placeTestPointMode = false;
+        let currentStep = 0; // 0: Initial, 1: Neighbors Highlighted, 2: Votes Counted, 3: Classified, 4: Boundary Drawn
+        let autoRunInterval = null;
+        const boundaryResolution = 50; // Grid size for boundary drawing (e.g., 50x50)
+
+        const pointColors = ['#ff6347', '#4682b4']; // Red, Blue
+        const pointRadius = 5;
+        const testPointColor = '#000000';
+        const testPointPredictedColors = ['#ff634788', '#4682b488']; // Semi-transparent Red/Blue
+        const testPointShapeSize = 8;
+        const highlightColor = '#2f8d46'; // Green
+
+        // --- Utility Functions ---
+
+        function setCanvasSize() {
+            const canvasPanel = canvas.parentElement;
+            canvas.width = canvasPanel.clientWidth;
+            canvas.height = canvasPanel.clientHeight;
+            drawCanvas(); // Redraw on resize
+        }
+
+        function euclideanDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        function manhattanDistance(p1, p2) {
+            return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        }
+
+        function getDistanceFunction(metric) {
+            return metric === 'euclidean' ? euclideanDistance : manhattanDistance;
+        }
+
+        function findNearestNeighbors(point, data, k, metric) {
+            if (!point || !data || data.length === 0) return [];
+
+            const dists = data.map(dp => ({
+                point: dp,
+                distance: getDistanceFunction(metric)(point, dp)
+            }));
+
+            dists.sort((a, b) => a.distance - b.distance);
+
+            return dists.slice(0, k).map(item => item.point);
+        }
+
+        function classifyPoint(point, data, k, metric) {
+            if (!point || !data || data.length === 0) return null;
+
+            const neighbors = findNearestNeighbors(point, data, k, metric);
+            const voteCounts = {};
+            let totalNeighbors = neighbors.length;
+
+            neighbors.forEach(n => {
+                voteCounts[n.category] = (voteCounts[n.category] || 0) + 1;
+            });
+
+            let predictedCategory = null;
+            let maxVotes = -1;
+            let tied = false; // Simple tie detection for explanation
+
+            for (const cat in voteCounts) {
+                 if (voteCounts[cat] > maxVotes) {
+                     maxVotes = voteCounts[cat];
+                     predictedCategory = parseInt(cat);
+                     tied = false;
+                 } else if (voteCounts[cat] === maxVotes) {
+                     tied = true;
+                 }
+            }
+
+             let explanationText = `Neighbors: `;
+             const categories = Object.keys(voteCounts).map(Number).sort((a, b) => a - b); // Sort categories for consistent output
+             categories.forEach((cat, index) => {
+                 explanationText += `Class ${cat+1} (${voteCounts[cat] || 0})${index < categories.length - 1 ? ', ' : ''}`;
+             });
+             explanationText += `.`;
+
+            if (predictedCategory !== null) {
+                 explanationText += ` Predicted: Class ${predictedCategory+1}${tied ? ' (Tie)' : ''}.`;
+            } else {
+                 explanationText += ` No prediction (no neighbors).`;
+            }
+
+
+            return {
+                 predictedCategory,
+                 neighborCounts: voteCounts,
+                 explanation: explanationText
+            };
+        }
+
+        // --- Drawing Functions ---
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw data points
+            dataPoints.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
+                ctx.fillStyle = pointColors[point.category];
+                ctx.fill();
+                ctx.strokeStyle = '#000000';
+                ctx.stroke();
+            });
+
+            // Highlight k-neighbors if test point exists and step is >= 1
+            if (testPoint && currentStep >= 1) {
+                 const neighbors = findNearestNeighbors(testPoint, dataPoints, k, distanceMetric);
+                 neighbors.forEach(n => {
+                     ctx.beginPath();
+                     ctx.arc(n.x, n.y, pointRadius + 2, 0, Math.PI * 2); // Slightly larger ring
+                     ctx.strokeStyle = highlightColor;
+                     ctx.lineWidth = 2;
+                     ctx.stroke();
+                 });
+            }
+
+             // Draw decision boundary if step is >= 4 (or explicitly requested)
+             if (currentStep >= 4) {
+                 drawDecisionBoundary();
+             }
+
+
+            // Draw test point
+            if (testPoint) {
+                ctx.fillStyle = currentStep >= 3 ? testPointPredictedColors[testPoint.predictedCategory] : testPointColor;
+                ctx.strokeStyle = highlightColor;
+                ctx.lineWidth = placeTestPointMode || currentStep >= 1 ? 2 : 1; // Highlight border in place mode or after step 1
+                ctx.fillRect(testPoint.x - testPointShapeSize / 2, testPoint.y - testPointShapeSize / 2, testPointShapeSize, testPointShapeSize);
+                ctx.strokeRect(testPoint.x - testPointShapeSize / 2, testPoint.y - testPointShapeSize / 2, testPointShapeSize, testPointShapeSize);
+            }
+
+             // Draw axis lines (subtle gray)
+            ctx.strokeStyle = '#cccccc';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+        }
+
+        function drawDecisionBoundary() {
+             if (dataPoints.length === 0) return;
+
+             const stepX = canvas.width / boundaryResolution;
+             const stepY = canvas.height / boundaryResolution;
+
+             for (let i = 0; i < boundaryResolution; i++) {
+                 for (let j = 0; j < boundaryResolution; j++) {
+                     const x = (i + 0.5) * stepX;
+                     const y = (j + 0.5) * stepY;
+                     const point = { x, y };
+
+                     // Classify this grid point
+                     const classificationResult = classifyPoint(point, dataPoints, k, distanceMetric);
+                     if (classificationResult && classificationResult.predictedCategory !== null) {
+                         const predictedCategory = classificationResult.predictedCategory;
+                         ctx.fillStyle = testPointPredictedColors[predictedCategory]; // Use semi-transparent predicted colors
+                         ctx.fillRect(i * stepX, j * stepY, stepX, stepY);
+                     }
+                 }
+             }
+         }
+
+
+        // --- Data & State Management ---
+
+        function generateRandomData(numPoints = 100) {
+            dataPoints = [];
+            for (let i = 0; i < numPoints; i++) {
+                const category = Math.random() > 0.5 ? 1 : 0; // Two categories
+                // Generate points clustered around different centers for clarity
+                let x, y;
+                if (category === 0) { // Cluster 1 (e.g., top-left)
+                    x = canvas.width * (0.2 + Math.random() * 0.3);
+                    y = canvas.height * (0.2 + Math.random() * 0.3);
+                } else { // Cluster 2 (e.g., bottom-right)
+                    x = canvas.width * (0.7 + Math.random() * 0.3);
+                    y = canvas.height * (0.7 + Math.random() * 0.3);
+                }
+                dataPoints.push({ x, y, category });
+            }
+             setExplanation("Random data generated. Place or randomize a test point.");
+             testPoint = null; // Clear test point on new data
+             currentStep = 0; // Reset steps
+             drawCanvas();
+        }
+
+        function placeTestPointHandler(event) {
+            if (!placeTestPointMode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            testPoint = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top,
+                predictedCategory: null // Reset prediction
+            };
+            placeTestPointMode = false;
+            canvas.style.cursor = 'default';
+            setExplanation("Test point placed. Click 'Next Step' to classify.");
+            currentStep = 0; // Reset steps to allow step-by-step guide
+            drawCanvas(); // Draw point immediately
+        }
+
+        function randomizeTestPoint() {
+            testPoint = {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                predictedCategory: null // Reset prediction
+            };
+             setExplanation("Test point randomized. Click 'Next Step' to classify.");
+             currentStep = 0; // Reset steps
+             drawCanvas();
+        }
+
+        function setExplanation(text) {
+            explanationDiv.textContent = text;
+        }
+
+        function resetApp() {
+             stopAutoRun();
+             kSlider.value = 5;
+             k = 5;
+             kValueSpan.textContent = k;
+             metricRadios[0].checked = true;
+             distanceMetric = 'euclidean';
+             dataPoints = []; // Or regenerate default data
+             testPoint = null;
+             currentStep = 0;
+             placeTestPointMode = false;
+             canvas.style.cursor = 'default';
+             setExplanation("App reset. Click 'Randomize Data' to start.");
+             drawCanvas();
+        }
+
+
+        // --- Step-by-Step Guide ---
+
+        function nextStep() {
+             if (dataPoints.length === 0) {
+                 setExplanation("Please randomize data first.");
+                 return;
+             }
+             if (!testPoint) {
+                  setExplanation("Please place or randomize a test point first.");
+                  return;
+             }
+
+            currentStep++;
+
+            switch (currentStep) {
+                case 1:
+                    setExplanation("Step 1: Highlight test point and data.");
+                    drawCanvas(); // Redraw to ensure highlight
+                    break;
+                case 2:
+                     const neighbors = findNearestNeighbors(testPoint, dataPoints, k, distanceMetric);
+                     if (neighbors.length === 0) {
+                         setExplanation("Step 2: Finding nearest neighbors... None found (data might be empty).");
+                         currentStep = 4; // Skip to boundary or end if no neighbors
+                     } else {
+                         setExplanation(`Step 2: Finding the ${k} nearest neighbors using ${distanceMetric} distance...`);
+                     }
+                    drawCanvas(); // Redraw to show neighbor highlight
+                    break;
+                case 3:
+                    const classificationResult = classifyPoint(testPoint, dataPoints, k, distanceMetric);
+                     testPoint.predictedCategory = classificationResult.predictedCategory;
+                    setExplanation(`Step 3: Counting votes. ${classificationResult.explanation}`);
+                    drawCanvas(); // Redraw to show predicted color (if classified)
+                    break;
+                case 4:
+                    if (testPoint && testPoint.predictedCategory !== null) {
+                         setExplanation(`Step 4: Test point classified as Class ${testPoint.predictedCategory + 1}.`);
+                    } else {
+                         setExplanation(`Step 4: Could not classify test point.`);
+                    }
+                    drawCanvas(); // Redraw (point color should be updated from step 3)
+                     // Move to next step which includes boundary
+                    currentStep = 5; // Go directly to boundary drawing step
+                     nextStep(); // Execute next step immediately
+                    break;
+                 case 5:
+                     setExplanation(`Step 5: Drawing decision boundary for k=${k}, ${distanceMetric} metric.`);
+                     drawCanvas(); // Redraw with boundary
+                     break;
+                default:
+                    setExplanation("Step-by-step guide complete. Change settings or click Reset.");
+                    currentStep = 5; // Stay on last step state
+                    drawCanvas(); // Ensure last state is drawn
+                    break;
+            }
+        }
+
+        function autoRun() {
+            stopAutoRun(); // Ensure no other auto-run is active
+            disableControls(true); // Disable manual controls during auto-run
+            let autoRunK = 1;
+            const maxK = parseInt(kSlider.max);
+            const metrics = ['euclidean', 'manhattan'];
+            let metricIndex = 0;
+
+            setExplanation("Starting auto-run demonstration...");
+
+            autoRunInterval = setInterval(() => {
+                // Cycle K
+                k = autoRunK;
+                kSlider.value = k;
+                kValueSpan.textContent = k;
+
+                // Cycle Metric every few K values
+                if (autoRunK % 5 === 1) { // Change metric every 5 K values start
+                     distanceMetric = metrics[metricIndex % metrics.length];
+                     document.getElementById('metric' + distanceMetric.charAt(0).toUpperCase() + distanceMetric.slice(1)).checked = true;
+                }
+
+
+                setExplanation(`Auto-run: Showing boundary for k=${k}, ${distanceMetric} metric.`);
+                testPoint = null; // Clear test point during boundary demo
+                currentStep = 4; // Force boundary drawing step state
+                drawCanvas(); // Redraw boundary
+
+                autoRunK++;
+
+                if (autoRunK > maxK + metrics.length * 5) { // Stop after cycling K multiple times with metrics
+                    stopAutoRun();
+                    setExplanation("Auto-run demonstration finished. Click Reset or change settings.");
+                    disableControls(false); // Re-enable controls
+                    currentStep = 0; // Reset step state after auto run
+                     drawCanvas(); // Redraw without boundary/test point if they were cleared
+                }
+
+            }, 1500); // Change K every 1.5 seconds
+        }
+
+        function stopAutoRun() {
+            if (autoRunInterval) {
+                clearInterval(autoRunInterval);
+                autoRunInterval = null;
+                disableControls(false); // Re-enable controls if stopped manually
+                 setExplanation("Auto-run stopped.");
+            }
+        }
+
+        function disableControls(disable) {
+             kSlider.disabled = disable;
+             metricRadios.forEach(radio => radio.disabled = disable);
+             placeTestPointBtn.disabled = disable;
+             randomizeTestPointBtn.disabled = disable;
+             randomizeDataBtn.disabled = disable;
+             resetBtn.disabled = disable; // Keep reset enabled? Maybe not during auto-run
+             nextStepBtn.disabled = disable;
+             autoRunBtn.disabled = disable; // Disable auto-run button itself while running
+        }
+
+
+        // --- Event Listeners ---
+
+        kSlider.addEventListener('input', (event) => {
+            k = parseInt(event.target.value);
+            kValueSpan.textContent = k;
+             if (!autoRunInterval) { // Only redraw immediately if not in auto-run
+                 currentStep = 0; // Reset step guide on manual change
+                 setExplanation(`K changed to ${k}. Click Next Step or Auto-Run.`);
+                drawCanvas();
+             }
+        });
+
+        metricRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                distanceMetric = event.target.value;
+                 if (!autoRunInterval) { // Only redraw immediately if not in auto-run
+                     currentStep = 0; // Reset step guide on manual change
+                     setExplanation(`Distance metric changed to ${distanceMetric}. Click Next Step or Auto-Run.`);
+                    drawCanvas();
+                 }
+            });
+        });
+
+        placeTestPointBtn.addEventListener('click', () => {
+             stopAutoRun();
+            placeTestPointMode = true;
+            canvas.style.cursor = 'crosshair';
+            setExplanation("Click on the canvas to place the test point.");
+            testPoint = null; // Clear previous test point
+            currentStep = 0; // Reset steps
+            drawCanvas(); // Clear previous point visualization
+        });
+
+        randomizeTestPointBtn.addEventListener('click', () => {
+            stopAutoRun();
+            placeTestPointMode = false;
+            canvas.style.cursor = 'default';
+            randomizeTestPoint();
+        });
+
+        randomizeDataBtn.addEventListener('click', () => {
+             stopAutoRun();
+             generateRandomData();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            resetApp();
+        });
+
+        nextStepBtn.addEventListener('click', () => {
+             stopAutoRun(); // Stop auto-run if manual step is taken
+             nextStep();
+        });
+
+        autoRunBtn.addEventListener('click', () => {
+             if (autoRunInterval) {
+                 stopAutoRun();
+             } else {
+                autoRun();
+             }
+        });
+
+
+        canvas.addEventListener('click', placeTestPointHandler);
+
+        // --- Initialization ---
+
+        // Set initial canvas size and draw on load
+        window.addEventListener('load', () => {
+            setCanvasSize();
+            generateRandomData(); // Start with some data
+        });
+        // Handle resize - IMPORTANT for vh/vw layout
+        window.addEventListener('resize', setCanvasSize);
+
+
+    </script>
+
+</body>
+</html>

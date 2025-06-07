@@ -1,0 +1,1039 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python List Explorer</title>
+    <style>
+        /* Global styles */
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: #fff;
+            color: #000;
+            overflow: hidden; /* Ensure no scrolling */
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Theme colors */
+        :root {
+            --green-accent: #2f8d46;
+            --light-gray: #cccccc;
+        }
+
+        /* Header */
+        header {
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            padding: 0 2vw;
+            border-bottom: 1px solid #000;
+            position: relative; /* For absolute positioning of logo */
+        }
+
+        header img {
+            height: 32px;
+            position: absolute;
+            left: 2vw;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        header h1 {
+            flex-grow: 1;
+            text-align: center;
+            margin: 0;
+            font-size: 1.8vh; /* Relative to viewport height */
+        }
+
+        /* Main content area */
+        main {
+            flex-grow: 1; /* Takes up remaining vertical space */
+            display: flex;
+            flex-direction: column;
+            height: 84vh; /* Explicit height based on brief */
+        }
+
+        /* Visualization Panel */
+        #visualization-panel {
+            height: 60vh; /* 60% of main area height (adjusting to fit 84vh main) */
+            border-bottom: 1px solid #000;
+            padding: 1vh 2vw;
+            overflow: hidden; /* Crucial for no scrolling */
+            display: flex;
+            flex-direction: column; /* Stack list and referenced objects */
+            gap: 2vh; /* Space between main list and referenced */
+        }
+
+        #list-container {
+            display: flex;
+            align-items: flex-start; /* Align indices/values nicely */
+            gap: 1vw; /* Space between list items */
+            overflow-x: auto; /* Allow internal horizontal scrolling if list is very long */
+            max-width: 100%; /* Prevent container overflow */
+            /* Style scrollbar if needed */
+            scrollbar-width: thin;
+            scrollbar-color: var(--green-accent) var(--light-gray);
+        }
+         #list-container::-webkit-scrollbar { width: 8px; height: 8px; }
+         #list-container::-webkit-scrollbar-track { background: var(--light-gray); }
+         #list-container::-webkit-scrollbar-thumb { background-color: var(--green-accent); border-radius: 4px; }
+
+
+        .list-item {
+            border: 1px solid #000;
+            padding: 0.5vh 0.8vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            box-sizing: border-box;
+            min-width: 5vw; /* Ensure items have some minimum width */
+        }
+
+        .list-item .index {
+            font-size: 1.2vh;
+            color: var(--light-gray);
+            margin-bottom: 0.5vh;
+        }
+
+        .list-item .value {
+            font-size: 1.8vh;
+            text-align: center;
+            word-break: break-all; /* Break long values */
+        }
+
+        .list-item.highlight {
+            border-color: var(--green-accent);
+            transform: scale(1.05);
+        }
+
+        .list-item.error {
+             border-color: red;
+             animation: shake 0.5s;
+             animation-iteration-count: 1;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+
+        #referenced-objects {
+            flex-grow: 1; /* Takes rest of visualization panel height */
+            overflow-y: auto; /* Allow internal vertical scrolling if many objects */
+             scrollbar-width: thin;
+            scrollbar-color: var(--green-accent) var(--light-gray);
+        }
+         #referenced-objects::-webkit-scrollbar { width: 8px; height: 8px; }
+         #referenced-objects::-webkit-scrollbar-track { background: var(--light-gray); }
+         #referenced-objects::-webkit-scrollbar-thumb { background-color: var(--green-accent); border-radius: 4px; }
+
+
+        .referenced-list {
+            border: 1px dashed var(--light-gray); /* Differentiate from main list */
+            padding: 1vh 1vw;
+            margin-bottom: 1vh;
+            display: flex;
+            flex-direction: column; /* Stack ID and list items */
+            gap: 1vh;
+        }
+
+        .referenced-list .ref-id {
+            font-size: 1.4vh;
+            color: var(--green-accent);
+            font-weight: bold;
+        }
+
+        .referenced-list .inner-list-container {
+            display: flex;
+            gap: 1vw;
+            overflow-x: auto; /* Horizontal scroll for inner lists */
+             scrollbar-width: thin;
+            scrollbar-color: var(--green-accent) var(--light-gray);
+        }
+         .referenced-list .inner-list-container::-webkit-scrollbar { height: 8px; }
+         .referenced-list .inner-list-container::-webkit-scrollbar-track { background: var(--light-gray); }
+         .referenced-list .inner-list-container::-webkit-scrollbar-thumb { background-color: var(--green-accent); border-radius: 4px; }
+
+
+        .referenced-list .list-item {
+            border: 1px solid var(--light-gray); /* Less prominent border */
+        }
+
+        /* Controls and Explanation Panel */
+        #controls-explanation-panel {
+            height: 24vh; /* 40% of main area height (adjusting to fit 84vh main) */
+            display: flex;
+        }
+
+        #controls-panel {
+            width: 40vw; /* 40% of its width */
+            border-right: 1px solid #000;
+            padding: 1vh 2vw;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Space between control groups */
+            overflow-y: auto; /* Add scrolling if controls exceed space */
+             scrollbar-width: thin;
+            scrollbar-color: var(--green-accent) var(--light-gray);
+        }
+         #controls-panel::-webkit-scrollbar { width: 8px; }
+         #controls-panel::-webkit-scrollbar-track { background: var(--light-gray); }
+         #controls-panel::-webkit-scrollbar-thumb { background-color: var(--green-accent); border-radius: 4px; }
+
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5vh;
+        }
+
+        .control-group label {
+            font-size: 1.6vh;
+            margin-bottom: 0.2vh;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 0.8vh;
+            border: 1px solid #000;
+            font-family: monospace;
+            font-size: 1.6vh;
+            background-color: #fff;
+            color: #000;
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+            width: 100%; /* Fill container width */
+        }
+
+        .control-group button {
+            padding: 1vh 1.5vw;
+            border: 1px solid var(--green-accent);
+            background-color: #fff;
+            color: var(--green-accent);
+            font-family: monospace;
+            font-size: 1.6vh;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .control-group button:hover:not(:disabled) {
+            background-color: var(--green-accent);
+            color: #fff;
+        }
+
+        .control-group button:disabled {
+            border-color: var(--light-gray);
+            color: var(--light-gray);
+            cursor: not-allowed;
+        }
+
+        #navigation-buttons {
+            display: flex;
+            gap: 1vw; /* Space between nav buttons */
+        }
+         #navigation-buttons button {
+            flex-grow: 1; /* Distribute space */
+         }
+
+
+        #explanation-panel {
+            flex-grow: 1; /* Takes remaining width (60vw) */
+            padding: 1vh 2vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.8vh;
+            background-color: #f9f9f9; /* Slightly different background */
+            border-top: 1px solid var(--light-gray); /* subtle separation */
+            box-sizing: border-box;
+        }
+
+        /* Footer */
+        footer {
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2vw;
+            background-color: #f0f0f0; /* Light gray background */
+            border-top: 1px solid #000;
+        }
+
+        footer a {
+            color: var(--green-accent);
+            text-decoration: none;
+            font-size: 1.6vh;
+            transition: text-decoration 0.3s ease;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Hide inputs that are not relevant for the selected action */
+        .input-field {
+            display: none;
+        }
+
+        .input-field.active {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5vh;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>Python List Explorer</h1>
+    </header>
+
+    <main>
+        <section id="visualization-panel">
+            <div id="list-container">
+                <!-- List items will be rendered here -->
+            </div>
+            <div id="referenced-objects">
+                <!-- Referenced lists (nested lists) will be rendered here -->
+            </div>
+        </section>
+
+        <section id="controls-explanation-panel">
+            <div id="controls-panel">
+                <div class="control-group">
+                    <label for="action-select">Choose Action:</label>
+                    <select id="action-select">
+                        <option value="reset">Reset List</option>
+                        <option value="create_default">Create Default List [10, 'b', 3.14]</option>
+                        <option value="create_empty">Create Empty List []</option>
+                        <option value="create_random">Create Random List</option>
+                        <option value="append">Append(value)</option>
+                        <option value="insert">Insert(index, value)</option>
+                        <option value="remove_value">Remove (by value)</option>
+                        <option value="pop_index">Pop (by index)</option>
+                        <option value="get_index">Get by Index (index)</option>
+                        <option value="modify_index">Modify at Index (index, new_value)</option>
+                        <option value="explore_nested">Explore Nested List Example</option>
+                    </select>
+                </div>
+
+                <div id="input-value" class="input-field">
+                    <label for="input-value-field">Value:</label>
+                    <input type="text" id="input-value-field" placeholder="e.g., 42 or 'hello'">
+                </div>
+
+                 <div id="input-index" class="input-field">
+                    <label for="input-index-field">Index:</label>
+                    <input type="number" id="input-index-field" placeholder="e.g., 0 or 2">
+                </div>
+
+                 <div id="input-new-value" class="input-field">
+                    <label for="input-new-value-field">New Value:</label>
+                    <input type="text" id="input-new-value-field" placeholder="e.g., 'new' or [1, 2]">
+                </div>
+
+                <div class="control-group">
+                    <button id="execute-btn">Execute Action</button>
+                </div>
+
+                <div class="control-group" id="navigation-buttons">
+                    <button id="reset-btn">Reset</button>
+                    <button id="randomize-btn">Randomize</button>
+                    <button id="next-step-btn">Next Step</button>
+                    <button id="auto-run-btn">Auto-Run</button>
+                </div>
+            </div>
+
+            <div id="explanation-panel">
+                Welcome to the Python List Explorer! Choose an action or start the demo.
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const visPanel = document.getElementById('visualization-panel');
+        const listContainer = document.getElementById('list-container');
+        const referencedObjectsContainer = document.getElementById('referenced-objects');
+        const controlsPanel = document.getElementById('controls-panel');
+        const explanationPanel = document.getElementById('explanation-panel');
+
+        const actionSelect = document.getElementById('action-select');
+        const inputValueField = document.getElementById('input-value-field');
+        const inputIndexField = document.getElementById('input-index-field');
+        const inputNewValueField = document.getElementById('input-new-value-field');
+        const executeButton = document.getElementById('execute-btn');
+        const resetButton = document.getElementById('reset-btn');
+        const randomizeButton = document.getElementById('randomize-btn');
+        const nextStepButton = document.getElementById('next-step-btn');
+        const autoRunButton = document.getElementById('auto-run-btn');
+
+        let currentList = [];
+        let objectRegistry = {}; // Stores referenced mutable objects like lists
+        let nextObjectId = 1;
+        let demoSteps = [];
+        let currentStepIndex = 0;
+        let autoRunInterval = null;
+
+        // --- Helper Functions ---
+
+        function updateExplanation(text, isError = false) {
+            explanationPanel.textContent = text;
+            explanationPanel.style.color = isError ? 'red' : '#000';
+        }
+
+        function clearInputs() {
+            inputValueField.value = '';
+            inputIndexField.value = '';
+            inputNewValueField.value = '';
+        }
+
+        function showRelevantInputs() {
+            const action = actionSelect.value;
+            document.querySelectorAll('.input-field').forEach(div => div.classList.remove('active'));
+
+            switch (action) {
+                case 'append':
+                case 'remove_value':
+                    document.getElementById('input-value').classList.add('active');
+                    break;
+                case 'insert':
+                    document.getElementById('input-index').classList.add('active');
+                    document.getElementById('input-value').classList.add('active');
+                    break;
+                case 'pop_index':
+                case 'get_index':
+                    document.getElementById('input-index').classList.add('active');
+                    break;
+                case 'modify_index':
+                    document.getElementById('input-index').classList.add('active');
+                    document.getElementById('input-new-value').classList.add('active');
+                    break;
+                // default actions like reset, create, explore_nested need no inputs
+            }
+        }
+
+         function highlightItem(index, className = 'highlight', duration = 500) {
+            const itemElement = listContainer.querySelector(`.list-item:nth-child(${index + 1})`);
+            if (itemElement) {
+                itemElement.classList.add(className);
+                setTimeout(() => {
+                    itemElement.classList.remove(className);
+                    if (className === 'error') {
+                         itemElement.style.borderColor = ''; // Reset border after error
+                    }
+                }, duration);
+            }
+         }
+
+         function generateObjectId(obj) {
+            // Simple string representation as unique ID
+            // In a real scenario, you might hash or use unique symbols
+            const id = `obj${nextObjectId++}`;
+            objectRegistry[id] = obj;
+            return `#${id}`;
+         }
+
+         function getValueRepresentation(value) {
+             if (Array.isArray(value)) {
+                 // Check if this list is already registered to reuse ID
+                 for(const id in objectRegistry) {
+                     if (objectRegistry[id] === value) {
+                         return `#${id}`; // Reuse existing ID
+                     }
+                 }
+                 // If not registered, generate a new ID and register
+                 return generateObjectId(value);
+             }
+             if (typeof value === 'string') return `'${value}'`;
+             if (value === null) return 'None'; // Python None
+             if (value === undefined) return 'N/A'; // Should not happen for Python lists
+             return String(value); // Numbers, booleans etc.
+         }
+
+
+        function renderList(list = currentList, container = listContainer, isReferenced = false) {
+            container.innerHTML = ''; // Clear current visualization
+
+            if (!Array.isArray(list)) {
+                 updateExplanation("Error: Cannot render non-list object.", true);
+                 return;
+            }
+
+            list.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('list-item');
+                if (isReferenced) {
+                     itemDiv.classList.add('inner-list-item'); // Style differently if inside a referenced list
+                }
+
+                const indexSpan = document.createElement('div');
+                indexSpan.classList.add('index');
+                indexSpan.textContent = index;
+
+                const valueSpan = document.createElement('div');
+                valueSpan.classList.add('value');
+                valueSpan.textContent = getValueRepresentation(item); // Use helper for value/reference
+
+                itemDiv.appendChild(indexSpan);
+                itemDiv.appendChild(valueSpan);
+                container.appendChild(itemDiv);
+            });
+
+            // If rendering the main list, also render referenced objects
+            if (container === listContainer) {
+                renderReferencedObjects();
+            }
+        }
+
+        function renderReferencedObjects() {
+             referencedObjectsContainer.innerHTML = '';
+             // Filter out objects that are actually still referenced in currentList or other referenced lists
+             const activeRefs = new Set();
+             function findRefs(arr) {
+                 arr.forEach(item => {
+                     if (typeof item === 'string' && item.startsWith('#obj')) {
+                         activeRefs.add(item.substring(1)); // Add ID part
+                     } else if (Array.isArray(item)) {
+                         findRefs(item); // Recurse into nested lists
+                     }
+                 });
+             }
+             findRefs(currentList);
+
+             const currentObjectRegistry = {};
+             // Rebuild registry with only active references
+             for(const id in objectRegistry) {
+                 if (activeRefs.has(id)) {
+                     currentObjectRegistry[id] = objectRegistry[id];
+                 }
+             }
+             objectRegistry = currentObjectRegistry;
+
+
+             for (const id in objectRegistry) {
+                 const referencedList = objectRegistry[id];
+                 if (Array.isArray(referencedList)) {
+                     const refDiv = document.createElement('div');
+                     refDiv.classList.add('referenced-list');
+
+                     const idSpan = document.createElement('div');
+                     idSpan.classList.add('ref-id');
+                     idSpan.textContent = `#${id}:`; // Show ID
+
+                     const innerListContainer = document.createElement('div');
+                     innerListContainer.classList.add('inner-list-container');
+                     renderList(referencedList, innerListContainer, true); // Render inner list
+
+                     refDiv.appendChild(idSpan);
+                     refDiv.appendChild(innerListContainer);
+                     referencedObjectsContainer.appendChild(refDiv);
+                 }
+             }
+        }
+
+        // --- Action Implementations ---
+
+        function resetList() {
+            currentList = [];
+            objectRegistry = {};
+            nextObjectId = 1;
+            renderList();
+            updateExplanation("List reset to [].");
+        }
+
+        function createDefaultList() {
+            currentList = [10, 'b', 3.14];
+             objectRegistry = {}; // Clear registry for new list
+             nextObjectId = 1;
+            renderList();
+            updateExplanation("Created default list [10, 'b', 3.14].");
+        }
+
+        function createEmptyList() {
+            currentList = [];
+            objectRegistry = {}; // Clear registry for new list
+            nextObjectId = 1;
+            renderList();
+            updateExplanation("Created empty list [].");
+        }
+
+        function createRandomList() {
+             const length = Math.floor(Math.random() * 8) + 3; // 3 to 10 elements
+             currentList = [];
+             objectRegistry = {}; // Clear registry for new list
+             nextObjectId = 1;
+
+             for (let i = 0; i < length; i++) {
+                 const type = Math.random();
+                 if (type < 0.4) { // Number
+                     currentList.push(Math.floor(Math.random() * 100));
+                 } else if (type < 0.8) { // String
+                     currentList.push(Math.random().toString(36).substring(2, Math.floor(Math.random() * 5) + 3)); // Random short string
+                 } else { // Boolean or Null
+                     currentList.push(Math.random() > 0.5 ? true : null); // Python None
+                 }
+             }
+             renderList();
+             updateExplanation(`Created a random list of size ${length}.`);
+        }
+
+        function appendValue(value) {
+            // Simple type detection, doesn't fully parse complex types like nested lists from string input
+            let actualValue = value;
+             if (value.startsWith('[') && value.endsWith(']')) {
+                try {
+                     // Attempt to parse as a list
+                     actualValue = JSON.parse(value.replace(/\'/g, '"')); // Replace single quotes with double quotes for JSON
+                     if (!Array.isArray(actualValue)) throw new Error("Not an array");
+                     // If it's an array, generate/get ID representation
+                     actualValue = getValueRepresentation(actualValue);
+
+                 } catch (e) {
+                      // Failed to parse as list, treat as string
+                     actualValue = value;
+                 }
+             } else if (!isNaN(value) && value.trim() !== '') {
+                 actualValue = Number(value);
+             } else if (value.toLowerCase() === 'true') {
+                 actualValue = true;
+             } else if (value.toLowerCase() === 'false') {
+                 actualValue = false;
+             } else if (value.toLowerCase() === 'none') {
+                 actualValue = null; // Python None
+             }
+             // Otherwise, treat as string
+
+            currentList.push(actualValue);
+            renderList();
+            updateExplanation(`Appended ${getValueRepresentation(actualValue)}.`);
+            highlightItem(currentList.length - 1);
+        }
+
+        function insertValue(index, value) {
+             const idx = parseInt(index, 10);
+             if (isNaN(idx) || idx < 0 || idx > currentList.length) {
+                updateExplanation(`Error: Index ${index} is out of bounds for insertion.`, true);
+                if (currentList.length > 0) { // Highlight where it *would* be or an invalid spot
+                     const lastItemIndex = currentList.length -1;
+                     highlightItem(lastItemIndex, 'error'); // Highlight last element
+                } else {
+                    // No elements to highlight error on
+                }
+                return;
+            }
+
+            let actualValue = value;
+             if (value.startsWith('[') && value.endsWith(']')) {
+                try {
+                     actualValue = JSON.parse(value.replace(/\'/g, '"'));
+                     if (!Array.isArray(actualValue)) throw new Error("Not an array");
+                     actualValue = getValueRepresentation(actualValue);
+                 } catch (e) {
+                      actualValue = value;
+                 }
+             } else if (!isNaN(value) && value.trim() !== '') {
+                 actualValue = Number(value);
+             } else if (value.toLowerCase() === 'true') {
+                 actualValue = true;
+             } else if (value.toLowerCase() === 'false') {
+                 actualValue = false;
+             } else if (value.toLowerCase() === 'none') {
+                 actualValue = null;
+             }
+
+            currentList.splice(idx, 0, actualValue);
+            renderList();
+            updateExplanation(`Inserted ${getValueRepresentation(actualValue)} at index ${idx}.`);
+            highlightItem(idx);
+        }
+
+        function removeValue(value) {
+            // Simple check, doesn't handle complex object equality
+            // For simplicity, search for string representation or number
+             let foundIndex = -1;
+             const searchValue = (!isNaN(value) && value.trim() !== '') ? Number(value) : value;
+
+             if (typeof searchValue === 'number') {
+                 foundIndex = currentList.findIndex(item => typeof item === 'number' && item === searchValue);
+             } else {
+                 const searchString = getValueRepresentation(searchValue);
+                 foundIndex = currentList.findIndex(item => getValueRepresentation(item) === searchString);
+             }
+
+
+            if (foundIndex > -1) {
+                const removedValue = currentList.splice(foundIndex, 1)[0];
+                renderList();
+                updateExplanation(`Removed first occurrence of ${getValueRepresentation(removedValue)}.`, false);
+                // No item to highlight after removal animation could be complex
+            } else {
+                updateExplanation(`Error: Value '${value}' not found in the list.`, true);
+            }
+        }
+
+        function popIndex(index) {
+             const idx = parseInt(index, 10);
+            if (isNaN(idx) || idx < 0 || idx >= currentList.length) {
+                 updateExplanation(`Error: Index ${index} is out of bounds for pop.`, true);
+                 if (currentList.length > 0) { // Highlight the bounds
+                     const lastItemIndex = currentList.length -1;
+                     highlightItem(0, 'error');
+                     highlightItem(lastItemIndex, 'error');
+                 } else {
+                      // No elements to highlight error on
+                 }
+                return;
+            }
+
+            const poppedValue = currentList.splice(idx, 1)[0];
+            renderList();
+            updateExplanation(`Popped element at index ${idx} (value was ${getValueRepresentation(poppedValue)}).`);
+             // No item to highlight after removal
+        }
+
+        function getIndex(index) {
+             const idx = parseInt(index, 10);
+            if (isNaN(idx) || idx < 0 || idx >= currentList.length) {
+                 updateExplanation(`Error: Index ${index} is out of bounds for getting.`, true);
+                  if (currentList.length > 0) { // Highlight the bounds
+                     const lastItemIndex = currentList.length -1;
+                     highlightItem(0, 'error');
+                     highlightItem(lastItemIndex, 'error');
+                 } else {
+                      // No elements to highlight error on
+                 }
+                return;
+            }
+
+            const value = currentList[idx];
+            renderList(); // Re-render to clear previous highlights
+            updateExplanation(`Element at index ${idx} is ${getValueRepresentation(value)}.`);
+            highlightItem(idx);
+        }
+
+        function modifyIndex(index, newValue) {
+             const idx = parseInt(index, 10);
+             if (isNaN(idx) || idx < 0 || idx >= currentList.length) {
+                 updateExplanation(`Error: Index ${index} is out of bounds for modification.`, true);
+                 if (currentList.length > 0) { // Highlight the bounds
+                     const lastItemIndex = currentList.length -1;
+                     highlightItem(0, 'error');
+                     highlightItem(lastItemIndex, 'error');
+                 } else {
+                      // No elements to highlight error on
+                 }
+                return;
+            }
+
+             let actualValue = newValue;
+             if (newValue.startsWith('[') && newValue.endsWith(']')) {
+                try {
+                     actualValue = JSON.parse(newValue.replace(/\'/g, '"'));
+                     if (!Array.isArray(actualValue)) throw new Error("Not an array");
+                     actualValue = getValueRepresentation(actualValue);
+                 } catch (e) {
+                      actualValue = newValue;
+                 }
+             } else if (!isNaN(newValue) && newValue.trim() !== '') {
+                 actualValue = Number(newValue);
+             } else if (newValue.toLowerCase() === 'true') {
+                 actualValue = true;
+             } else if (newValue.toLowerCase() === 'false') {
+                 actualValue = false;
+             } else if (newValue.toLowerCase() === 'none') {
+                 actualValue = null;
+             }
+
+            const oldValue = currentList[idx];
+            currentList[idx] = actualValue;
+            renderList();
+            updateExplanation(`Modified element at index ${idx} from ${getValueRepresentation(oldValue)} to ${getValueRepresentation(actualValue)}.`);
+            highlightItem(idx);
+        }
+
+         function exploreNestedList() {
+             const innerList1 = [1, 2];
+             const innerList2 = ['x', 'y', 'z'];
+             currentList = [100, 'hello', innerList1, 999, innerList2];
+
+             objectRegistry = {}; // Clear and re-register
+             nextObjectId = 1;
+             // Register inner lists to get their IDs before rendering
+             const id1 = generateObjectId(innerList1); // returns #obj1
+             const id2 = generateObjectId(innerList2); // returns #obj2
+
+             // Update the list to store the string representations
+             currentList[2] = `#${id1}`;
+             currentList[4] = `#${id2}`;
+
+             renderList();
+             updateExplanation("Created a list with nested lists. Observe the references (#objX).");
+         }
+
+
+        // --- Event Handlers ---
+
+        actionSelect.addEventListener('change', () => {
+            clearInputs();
+            showRelevantInputs();
+            updateExplanation("Choose parameters and click 'Execute'.");
+             if (actionSelect.value === 'explore_nested') {
+                 // Immediately perform the nested example action if selected
+                 exploreNestedList();
+                 // Reset select back to something else if desired, or leave it
+                 actionSelect.value = 'create_default'; // Reset dropdown state visually
+                 showRelevantInputs(); // Update inputs based on new select value
+             } else if (actionSelect.value === 'reset') {
+                 resetList();
+                  actionSelect.value = 'create_default'; // Reset dropdown state visually
+                 showRelevantInputs();
+             } else if (actionSelect.value === 'create_default') {
+                 createDefaultList();
+                  actionSelect.value = 'create_default'; // Keep dropdown state visually
+                 showRelevantInputs();
+             } else if (actionSelect.value === 'create_empty') {
+                 createEmptyList();
+                  actionSelect.value = 'create_default'; // Reset dropdown state visually
+                 showRelevantInputs();
+             } else if (actionSelect.value === 'create_random') {
+                 createRandomList();
+                  actionSelect.value = 'create_default'; // Reset dropdown state visually
+                 showRelevantInputs();
+             }
+        });
+
+        executeButton.addEventListener('click', () => {
+            const action = actionSelect.value;
+            const value = inputValueField.value;
+            const index = inputIndexField.value;
+            const newValue = inputNewValueField.value;
+
+            // Prevent execution during auto-run
+            if (autoRunInterval) {
+                 updateExplanation("Please stop Auto-Run before executing manual actions.", true);
+                 return;
+            }
+
+            // Clear previous errors
+             explanationPanel.style.color = '#000';
+             document.querySelectorAll('.list-item.error').forEach(el => {
+                 el.classList.remove('error');
+                 el.style.borderColor = ''; // Reset border
+            });
+
+            switch (action) {
+                case 'append':
+                    if (value.trim() === '') {
+                        updateExplanation("Error: Value cannot be empty for Append.", true);
+                    } else {
+                        appendValue(value);
+                    }
+                    break;
+                case 'insert':
+                     if (index.trim() === '' || value.trim() === '') {
+                        updateExplanation("Error: Index and Value cannot be empty for Insert.", true);
+                     } else if (isNaN(parseInt(index, 10))) {
+                         updateExplanation("Error: Index must be a number for Insert.", true);
+                     }
+                    else {
+                        insertValue(index, value);
+                    }
+                    break;
+                case 'remove_value':
+                    if (value.trim() === '') {
+                        updateExplanation("Error: Value cannot be empty for Remove.", true);
+                    } else {
+                        removeValue(value);
+                    }
+                    break;
+                case 'pop_index':
+                     if (index.trim() === '') {
+                        updateExplanation("Error: Index cannot be empty for Pop.", true);
+                     } else if (isNaN(parseInt(index, 10))) {
+                         updateExplanation("Error: Index must be a number for Pop.", true);
+                     } else {
+                        popIndex(index);
+                    }
+                    break;
+                case 'get_index':
+                     if (index.trim() === '') {
+                        updateExplanation("Error: Index cannot be empty for Get by Index.", true);
+                     } else if (isNaN(parseInt(index, 10))) {
+                         updateExplanation("Error: Index must be a number for Get by Index.", true);
+                     } else {
+                        getIndex(index);
+                    }
+                    break;
+                case 'modify_index':
+                     if (index.trim() === '' || newValue.trim() === '') {
+                        updateExplanation("Error: Index and New Value cannot be empty for Modify at Index.", true);
+                     } else if (isNaN(parseInt(index, 10))) {
+                         updateExplanation("Error: Index must be a number for Modify at Index.", true);
+                     }
+                    else {
+                        modifyIndex(index, newValue);
+                    }
+                    break;
+                 // Note: reset, create, explore_nested are handled by the change event listener
+                default:
+                    updateExplanation("Please select a valid action.", true);
+            }
+        });
+
+        resetButton.addEventListener('click', resetList);
+        randomizeButton.addEventListener('click', createRandomList);
+
+
+        // --- Guided Demo Logic ---
+
+        demoSteps = [
+            { action: 'create_default', explanation: "Start with a default list: [10, 'b', 3.14]" },
+            { action: 'append', value: 'apple', explanation: "Append 'apple' to the end." },
+            { action: 'append', value: 99, explanation: "Append number 99." },
+            { action: 'insert', index: 1, value: 'first', explanation: "Insert 'first' at index 1." },
+            { action: 'get_index', index: 3, explanation: "Get element at index 3." },
+            { action: 'modify_index', index: 0, newValue: 'start', explanation: "Modify element at index 0 to 'start'." },
+            { action: 'pop_index', index: 2, explanation: "Pop (remove) element at index 2." },
+            { action: 'remove_value', value: 99, explanation: "Remove first occurrence of value 99." },
+             { action: 'explore_nested', explanation: "Now, explore a list with nested lists." },
+             // You could add steps to access/modify elements *within* nested lists, but JS array methods don't directly support list[i][j] syntax in the same way as Python. Visualization handles it conceptually.
+             // { action: 'get_nested', path: [2, 0], explanation: "Access element at list[2][0]." } // More complex step
+        ];
+
+        function executeStep(step) {
+            updateExplanation(step.explanation);
+
+             // Clear any previous errors before executing the next step
+             explanationPanel.style.color = '#000';
+             document.querySelectorAll('.list-item.error').forEach(el => {
+                 el.classList.remove('error');
+                 el.style.borderColor = ''; // Reset border
+            });
+
+
+            // Map step action to implementation function
+            switch (step.action) {
+                case 'reset': resetList(); break;
+                case 'create_default': createDefaultList(); break;
+                case 'create_empty': createEmptyList(); break;
+                case 'create_random': createRandomList(); break;
+                case 'append': appendValue(step.value); break;
+                case 'insert': insertValue(step.index, step.value); break;
+                case 'remove_value': removeValue(step.value); break;
+                case 'pop_index': popIndex(step.index); break;
+                case 'get_index': getIndex(step.index); break;
+                case 'modify_index': modifyIndex(step.index, step.newValue); break;
+                case 'explore_nested': exploreNestedList(); break;
+                 // Add more complex steps here if implemented
+                default: console.error("Unknown demo step action:", step.action);
+            }
+             // Ensure visualization is updated after each step
+             renderList();
+        }
+
+        function nextStep() {
+            if (currentStepIndex < demoSteps.length) {
+                executeStep(demoSteps[currentStepIndex]);
+                currentStepIndex++;
+                if (currentStepIndex >= demoSteps.length) {
+                    updateExplanation("Demo finished. Click Next Step to restart or Reset.");
+                    // Optionally reset currentStepIndex here or keep it at the end
+                    // currentStepIndex = 0; // Uncomment to loop
+                }
+            } else {
+                // Reset the demo if already finished
+                 currentStepIndex = 0;
+                 updateExplanation("Starting demo from the beginning.");
+                 executeStep(demoSteps[currentStepIndex]);
+                 currentStepIndex++;
+            }
+             // Disable manual controls during demo steps
+             actionSelect.disabled = true;
+             executeButton.disabled = true;
+             resetButton.disabled = true; // Allow reset anytime? Maybe not during auto-run
+             randomizeButton.disabled = true;
+             nextStepButton.disabled = false; // Keep enabled for manual advance
+        }
+
+        function startAutoRun() {
+            if (autoRunInterval) return; // Already running
+
+            currentStepIndex = 0; // Start from beginning
+            nextStep(); // Execute first step immediately
+
+            autoRunInterval = setInterval(() => {
+                 if (currentStepIndex < demoSteps.length) {
+                    nextStep(); // nextStep increments index internally
+                 } else {
+                    stopAutoRun();
+                    // Optionally reset currentStepIndex here if stopping means "finished"
+                     currentStepIndex = 0; // Reset index for next start
+                 }
+            }, 2500); // 2.5 seconds delay between steps
+
+            autoRunButton.textContent = 'Stop Auto-Run';
+             // Disable manual controls and next step button during auto-run
+             actionSelect.disabled = true;
+             executeButton.disabled = true;
+             resetButton.disabled = true;
+             randomizeButton.disabled = true;
+             nextStepButton.disabled = true;
+        }
+
+        function stopAutoRun() {
+            if (!autoRunInterval) return;
+
+            clearInterval(autoRunInterval);
+            autoRunInterval = null;
+            autoRunButton.textContent = 'Auto-Run';
+            updateExplanation("Auto-Run paused. Click Next Step to continue or choose an action.");
+             // Re-enable manual controls and next step button
+             actionSelect.disabled = false;
+             executeButton.disabled = false;
+             resetButton.disabled = false; // Re-enable reset
+             randomizeButton.disabled = false;
+             nextStepButton.disabled = false; // Re-enable next step for manual continuation
+        }
+
+        nextStepButton.addEventListener('click', nextStep);
+        autoRunButton.addEventListener('click', () => {
+            if (autoRunInterval) {
+                stopAutoRun();
+            } else {
+                startAutoRun();
+            }
+        });
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            createDefaultList(); // Start with a default list
+            showRelevantInputs(); // Show inputs for the default selected action ('reset' or 'create_default')
+
+            // Ensure correct inputs are shown initially based on default select value
+            showRelevantInputs();
+        });
+
+
+    </script>
+
+</body>
+</html>

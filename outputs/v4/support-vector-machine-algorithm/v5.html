@@ -1,0 +1,468 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GFG Concept Explorer</title>
+    <style>
+        /* Minimal Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Non-negotiable: No scrolling */
+            font-family: monospace;
+            background-color: #ffffff;
+            color: #000000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Variables */
+        :root {
+            --gfg-green: #2f8d46;
+            --light-gray: #cccccc;
+            --header-height: 10vh;
+            --footer-height: 10vh;
+            --main-height: 80vh;
+        }
+
+        /* Header */
+        header {
+            height: var(--header-height);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 2vw;
+            border-bottom: 1px solid var(--light-gray);
+            background-color: #ffffff;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        header img {
+            height: 32px; /* Specified height */
+            margin-right: 1vw;
+        }
+
+        header h1 {
+            font-size: 1.5vw; /* Relative to viewport */
+            font-weight: normal;
+        }
+
+        /* Main Content Area */
+        main {
+            height: var(--main-height);
+            width: 100%;
+            display: flex;
+            padding: 1vh 2vw; /* Padding relative to viewport */
+            flex-grow: 1; /* Allow it to fill space */
+            gap: 2vw; /* Gap between sections */
+        }
+
+        /* Filter and List Container */
+        .interaction-panel {
+            flex-basis: 70vw; /* Main content area takes ~70% of width */
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+            border: 1px solid var(--light-gray);
+            padding: 1vh;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1vw;
+            padding-bottom: 1vh;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .filter-btn {
+            background-color: transparent;
+            border: 1px solid var(--gfg-green);
+            color: var(--gfg-green);
+            padding: 0.5vh 1vw;
+            cursor: pointer;
+            font-size: 1vw;
+            transition: background-color 0.1s, color 0.1s;
+        }
+
+        .filter-btn:hover {
+            background-color: rgba(47, 141, 70, 0.1);
+        }
+
+        .filter-btn.active {
+            background-color: var(--gfg-green);
+            color: white;
+        }
+
+        .question-list {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5vh;
+            overflow: hidden; /* Important: Prevent list scrolling */
+        }
+
+        .question-item {
+            border: 1px solid var(--light-gray);
+            padding: 0.8vh 1vw;
+            cursor: pointer;
+            font-size: 1.1vw;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            transition: background-color 0.1s, border-color 0.1s;
+        }
+
+        .question-item:hover {
+             background-color: rgba(47, 141, 70, 0.05);
+        }
+
+        .question-item.attempted {
+            background-color: rgba(47, 141, 70, 0.2); /* Light green tint */
+            border-color: var(--gfg-green);
+        }
+
+        .question-item .status-indicator {
+            font-size: 0.8em;
+            color: var(--light-gray);
+        }
+
+         .question-item.attempted .status-indicator {
+            color: var(--gfg-green);
+         }
+
+
+        /* Controls and Explanation Area */
+        .controls-panel {
+            flex-basis: 25vw; /* Controls area takes ~25% of width */
+            display: flex;
+            flex-direction: column;
+            gap: 2vh;
+        }
+
+        .explanation-area {
+            border: 1px solid var(--light-gray);
+            padding: 1.5vh 1vw;
+            min-height: 8vh; /* Ensure space for 2 lines */
+            display: flex;
+            align-items: center;
+            font-size: 1.1vw;
+            line-height: 1.4;
+            flex-shrink: 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+            flex-grow: 1; /* Controls take up remaining vertical space */
+            justify-content: flex-start; /* Align buttons to the top */
+        }
+
+        .control-btn {
+            width: 100%; /* Make buttons fill control panel width */
+            background-color: var(--gfg-green);
+            color: white;
+            border: 1px solid var(--gfg-green);
+            padding: 1.5vh 0; /* Vertical padding */
+            cursor: pointer;
+            font-size: 1.2vw;
+            transition: opacity 0.1s;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .control-btn:disabled {
+            background-color: var(--light-gray);
+            border-color: var(--light-gray);
+            cursor: not-allowed;
+        }
+
+        /* Footer */
+        footer {
+            height: var(--footer-height);
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 3vw;
+            border-top: 1px solid var(--light-gray);
+            background-color: #ffffff;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: var(--gfg-green);
+            text-decoration: none;
+            font-size: 1.1vw;
+            transition: text-decoration 0.1s;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>Concept Explorer</h1>
+    </header>
+
+    <main>
+        <div class="interaction-panel">
+            <div class="filters">
+                <button class="filter-btn active" data-company="All">All Companies</button>
+                <button class="filter-btn" data-company="Google">Google</button>
+                <button class="filter-btn" data-company="Amazon">Amazon</button>
+                <button class="filter-btn" data-company="Microsoft">Microsoft</button>
+                <!-- Add more filters as needed -->
+            </div>
+            <div class="question-list">
+                <!-- Question items will be injected here by JavaScript -->
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="explanation-area" id="explanationText">
+                <p>Explore how to filter questions and track progress.</p>
+            </div>
+            <div class="controls">
+                <button class="control-btn" id="resetBtn">Reset</button>
+                <button class="control-btn" id="nextStepBtn">Next Step</button>
+                <button class="control-btn" id="autoRunBtn">Auto-Run Demo</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Data ---
+        let allQuestions = [
+            { id: 1, name: "Two Sum", company: "Google", status: "unattempted" },
+            { id: 2, name: "Merge Intervals", company: "Google", status: "unattempted" },
+            { id: 3, name: "Valid Parentheses", company: "Amazon", status: "unattempted" },
+            { id: 4, name: "Maximal Square", company: "Amazon", status: "unattempted" },
+            { id: 5, name: "Container With Most Water", company: "Microsoft", status: "unattempted" },
+            { id: 6, name: "Longest Increasing Subsequence", company: "Microsoft", status: "unattempted" },
+            { id: 7, name: "Lowest Common Ancestor", company: "Google", status: "unattempted" },
+            { id: 8, name: "Rotate Image", company: "Amazon", status: "unattempted" },
+        ];
+
+        let questions = JSON.parse(JSON.stringify(allQuestions)); // Use a deep copy
+        let currentFilter = 'All';
+        let demoStep = 0;
+        let autoRunTimeout;
+
+        // --- DOM References ---
+        const questionListDiv = document.querySelector('.question-list');
+        const explanationTextP = document.querySelector('#explanationText p');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const resetBtn = document.getElementById('resetBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const autoRunBtn = document.getElementById('autoRunBtn');
+
+        // --- Rendering ---
+        function renderQuestions() {
+            questionListDiv.innerHTML = ''; // Clear list
+
+            const filteredQuestions = currentFilter === 'All'
+                ? questions
+                : questions.filter(q => q.company === currentFilter);
+
+            if (filteredQuestions.length === 0 && currentFilter !== 'All') {
+                 questionListDiv.innerHTML = `<div style="padding: 1vh; text-align: center; color: #555;">No questions found for ${currentFilter}.</div>`;
+                 return;
+            }
+
+
+            filteredQuestions.forEach(q => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('question-item');
+                itemDiv.dataset.id = q.id; // Store ID
+                if (q.status === 'attempted') {
+                    itemDiv.classList.add('attempted');
+                }
+
+                itemDiv.innerHTML = `
+                    <span>${q.id}. ${q.name} (${q.company})</span>
+                    <span class="status-indicator">${q.status === 'attempted' ? '✅' : '○'}</span>
+                `;
+
+                // Add click listener to toggle status
+                itemDiv.addEventListener('click', () => {
+                    toggleStatus(q.id);
+                });
+
+                questionListDiv.appendChild(itemDiv);
+            });
+        }
+
+        // --- Logic ---
+        function updateExplanation(text) {
+            explanationTextP.textContent = text;
+        }
+
+        function applyFilter(company) {
+            currentFilter = company;
+            filterButtons.forEach(btn => {
+                if (btn.dataset.company === company) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            renderQuestions();
+            if (!isDemoRunning()) { // Only update text on manual interaction
+                 updateExplanation(`Showing questions for ${company}.`);
+            }
+        }
+
+        function toggleStatus(questionId) {
+            const question = questions.find(q => q.id === questionId);
+            if (question) {
+                question.status = question.status === 'attempted' ? 'unattempted' : 'attempted';
+                renderQuestions();
+                if (!isDemoRunning()) { // Only update text on manual interaction
+                    updateExplanation(`Marked question ${question.id} as ${question.status}.`);
+                }
+            }
+        }
+
+        function resetApp() {
+            questions = JSON.parse(JSON.stringify(allQuestions)); // Reset data
+            applyFilter('All'); // Reset filter
+            demoStep = 0;
+            clearTimeout(autoRunTimeout);
+            enableDemoControls();
+            updateExplanation("Explore how to filter questions and track progress.");
+        }
+
+        // --- Guided Demo ---
+        const demoSteps = [
+             { type: 'explanation', text: "Step 1: Initial state. All questions shown." },
+             { type: 'filter', value: 'Google', text: "Step 2: Filter by 'Google'." },
+             { type: 'explanation', text: "See how only Google questions remain?" },
+             { type: 'toggle', value: 1, text: "Step 3: Mark 'Two Sum' (ID 1) as attempted." }, // Toggle ID 1
+             { type: 'explanation', text: "It's now visually marked." },
+             { type: 'filter', value: 'Amazon', text: "Step 4: Filter by 'Amazon'." },
+             { type: 'explanation', text: "Now only Amazon questions are visible." },
+             { type: 'filter', value: 'All', text: "Step 5: Reset filter to 'All Companies'." },
+             { type: 'explanation', text: "Notice the 'Two Sum' status persists across filters." },
+             { type: 'toggle', value: 1, text: "Step 6: Unmark 'Two Sum'." }, // Toggle ID 1 again
+             { type: 'explanation', text: "Status is now reset for that item." },
+             { type: 'explanation', text: "Demo complete! You can now explore freely or Reset." },
+        ];
+
+        function isDemoRunning() {
+            return autoRunTimeout !== undefined;
+        }
+
+        function disableDemoControls() {
+             nextStepBtn.disabled = true;
+             autoRunBtn.disabled = true;
+        }
+
+        function enableDemoControls() {
+            nextStepBtn.disabled = false;
+            autoRunBtn.disabled = false;
+        }
+
+
+        function performStep(step) {
+            clearTimeout(autoRunTimeout); // Clear any pending auto-run step
+
+            if (!step) {
+                updateExplanation("Demo complete! You can now explore freely or Reset.");
+                enableDemoControls();
+                autoRunTimeout = undefined; // Indicate demo finished
+                return;
+            }
+
+            updateExplanation(`[Demo] ${step.text}`);
+
+            // Execute the action after a brief delay so the user can read the explanation first
+             setTimeout(() => {
+                switch (step.type) {
+                    case 'filter':
+                        applyFilter(step.value);
+                        break;
+                    case 'toggle':
+                        // Need to find the actual element to trigger click for visual effect in demo
+                        // Or just update data directly and re-render
+                         toggleStatus(step.value); // Update data and render
+                        break;
+                    case 'explanation':
+                        // Explanation is already updated above
+                        break;
+                }
+                 // Ensure filters and list are visible after action in demo
+                 // applyFilter(currentFilter); // Re-apply current filter state if needed (toggle might change list appearance)
+
+                demoStep++; // Move to next step
+                 if (isDemoRunning()) { // If Auto-Run was active, schedule next step
+                      autoRunTimeout = setTimeout(() => performStep(demoSteps[demoStep]), 2000); // 2-second delay
+                 } else if (demoStep >= demoSteps.length) {
+                     // If manual Next Step finished the demo
+                     enableDemoControls();
+                 }
+
+             }, step.type === 'explanation' ? 1500 : 1000); // Shorter delay after action vs explanation
+
+        }
+
+        function nextStep() {
+             if (isDemoRunning()) return; // Prevent manual step during auto-run
+             if (demoStep >= demoSteps.length) {
+                 updateExplanation("Demo complete! Reset to run again.");
+                 return;
+             }
+             performStep(demoSteps[demoStep]);
+        }
+
+        function autoRun() {
+            if (isDemoRunning()) return; // Prevent starting multiple auto-runs
+            resetApp(); // Start auto-run from clean state
+            disableDemoControls();
+             autoRunTimeout = setTimeout(() => performStep(demoSteps[demoStep]), 100); // Start first step after small delay
+        }
+
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            resetApp(); // Initialize the app on load
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (!isDemoRunning()) { // Prevent filtering during auto-run
+                        applyFilter(btn.dataset.company);
+                        demoStep = 0; // Reset demo progress on manual interaction
+                        enableDemoControls(); // Re-enable controls if they were disabled by partial demo
+                    }
+                });
+            });
+
+            resetBtn.addEventListener('click', resetApp);
+            nextStepBtn.addEventListener('click', nextStep);
+            autoRunBtn.addEventListener('click', autoRun);
+        });
+
+    </script>
+
+</body>
+</html>

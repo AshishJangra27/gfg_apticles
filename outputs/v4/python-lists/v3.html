@@ -1,0 +1,570 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python List Explorer - GeeksforGeeks</title>
+    <style>
+        :root {
+            --gfg-green: #2f8d46;
+            --light-gray: #cccccc;
+            --white: #ffffff;
+            --black: #000000;
+            --header-height: 9vh;
+            --footer-height: 9vh;
+            --main-height: 82vh; /* 100 - 9 - 9 */
+            --padding: 1vh;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Ensure no scrolling */
+            font-family: monospace;
+            color: var(--black);
+            background-color: var(--white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        header {
+            height: var(--header-height);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 var(--padding);
+            box-sizing: border-box;
+            border-bottom: 1px solid var(--light-gray);
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        header img {
+            height: 32px;
+            margin-right: 1vw;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8vh; /* Relative font size */
+            flex-grow: 1; /* Push other elements */
+        }
+
+        main {
+            height: var(--main-height);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: var(--padding);
+            box-sizing: border-box;
+            flex-grow: 1; /* Take remaining space */
+        }
+
+        .visualization-panel {
+            flex-grow: 2; /* Take more space than feedback/controls */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent list visualization from causing scroll */
+            border: 1px solid var(--light-gray);
+            margin-bottom: var(--padding);
+            position: relative; /* Needed for potential absolute positioning of highlights */
+        }
+
+        .list-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end; /* Align indices at bottom */
+            padding: var(--padding);
+            gap: 0.5vw; /* Space between elements */
+            overflow-x: auto; /* Allow horizontal scrolling *if* list is too wide, but the main area should prevent vertical */
+            height: calc(100% - 3vh); /* Make space for index row label */
+            box-sizing: border-box;
+            position: relative; /* For element highlighting */
+        }
+
+        .list-element {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid var(--black);
+            padding: 0.5vh 0.5vw;
+            min-width: 4vw; /* Minimum width for elements */
+            text-align: center;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .list-element .value {
+             word-break: break-all; /* Prevent long words from overflowing */
+             font-size: 1.5vh;
+             margin-bottom: 0.5vh;
+        }
+
+        .list-element .index {
+            font-size: 1.2vh;
+            color: var(--black);
+        }
+
+        .list-element.highlight {
+            border-color: var(--gfg-green);
+            background-color: rgba(47, 141, 70, 0.1); /* Light green background */
+        }
+
+
+        .feedback-panel {
+            flex-grow: 0.5; /* Less space than visualization */
+            padding: var(--padding);
+            border: 1px solid var(--light-gray);
+            margin-bottom: var(--padding);
+            font-size: 1.5vh;
+            min-height: 3vh; /* Ensure it's visible */
+            max-height: 6vh; /* Limit height */
+            overflow-y: auto; /* Allow scrolling if feedback is long */
+        }
+
+        .controls-panel {
+            flex-grow: 1; /* Take space */
+            padding: var(--padding);
+            border: 1px solid var(--light-gray);
+            display: flex;
+            flex-wrap: wrap; /* Allow controls to wrap */
+            gap: 1vw; /* Space between control groups */
+            align-items: flex-start; /* Align items to the top */
+            overflow-y: auto; /* Allow scrolling if controls take too much vertical space */
+            max-height: 20vh; /* Limit height */
+            box-sizing: border-box;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5vh;
+            border: 1px solid var(--light-gray);
+            padding: 1vh;
+            flex: 1 1 auto; /* Allow shrinking/growing, take space */
+            min-width: 15vw; /* Minimum width for a group */
+        }
+
+        .control-group h3 {
+            margin: 0 0 0.5vh 0;
+            font-size: 1.6vh;
+            border-bottom: 1px solid var(--light-gray);
+            padding-bottom: 0.5vh;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+            font-size: 1.4vh;
+        }
+
+        .control-row input[type="text"],
+        .control-row input[type="number"] {
+            padding: 0.5vh 0.5vw;
+            font-size: 1.4vh;
+            border: 1px solid var(--black);
+            box-sizing: border-box;
+        }
+         .control-row input[type="text"] { width: 8vw; }
+         .control-row input[type="number"] { width: 4vw; }
+
+
+        .controls-panel button {
+            padding: 0.5vh 1vw;
+            font-size: 1.4vh;
+            cursor: pointer;
+            border: 1px solid var(--black);
+            background-color: var(--white);
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .controls-panel button:hover {
+            background-color: var(--gfg-green);
+            color: var(--white);
+            border-color: var(--gfg-green);
+        }
+         .controls-panel button:active {
+             background-color: var(--black);
+             border-color: var(--black);
+         }
+
+
+        footer {
+            height: var(--footer-height);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center links */
+            padding: 0 var(--padding);
+            box-sizing: border-box;
+            border-top: 1px solid var(--light-gray);
+            flex-shrink: 0; /* Prevent shrinking */
+            gap: 2vw;
+        }
+
+        footer a {
+            color: var(--gfg-green);
+            text-decoration: none;
+            font-size: 1.4vh;
+            transition: color 0.2s ease;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+            color: var(--black);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://media.geeksforgeeks.org/gfg-gg-logo.svg" alt="GeeksforGeeks Logo">
+        <h1>Python List Explorer</h1>
+    </header>
+
+    <main>
+        <div class="visualization-panel">
+             <div class="list-container" id="listVisualization">
+                 <!-- List elements will be rendered here by JS -->
+             </div>
+        </div>
+
+        <div class="feedback-panel" id="feedbackArea">
+            Ready to explore Python lists! Use the controls below.
+        </div>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                 <h3>Demo & Reset</h3>
+                 <div class="control-row">
+                     <button id="resetBtn">Reset</button>
+                     <button id="randomizeBtn">Randomize</button>
+                     <button id="nextStepBtn">Next Step</button>
+                     <button id="autoRunBtn">Auto-Run</button>
+                 </div>
+             </div>
+
+             <div class="control-group">
+                 <h3>Access</h3>
+                 <div class="control-row">
+                     <label for="accessIndex">Index:</label>
+                     <input type="number" id="accessIndex" value="0" min="0">
+                     <button id="accessBtn">Access Element</button>
+                 </div>
+             </div>
+
+             <div class="control-group">
+                 <h3>Add</h3>
+                 <div class="control-row">
+                     <label for="appendItem">Item:</label>
+                     <input type="text" id="appendItem" placeholder="e.g. 'grape'">
+                     <button id="appendBtn">Append Item</button>
+                 </div>
+                 <div class="control-row">
+                     <label for="insertIndex">Index:</label>
+                     <input type="number" id="insertIndex" value="0" min="0">
+                      <label for="insertItem">Item:</label>
+                     <input type="text" id="insertItem" placeholder="e.g. 'mango'">
+                     <button id="insertBtn">Insert Item</button>
+                 </div>
+             </div>
+
+            <div class="control-group">
+                 <h3>Remove</h3>
+                 <div class="control-row">
+                     <label for="popIndex">Index:</label>
+                     <input type="number" id="popIndex" value="0" min="0">
+                     <button id="popBtn">Pop Index</button>
+                 </div>
+                 <!-- Remove by Value could be added here if needed -->
+             </div>
+
+             <div class="control-group">
+                 <h3>Update</h3>
+                 <div class="control-row">
+                     <label for="updateIndex">Index:</label>
+                     <input type="number" id="updateIndex" value="0" min="0">
+                      <label for="updateValue">New Value:</label>
+                     <input type="text" id="updateValue" placeholder="e.g. 'kiwi'">
+                     <button id="updateBtn">Update Element</button>
+                 </div>
+             </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        let currentList = [];
+        const listViz = document.getElementById('listVisualization');
+        const feedbackArea = document.getElementById('feedbackArea');
+
+        const accessIndexInput = document.getElementById('accessIndex');
+        const appendItemInput = document.getElementById('appendItem');
+        const insertIndexInput = document.getElementById('insertIndex');
+        const insertItemInput = document.getElementById('insertItem');
+        const popIndexInput = document.getElementById('popIndex');
+        const updateIndexInput = document.getElementById('updateIndex');
+        const updateValueInput = document.getElementById('updateValue');
+
+        // --- List Rendering and Feedback ---
+        function renderList(highlightIndex = -1) {
+            listViz.innerHTML = ''; // Clear current visualization
+            if (currentList.length === 0) {
+                listViz.innerHTML = '<div style="padding:' + varCSS('--padding') + '; font-size: 1.6vh; color: var(--light-gray);">List is empty</div>';
+                return;
+            }
+
+            currentList.forEach((item, index) => {
+                const elementDiv = document.createElement('div');
+                elementDiv.classList.add('list-element');
+                if (index === highlightIndex) {
+                    elementDiv.classList.add('highlight');
+                }
+
+                const valueDiv = document.createElement('div');
+                valueDiv.classList.add('value');
+                // Basic handling for non-string types for display
+                valueDiv.textContent = String(item);
+
+                const indexDiv = document.createElement('div');
+                indexDiv.classList.add('index');
+                indexDiv.textContent = index; // Positive index
+
+                elementDiv.appendChild(valueDiv);
+                elementDiv.appendChild(indexDiv);
+                listViz.appendChild(elementDiv);
+            });
+
+            // Briefly remove highlight after animation/transition
+            if (highlightIndex !== -1) {
+                setTimeout(() => {
+                     const highlightedElement = listViz.querySelector('.list-element.highlight');
+                     if (highlightedElement) {
+                         highlightedElement.classList.remove('highlight');
+                     }
+                }, 500); // Match CSS transition duration
+            }
+        }
+
+        function updateFeedback(message) {
+            feedbackArea.textContent = message;
+            // Optional: Add current list state to feedback
+             feedbackArea.textContent += ` | Current list: [${currentList.map(item => `'${item}'`).join(', ')}]`;
+        }
+
+        // Helper to get CSS variables
+        function varCSS(name) {
+             return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        // --- Operations ---
+
+        function resetList() {
+            currentList = [];
+            renderList();
+            updateFeedback("List reset.");
+            instructionIndex = 0; // Reset demo
+        }
+
+        function randomizeList() {
+            const items = ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape'];
+            const size = Math.floor(Math.random() * 5) + 2; // 2 to 6 items
+            currentList = Array.from({ length: size }, () => items[Math.floor(Math.random() * items.length)]);
+            renderList();
+            updateFeedback(`List randomized with ${size} items.`);
+             instructionIndex = 0; // Reset demo
+        }
+
+        function accessElement() {
+            const index = parseInt(accessIndexInput.value, 10);
+            if (isNaN(index) || index < 0 || index >= currentList.length) {
+                updateFeedback("Error: Invalid index for access.");
+                return;
+            }
+            const value = currentList[index];
+            renderList(index); // Highlight accessed element
+            updateFeedback(`Accessed element at index ${index}: '${value}'.`);
+        }
+
+        function appendItem() {
+            const item = appendItemInput.value.trim();
+            if (item === "") {
+                 updateFeedback("Error: Item to append cannot be empty.");
+                 return;
+            }
+            currentList.push(item);
+            renderList(currentList.length - 1); // Highlight the new element
+            updateFeedback(`Appended '${item}'. List size is now ${currentList.length}.`);
+            appendItemInput.value = ""; // Clear input
+        }
+
+        function insertItem() {
+            const index = parseInt(insertIndexInput.value, 10);
+            const item = insertItemInput.value.trim();
+            if (isNaN(index) || index < 0 || index > currentList.length) {
+                updateFeedback(`Error: Invalid index for insert. Must be between 0 and ${currentList.length}.`);
+                return;
+            }
+             if (item === "") {
+                 updateFeedback("Error: Item to insert cannot be empty.");
+                 return;
+             }
+
+            currentList.splice(index, 0, item);
+            renderList(index); // Highlight the inserted element
+            updateFeedback(`Inserted '${item}' at index ${index}. List size is now ${currentList.length}.`);
+            insertIndexInput.value = index; // Keep index input, might insert again
+            insertItemInput.value = ""; // Clear item input
+        }
+
+
+        function popIndex() {
+            const index = parseInt(popIndexInput.value, 10);
+             if (isNaN(index) || index < 0 || index >= currentList.length) {
+                updateFeedback("Error: Invalid index for pop. Must be between 0 and list size - 1.");
+                return;
+            }
+
+            const removedItem = currentList.splice(index, 1)[0];
+            renderList(); // Re-render without the element
+             // Add a temporary visual cue before re-rendering if animation is desired
+            updateFeedback(`Popped element at index ${index}: '${removedItem}'. Elements shifted left.`);
+             popIndexInput.value = Math.max(0, index - 1); // Adjust index input
+        }
+
+        function updateElement() {
+            const index = parseInt(updateIndexInput.value, 10);
+            const newValue = updateValueInput.value.trim();
+
+             if (isNaN(index) || index < 0 || index >= currentList.length) {
+                updateFeedback("Error: Invalid index for update. Must be between 0 and list size - 1.");
+                return;
+            }
+             if (newValue === "") {
+                 updateFeedback("Error: New value cannot be empty.");
+                 return;
+             }
+
+            const oldValue = currentList[index];
+            currentList[index] = newValue;
+            renderList(index); // Highlight the updated element
+            updateFeedback(`Updated element at index ${index} from '${oldValue}' to '${newValue}'.`);
+            // updateIndexInput.value = index; // Keep index input
+            updateValueInput.value = ""; // Clear value input
+        }
+
+        // --- Guided Demo ---
+        const demoSteps = [
+            { type: 'reset' },
+            { type: 'append', value: 'apple', feedback: "Starting with an empty list." },
+            { type: 'append', value: 'banana', feedback: "Use `append()` to add items to the end." },
+            { type: 'append', value: 'cherry', feedback: "Appending 'cherry'." },
+            { type: 'access', index: 1, feedback: "Accessing an element using its index: `list[1]`." },
+            { type: 'insert', index: 0, value: 'grape', feedback: "Use `insert(index, item)` to add at a specific position." },
+            { type: 'update', index: 2, value: 'date', feedback: "Update an element using its index: `list[index] = new_value`." },
+            { type: 'pop', index: 1, feedback: "Use `pop(index)` to remove an item by index. Other elements shift." },
+            { type: 'access', index: 1, feedback: "Accessing index 1 again to see the shifted element." },
+            { type: 'reset', feedback: "Resetting the list to start over." },
+             { type: 'randomize', feedback: "Exploring with a random list." }
+
+        ];
+        let instructionIndex = 0;
+        let autoRunInterval = null;
+
+        function executeStep(step) {
+            if (!step) {
+                 updateFeedback("Demo finished.");
+                 instructionIndex = 0; // Reset index when done
+                 return;
+            }
+
+            // Set input values for clarity before executing
+            switch (step.type) {
+                case 'access': accessIndexInput.value = step.index; break;
+                case 'append': appendItemInput.value = step.value; break;
+                case 'insert': insertIndexInput.value = step.index; insertItemInput.value = step.value; break;
+                case 'pop': popIndexInput.value = step.index; break;
+                case 'update': updateIndexInput.value = step.index; updateValueInput.value = step.value; break;
+                default: break;
+            }
+
+            // Execute the action
+            switch (step.type) {
+                case 'reset': resetList(); break;
+                case 'randomize': randomizeList(); break;
+                case 'access': accessElement(); break;
+                case 'append': appendItem(); break;
+                case 'insert': insertItem(); break;
+                case 'pop': popIndex(); break;
+                case 'update': updateElement(); break;
+                default: updateFeedback("Unknown step type: " + step.type); break;
+            }
+
+             // Provide specific feedback if defined in step
+             if (step.feedback) {
+                 feedbackArea.textContent = step.feedback; // Overwrite general feedback for this step
+                  // Add current list state back
+                 feedbackArea.textContent += ` | Current list: [${currentList.map(item => `'${item}'`).join(', ')}]`;
+             }
+        }
+
+        function nextStep() {
+            if (autoRunInterval) {
+                 clearInterval(autoRunInterval);
+                 autoRunInterval = null;
+                 document.getElementById('autoRunBtn').textContent = 'Auto-Run';
+            }
+            executeStep(demoSteps[instructionIndex]);
+            instructionIndex = (instructionIndex + 1) % demoSteps.length;
+        }
+
+        function autoRun() {
+             if (autoRunInterval) {
+                 clearInterval(autoRunInterval);
+                 autoRunInterval = null;
+                 document.getElementById('autoRunBtn').textContent = 'Auto-Run';
+             } else {
+                 document.getElementById('autoRunBtn').textContent = 'Stop Auto-Run';
+                 // Start from current index or reset if at the end
+                 if (instructionIndex === 0 && currentList.length > 0) {
+                      // If list is not empty and at the start of demo,
+                      // maybe force a reset step first or start demo from current state?
+                      // Let's force a reset for a clean demo start
+                      executeStep({ type: 'reset' });
+                      instructionIndex = 0; // Ensure index is 0 after reset
+                 }
+                 nextStep(); // Execute the first step immediately
+                 autoRunInterval = setInterval(() => {
+                    nextStep();
+                 }, 2000); // Pause for 2 seconds between steps
+             }
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('resetBtn').addEventListener('click', resetList);
+        document.getElementById('randomizeBtn').addEventListener('click', randomizeList);
+        document.getElementById('nextStepBtn').addEventListener('click', nextStep);
+        document.getElementById('autoRunBtn').addEventListener('click', autoRun);
+        document.getElementById('accessBtn').addEventListener('click', accessElement);
+        document.getElementById('appendBtn').addEventListener('click', appendItem);
+        document.getElementById('insertBtn').addEventListener('click', insertItem);
+        document.getElementById('popBtn').addEventListener('click', popIndex);
+        document.getElementById('updateBtn').addEventListener('click', updateElement);
+
+
+        // --- Initialization ---
+        resetList(); // Start with an empty list
+    </script>
+
+</body>
+</html>
