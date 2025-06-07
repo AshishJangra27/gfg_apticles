@@ -4,10 +4,8 @@ from pathlib import Path
 import json
 import re
 
-# API endpoint
 api_url = 'https://gfg-apticles-728938563934.asia-south1.run.app/generate-webpage'
 
-# List of article URLs
 urls = [
     "https://www.geeksforgeeks.org/depth-first-search-or-dfs-for-a-graph/",
     "https://www.geeksforgeeks.org/breadth-first-search-or-bfs-for-a-graph/"
