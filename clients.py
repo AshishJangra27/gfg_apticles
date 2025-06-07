@@ -9,10 +9,8 @@ api_url = 'https://gfg-apticles-728938563934.asia-south1.run.app/generate-webpag
 urls = [
     "https://www.geeksforgeeks.org/depth-first-search-or-dfs-for-a-graph/",
     "https://www.geeksforgeeks.org/breadth-first-search-or-bfs-for-a-graph/"
-    "https://www.geeksforgeeks.org/introduction-to-binary-tree/",
     "https://www.geeksforgeeks.org/binary-search/",
     "https://www.geeksforgeeks.org/bubble-sort-algorithm/"
-    "https://www.geeksforgeeks.org/decision-tree-introduction-example/",
     "https://www.geeksforgeeks.org/support-vector-machine-algorithm/",
     "https://www.geeksforgeeks.org/k-nearest-neighbours/",
     "https://www.geeksforgeeks.org/python-lists/"
@@ -46,6 +44,6 @@ def process_url_variations(url):
     except Exception as e:
         return f"⚠️ {url} | {e}"
 
-with ThreadPoolExecutor(max_workers=32) as executor:
+with ThreadPoolExecutor(max_workers=10) as executor:
     for result in executor.map(process_url_variations, urls):
         print(result)

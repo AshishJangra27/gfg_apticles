@@ -1,0 +1,417 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer</title>
+    <style>
+        /* Minimalist Reset and Layout */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Crucial: Prevent Scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        header {
+            height: 8vh; /* Fixed height for header */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid black;
+            font-size: 1.5vh;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        main {
+            flex-grow: 1; /* Main content takes remaining vertical space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2vh 2vw; /* Padding around main content */
+            box-sizing: border-box;
+            font-size: 1.8vh;
+            text-align: center;
+        }
+
+        footer {
+            height: 4vh; /* Fixed height for footer */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+            font-size: 1.5vh;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+             text-decoration: underline;
+        }
+
+        /* App Specific Styles */
+        #array-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 4vh; /* Provide more space below for L/H/M labels */
+            height: 10vh; /* Allocate space for elements and labels */
+        }
+
+        .array-element {
+            width: 4vw; /* Element width based on viewport */
+            height: 4vw; /* Element height to make it square */
+            border: 1px solid black;
+            display: flex;
+            flex-direction: column; /* Stack index and value */
+            justify-content: center; /* Center content vertically */
+            align-items: center; /* Center content horizontally */
+            margin: 0 0.3vw; /* Space between elements */
+            box-sizing: border-box;
+            position: relative; /* For absolute positioning of L/H/M labels */
+            font-size: 2vh; /* Value size */
+        }
+
+        .array-element span.index-label { /* Style for index label *inside* the box */
+             font-size: 1.2vh; /* Smaller */
+             position: static; /* Not absolute relative to element div */
+             transform: none; /* Remove potential transforms */
+             margin-bottom: 0.5vh; /* Space between index and value */
+        }
+
+         .range-label { /* Style for L, H, M labels *below* the box */
+            position: absolute;
+            top: 110%; /* Position below the element */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.8vh; /* Label size */
+            color: black;
+            white-space: nowrap; /* Prevent label text from wrapping */
+             z-index: 1; /* Ensure labels are above potential overlaps */
+        }
+
+
+         .highlight {
+            background-color: yellow; /* Highlight current search range */
+        }
+
+        .mid-highlight {
+            background-color: lightblue; /* Highlight the middle element */
+        }
+
+        .found-highlight {
+            background-color: lightgreen; /* Highlight the found element */
+        }
+
+        #controls {
+            margin-bottom: 2vh;
+            display: flex;
+            gap: 1vw;
+            align-items: center;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens if necessary */
+            justify-content: center; /* Center controls if wrapped */
+        }
+
+        #controls label {
+             font-size: 1.8vh;
+        }
+
+        #controls input[type="text"] {
+            font-family: monospace;
+            border: 1px solid black;
+            padding: 0.5vh 0.5vw;
+            font-size: 1.8vh;
+            width: 8vw;
+            min-width: 80px; /* Minimum width for input */
+            text-align: center;
+        }
+
+         #controls button {
+            font-family: monospace;
+            border: 1px solid black;
+            padding: 0.5vh 1vw;
+            font-size: 1.8vh;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        #controls button:hover {
+            background-color: #f0f0f0;
+        }
+
+         #status {
+            min-height: 4vh; /* Reserve space for status message */
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center status text */
+            font-size: 1.8vh;
+             text-align: center; /* Ensure text is centered */
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        Binary Search Visualizer
+    </header>
+
+    <main>
+        <p>Find a value in a sorted array by repeatedly dividing the search interval in half.</p>
+
+        <div id="array-container">
+            <!-- Array elements will be rendered here by JavaScript -->
+        </div>
+
+        <div id="controls">
+            <label for="target">Search Value:</label>
+            <input type="text" id="target" value="">
+            <button id="search-button">Search</button>
+            <button id="reset-button">Reset</button>
+            <button id="randomize-button">Randomize Array</button>
+            <button id="auto-demo-button">Auto Demo</button>
+        </div>
+
+        <div id="status">
+            Click 'Randomize Array' or 'Auto Demo', or enter a value and click 'Search' to begin.
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const arrayContainer = document.getElementById('array-container');
+        const targetInput = document.getElementById('target');
+        const searchButton = document.getElementById('search-button');
+        const resetButton = document.getElementById('reset-button');
+        const randomizeButton = document.getElementById('randomize-button');
+        const autoDemoButton = document.getElementById('auto-demo-button');
+        const statusDiv = document.getElementById('status');
+
+        let sortedArray = []; // Initialize with empty array
+        let animationTimeout; // To store the timeout ID
+
+        // --- Array Generation ---
+        function generateRandomSortedArray(size = 13) { // Default size
+            const newArray = [];
+            // Generate numbers between 1 and 100
+            for (let i = 0; i < size; i++) {
+                newArray.push(Math.floor(Math.random() * 100) + 1);
+            }
+            // Sort the array numerically
+            newArray.sort((a, b) => a - b);
+            return newArray;
+        }
+
+        // --- Rendering ---
+        function renderArray(low, high, mid, foundIndex) {
+            arrayContainer.innerHTML = ''; // Clear current array view
+            sortedArray.forEach((value, index) => {
+                const elementDiv = document.createElement('div');
+                elementDiv.classList.add('array-element');
+
+                // Highlight the current search range
+                if (low !== null && high !== null && index >= low && index <= high) {
+                    elementDiv.classList.add('highlight');
+                }
+
+                // Highlight the middle element
+                if (mid !== null && index === mid) {
+                    elementDiv.classList.add('mid-highlight');
+                }
+
+                // Highlight the found element
+                if (foundIndex !== null && index === foundIndex) {
+                     elementDiv.classList.add('found-highlight');
+                }
+
+                // Add index label (inside the element)
+                 const indexLabel = document.createElement('span');
+                 indexLabel.classList.add('index-label'); // Use new class
+                 indexLabel.textContent = index; // Display the index
+                 elementDiv.appendChild(indexLabel); // Add index first
+
+                const valueSpan = document.createElement('span'); // Wrap value in a span
+                valueSpan.textContent = value;
+                elementDiv.appendChild(valueSpan); // Add value second
+
+                arrayContainer.appendChild(elementDiv);
+            });
+
+            // Add L, H, M labels if applicable (below the elements)
+             const elements = arrayContainer.querySelectorAll('.array-element');
+             // Determine labels for L, H, M positions, handling overlaps
+             const labels = {};
+             if (low !== null && elements[low]) {
+                 labels[low] = labels[low] ? labels[low] + ', L' : 'L';
+             }
+             if (high !== null && elements[high]) {
+                  labels[high] = labels[high] ? labels[high] + ', H' : 'H';
+             }
+             if (mid !== null && elements[mid]) {
+                  labels[mid] = labels[mid] ? labels[mid] + ', M' : 'M';
+             }
+
+             // Add the labels to the corresponding elements
+             Object.keys(labels).forEach(indexStr => {
+                 const index = parseInt(indexStr, 10);
+                 if (elements[index]) {
+                     const label = document.createElement('span');
+                     label.classList.add('range-label'); // Use new class
+                     label.textContent = labels[index];
+                     elements[index].appendChild(label);
+                 }
+             });
+        }
+
+        // --- Binary Search Logic (Step-by-Step) ---
+        let low = 0;
+        let high = 0;
+        let targetValue = null;
+        let stepDelay = 1500; // Milliseconds delay between steps
+
+        function searchStep() {
+            if (low > high || sortedArray.length === 0) {
+                statusDiv.textContent = `Value ${targetValue} not found in the array.`;
+                renderArray(null, null, null, null); // Render without highlights
+                return;
+            }
+
+            const mid = Math.floor((low + high) / 2);
+             // Ensure mid is within bounds before accessing sortedArray[mid]
+             if (mid < low || mid > high || mid < 0 || mid >= sortedArray.length) {
+                  statusDiv.textContent = `Error: Calculation resulted in invalid index ${mid}.`;
+                  renderArray(null, null, null, null);
+                  return;
+             }
+
+
+            renderArray(low, high, mid, null); // Render current state with L, H, M
+
+            statusDiv.textContent = `Checking index ${mid} (Value: ${sortedArray[mid]})`;
+
+            if (sortedArray[mid] === targetValue) {
+                statusDiv.textContent = `Value ${targetValue} found at index ${mid}!`;
+                renderArray(null, null, null, mid); // Highlight found element
+            } else if (targetValue < sortedArray[mid]) {
+                statusDiv.textContent += `. Target (${targetValue}) is smaller than ${sortedArray[mid]}. Search left half.`;
+                // Pause then continue search
+                animationTimeout = setTimeout(() => {
+                    high = mid - 1;
+                    searchStep();
+                }, stepDelay);
+            } else { // targetValue > sortedArray[mid]
+                statusDiv.textContent += `. Target (${targetValue}) is larger than ${sortedArray[mid]}. Search right half.`;
+                 // Pause then continue search
+                 animationTimeout = setTimeout(() => {
+                    low = mid + 1;
+                    searchStep();
+                 }, stepDelay);
+            }
+        }
+
+        // --- Controls ---
+        function reset(keepArray = true) { // Default to keeping array on reset
+            if (animationTimeout) clearTimeout(animationTimeout);
+            low = 0;
+            targetValue = null;
+            statusDiv.textContent = "Click 'Randomize Array' or 'Auto Demo', or enter a value and click 'Search' to begin.";
+            targetInput.value = ''; // Clear target input on reset
+            if (!keepArray) {
+                 sortedArray = generateRandomSortedArray(); // Generate new array
+            }
+             high = sortedArray.length - 1; // Set high based on current (potentially new) array length
+            renderArray(null, null, null, null); // Render initial state (no highlights) with current array
+        }
+
+        function startSearch() {
+            if (animationTimeout) clearTimeout(animationTimeout); // Stop any previous animation
+
+            targetValue = parseInt(targetInput.value, 10);
+
+            if (isNaN(targetValue)) {
+                statusDiv.textContent = "Please enter a valid number.";
+                // Don't reset highlights if input is bad, just show message
+                return;
+            }
+             if (sortedArray.length === 0) {
+                 statusDiv.textContent = "Array is empty. Click 'Randomize Array' first.";
+                 return;
+             }
+
+
+            // Re-initialize low/high for a new search on the *current* array
+            low = 0;
+            high = sortedArray.length - 1;
+
+            // Clear any previous highlights from prior searches/resets
+            renderArray(null, null, null, null); // Render the array in a clean state before starting
+
+            statusDiv.textContent = `Starting search for ${targetValue}...`;
+            // Start the first step after a short delay
+            animationTimeout = setTimeout(searchStep, stepDelay);
+        }
+
+        function startAutoDemo() {
+             // Ensure array exists and is not empty for demo
+             if (sortedArray.length === 0) {
+                 reset(false); // Generate a new random array and reset state
+             } else {
+                 reset(true); // Just reset state, keep current array
+             }
+
+            let target;
+            // 60% chance to pick an existing element, 40% chance a random number
+            if (Math.random() < 0.6 && sortedArray.length > 0) {
+                // Pick an existing element
+                target = sortedArray[Math.floor(Math.random() * sortedArray.length)];
+            } else {
+                // Pick a random number (might or might not be in the array), within a reasonable range
+                target = Math.floor(Math.random() * 120) + 1; // Slightly larger range than generation to increase 'not found' chance
+            }
+            targetInput.value = target; // Set the input value
+            startSearch(); // Start the search animation
+        }
+
+
+        // --- Event Listeners ---
+        searchButton.addEventListener('click', startSearch);
+        // Reset button clears state and highlights but keeps current array
+        resetButton.addEventListener('click', () => reset(true));
+        // Randomize button clears state, generates new array, and resets
+        randomizeButton.addEventListener('click', () => reset(false));
+        autoDemoButton.addEventListener('click', startAutoDemo);
+
+        targetInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                startSearch();
+            }
+        });
+
+        // Initial setup: Generate a random array and render
+        reset(false); // Call reset with keepArray = false to generate initial array
+
+    </script>
+
+</body>
+</html>

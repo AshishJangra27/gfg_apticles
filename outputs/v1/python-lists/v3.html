@@ -1,0 +1,463 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python List Visualizer</title>
+    <style>
+        /* --- Global Minimal Styles --- */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Crucial for no scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex; /* Use flexbox for main layout */
+            flex-direction: column;
+            box-sizing: border-box;
+            line-height: 1.4; /* Improve readability */
+        }
+
+        * {
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        /* --- Layout --- */
+        header {
+            flex-shrink: 0; /* Don't allow header to shrink */
+            height: 8vh; /* Fixed height relative to viewport height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid black;
+            font-size: 2vh; /* Relative font size */
+            font-weight: bold;
+        }
+
+        main {
+            flex-grow: 1; /* Allow main content to take remaining space */
+            display: flex;
+            flex-direction: column; /* Stack list and controls vertically */
+            padding: 2vh; /* Add some padding */
+            justify-content: flex-start; /* Align content to the top */
+            align-items: center; /* Center content horizontally */
+             overflow-y: auto; /* Allow main content to scroll if needed (unlikely with vh, but safe) */
+             scrollbar-width: none; /* Hide scrollbar */
+             -ms-overflow-style: none; /* Hide scrollbar in IE and Edge */
+        }
+
+         main::-webkit-scrollbar {
+            display: none; /* Hide scrollbar in Chrome, Safari and Opera */
+        }
+
+
+        footer {
+            flex-shrink: 0; /* Don't allow footer to shrink */
+            height: 5vh; /* Fixed height relative to viewport height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+            font-size: 1.5vh; /* Relative font size */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw; /* Relative margin */
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- List Visualization --- */
+        .list-container {
+            display: flex; /* Arrange list items horizontally */
+            align-items: flex-start; /* Align items to the top */
+            margin-bottom: 3vh; /* Space below the list */
+            flex-wrap: wrap; /* Allow wrapping if too many items (though aiming for fit) */
+            justify-content: center; /* Center list items if they wrap */
+            width: 100%; /* Take full main width */
+            max-width: 90vw; /* Limit width to avoid extreme stretching */
+        }
+
+        .list-item {
+            border: 1px solid black;
+            padding: 1vh 0.8vw; /* Relative padding */
+            margin: 0.5vh 0.4vw; /* Relative margin */
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
+            font-size: 1.8vh; /* Relative font size */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-width: 8vw; /* Minimum width for items */
+            max-width: 15vw; /* Maximum width to prevent large items */
+            height: 10vh; /* Fixed height for visual consistency */
+             word-break: break-word; /* Break long words/strings */
+             overflow: hidden; /* Hide overflow text */
+        }
+
+        .list-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .list-item.selected {
+            background-color: #ddd;
+            border-color: blue; /* Highlight selected item */
+            box-shadow: 0 0 5px rgba(0, 0, 255, 0.5);
+        }
+
+        .item-index {
+            font-size: 1.2vh; /* Smaller font for index */
+            margin-bottom: 0.5vh;
+            color: #555; /* Slightly faded index */
+            flex-shrink: 0; /* Don't allow index to shrink */
+        }
+
+        .item-value {
+            flex-grow: 1; /* Allow value to take up space */
+            display: flex;
+            align-items: center; /* Center value vertically */
+            justify-content: center; /* Center value horizontally */
+            width: 100%; /* Take full width */
+        }
+
+        /* --- Interaction Controls --- */
+        .controls {
+            border: 1px solid black;
+            padding: 2vh;
+            font-size: 1.6vh;
+            display: flex;
+            flex-direction: column; /* Stack controls vertically */
+            align-items: flex-start; /* Align text/inputs to the left */
+            width: 90%; /* Control width */
+            max-width: 600px; /* Max pixel width */
+            min-height: 20vh; /* Minimum height for control area */
+             background-color: #f9f9f9; /* Slightly off-white background */
+        }
+
+        .controls > div { /* Direct children divs */
+            margin-bottom: 1.5vh; /* Space between control groups */
+            width: 100%; /* Ensure control rows take full width */
+        }
+
+         .controls > div:last-child {
+             margin-bottom: 0; /* No margin after the last group */
+         }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+
+         .control-row label {
+             flex-shrink: 0; /* Prevent label from shrinking */
+             margin-right: 1vw;
+             font-weight: bold;
+              min-width: 10vw; /* Give labels some minimal width */
+         }
+
+         .control-row span {
+             flex-grow: 1; /* Allow spans to grow */
+             word-break: break-word;
+         }
+
+         .control-row input[type="text"] {
+             flex-grow: 1; /* Allow input to grow */
+             font-family: monospace;
+             font-size: 1.6vh;
+             padding: 0.8vh;
+             margin-left: 0; /* Reset margin */
+             border: 1px solid black;
+             background-color: white;
+             min-width: 0; /* Allow input to shrink below content size */
+         }
+
+        .control-row button {
+            font-family: monospace;
+            font-size: 1.6vh;
+            padding: 0.8vh 1.5vw;
+            margin-right: 1vw;
+            cursor: pointer;
+            background-color: white;
+            border: 1px solid black;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        .control-row button:last-child {
+             margin-right: 0;
+        }
+
+
+        .control-row button:hover:not(:disabled) {
+            background-color: #e0e0e0;
+        }
+
+        .control-row button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+        }
+
+         /* Style for the initial instruction text */
+         .controls > div:first-child {
+             font-size: 1.5vh;
+             color: #333;
+             margin-bottom: 2vh;
+             line-height: 1.5;
+         }
+    </style>
+</head>
+<body>
+
+    <header>
+        Visualizing Python Lists
+    </header>
+
+    <main>
+        <div class="list-container" id="listContainer">
+            <!-- List items will be rendered here by JavaScript -->
+        </div>
+
+        <div class="controls">
+            <div>Click on a list item to select it and see its details below. Enter a new value in the input field and click 'Change Value' to modify the list.</div>
+            <div class="control-row">
+                <label>Selected Index:</label>
+                <span id="selectedIndex">-</span>
+            </div>
+             <div class="control-row">
+                <label>Current Value:</label>
+                <span id="currentValue">-</span>
+            </div>
+            <div class="control-row">
+                <label for="newValueInput">New Value:</label>
+                <input type="text" id="newValueInput" disabled placeholder='e.g., "new string", 123, True, False, None'>
+            </div>
+             <div class="control-row">
+                <button id="changeButton" disabled>Change Value</button>
+                 <button id="resetButton">Reset List</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Representing a sample Python list using JavaScript types
+            // Note: JS 'null' represents Python 'None'
+            // JS Arrays represent Python Lists
+            // JS Booleans represent Python Booleans
+            // JS Numbers represent Python Integers and Floats
+            // JS Strings represent Python Strings
+            let pyList = ["hello world", 123, true, null, [1, 2, 3], 98.6, "another item", false];
+
+            const listContainer = document.getElementById('listContainer');
+            const selectedIndexSpan = document.getElementById('selectedIndex');
+            const currentValueSpan = document.getElementById('currentValue');
+            const newValueInput = document.getElementById('newValueInput');
+            const changeButton = document.getElementById('changeButton');
+            const resetButton = document.getElementById('resetButton');
+
+            let selectedIndex = -1; // -1 means no item is selected
+
+            // Function to render the list visually
+            function renderList() {
+                listContainer.innerHTML = ''; // Clear current visualization
+
+                if (pyList.length === 0) {
+                     listContainer.innerHTML = '<div>List is empty. Click Reset to restore.</div>';
+                     selectedIndex = -1; // Deselect if list becomes empty
+                } else {
+                    pyList.forEach((item, index) => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.classList.add('list-item');
+                        itemDiv.dataset.index = index; // Store index in data attribute
+
+                        // Simple representation for different types, mimicking Python's repr or str
+                        let displayValue;
+                        const itemType = typeof item;
+
+                        if (item === null) {
+                            displayValue = 'None';
+                        } else if (Array.isArray(item)) {
+                            // Represent array contents simply, prevent infinite recursion
+                            try {
+                                // Limit depth/size for display
+                                const jsonString = JSON.stringify(item);
+                                displayValue = jsonString.length > 20 ? '[...]' : jsonString; // Truncate long array display
+                            } catch (e) {
+                                displayValue = '[...]'; // Fallback for complex/circular references
+                            }
+                        } else if (itemType === 'string') {
+                            // Escape quotes within the string for display
+                            const escapedString = item.replace(/"/g, '\\"');
+                            displayValue = `"${escapedString}"`;
+                        } else if (itemType === 'boolean') {
+                            displayValue = item ? 'True' : 'False';
+                        } else if (itemType === 'number') {
+                             // Display numbers directly
+                             displayValue = String(item);
+                        }
+                        else {
+                            // Fallback for other types (objects, functions etc.)
+                            displayValue = String(item);
+                        }
+
+
+                        itemDiv.innerHTML = `<div class="item-index">[${index}]</div><div class="item-value">${displayValue}</div>`;
+
+                        // Add selected class if this item is currently selected
+                        if (index === selectedIndex) {
+                            itemDiv.classList.add('selected');
+                        }
+
+                        listContainer.appendChild(itemDiv);
+                    });
+                }
+
+
+                 updateControls(); // Update controls whenever list is rendered
+            }
+
+            // Function to update control panel based on selection
+            function updateControls() {
+                const isItemSelected = selectedIndex !== -1 && selectedIndex < pyList.length;
+
+                if (isItemSelected) {
+                    const actualValue = pyList[selectedIndex];
+                    const itemType = typeof actualValue;
+
+                    selectedIndexSpan.textContent = selectedIndex;
+
+                    // Display the actual value clearly, trying to show type
+                    let valueDisplay;
+                    if (actualValue === null) {
+                        valueDisplay = 'None (null)';
+                    } else if (Array.isArray(actualValue)) {
+                         // Show a slightly more detailed array content
+                        try {
+                            valueDisplay = `list: ${JSON.stringify(actualValue)}`;
+                        } catch (e) {
+                             valueDisplay = `list: [...]`;
+                        }
+                    } else if (itemType === 'string') {
+                        // Show string with quotes and type
+                        const escapedString = actualValue.replace(/"/g, '\\"');
+                        valueDisplay = `str: "${escapedString}"`;
+                    } else if (itemType === 'boolean') {
+                         valueDisplay = `bool: ${actualValue ? 'True' : 'False'}`;
+                    } else if (itemType === 'number') {
+                         // Determine if int or float conceptually
+                         valueDisplay = (actualValue % 1 === 0) ? `int: ${actualValue}` : `float: ${actualValue}`;
+                    }
+                     else {
+                         valueDisplay = `${itemType}: ${String(actualValue)}`;
+                     }
+
+                    currentValueSpan.textContent = valueDisplay;
+
+                    // Populate input for editing
+                    if (actualValue === null) {
+                        newValueInput.value = 'None';
+                    } else if (itemType === 'string') {
+                        newValueInput.value = actualValue; // Don't add quotes automatically for editing
+                    } else if (Array.isArray(actualValue)) {
+                         try {
+                             newValueInput.value = JSON.stringify(actualValue); // Allow editing as JSON string
+                         } catch(e) {
+                             newValueInput.value = '[...]'; // Cannot represent
+                         }
+                    }
+                    else {
+                        newValueInput.value = String(actualValue); // Numbers, booleans display directly
+                    }
+
+                    newValueInput.disabled = false;
+                    changeButton.disabled = false;
+                } else {
+                    selectedIndexSpan.textContent = '-';
+                    currentValueSpan.textContent = '-';
+                    newValueInput.value = '';
+                    newValueInput.disabled = true;
+                    changeButton.disabled = true;
+                }
+
+                // Update selected class on list items
+                document.querySelectorAll('.list-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                const selectedItemElement = document.querySelector(`.list-item[data-index="${selectedIndex}"]`);
+                if (selectedItemElement) {
+                     selectedItemElement.classList.add('selected');
+                }
+            }
+
+            // Event listener for clicking on list items (using delegation)
+            listContainer.addEventListener('click', (event) => {
+                const itemElement = event.target.closest('.list-item');
+                if (itemElement) {
+                    const index = parseInt(itemElement.dataset.index, 10);
+                    if (index === selectedIndex) {
+                         selectedIndex = -1; // Deselect if clicked again
+                    } else {
+                        selectedIndex = index; // Select new item
+                    }
+                    updateControls(); // Update control panel and highlight
+                }
+            });
+
+            // Event listener for the Change Value button
+            changeButton.addEventListener('click', () => {
+                if (selectedIndex !== -1 && selectedIndex < pyList.length) {
+                    let newValueString = newValueInput.value.trim();
+                    let newValue;
+
+                    // Simple type inference based on input string
+                    if (newValueString.toLowerCase() === 'none') {
+                        newValue = null;
+                    } else if (newValueString.toLowerCase() === 'true') {
+                        newValue = true;
+                    } else if (newValueString.toLowerCase() === 'false') {
+                        newValue = false;
+                    } else if (!isNaN(parseFloat(newValueString)) && isFinite(newValueString)) {
+                         // Check if it's a valid number (int or float)
+                         newValue = parseFloat(newValueString);
+                    } else {
+                        // Default to treating as a plain string
+                        newValue = newValueString;
+                    }
+
+                    pyList[selectedIndex] = newValue; // Mutate the list
+                    renderList(); // Re-render the list
+                    // Selection is maintained by renderList calling updateControls
+                }
+            });
+
+            // Event listener for the Reset button
+            resetButton.addEventListener('click', () => {
+                pyList = ["hello world", 123, true, null, [1, 2, 3], 98.6, "another item", false]; // Reset to initial state
+                selectedIndex = -1; // Deselect item
+                renderList(); // Re-render
+            });
+
+            // Initial render
+            renderList();
+        });
+    </script>
+
+</body>
+</html>

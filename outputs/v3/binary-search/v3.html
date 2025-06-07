@@ -1,0 +1,441 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Crucial for no scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use full viewport height */
+            width: 100vw; /* Use full viewport width */
+            box-sizing: border-box;
+        }
+
+        #header {
+            height: 10vh; /* Allocate height for header */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border-bottom: 1px solid black;
+            box-sizing: border-box;
+        }
+
+        #main-content {
+            flex-grow: 1; /* Take remaining space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            align-items: center; /* Center content horizontally */
+            padding: 1vh; /* Minimal padding */
+            box-sizing: border-box;
+            position: relative; /* Needed for absolute positioning of pointers */
+        }
+
+        #array-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 5vh; /* Space below array */
+            /* position: relative; Removed, pointers are relative to #main-content or #pointers */
+            width: 90vw; /* Use a percentage of viewport width */
+            box-sizing: border-box;
+        }
+
+        .array-item {
+            flex-grow: 1; /* Distribute space evenly */
+            height: 5vh;
+            min-width: 2vw; /* Ensure some minimum width */
+            border: 1px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 0.2vw; /* Small gap between items */
+            box-sizing: border-box;
+            font-size: 0.8em;
+            transition: background-color 0.3s ease; /* Smooth transition for highlights */
+        }
+
+        .array-item.active-range {
+             /* Subtle background for the current search range */
+            background-color: rgba(0, 0, 0, 0.1); /* Light gray */
+        }
+
+        .array-item.checking {
+            background-color: yellow; /* Highlight the middle element being checked */
+        }
+
+        .array-item.found {
+            background-color: lightgreen; /* Highlight the found element */
+        }
+
+        #pointers {
+            position: absolute;
+            bottom: 0; /* Position below the array container, within #main-content */
+            left: 50%; /* Center relative to #main-content */
+            transform: translateX(-50%);
+            display: flex;
+            width: 90vw; /* Match array container width */
+            height: 4vh; /* Space for pointers */
+            box-sizing: border-box;
+        }
+
+        .pointer {
+            position: absolute;
+            width: 0.5vw; /* Small width */
+            height: 3vh; /* Height of the pointer line */
+            background-color: blue; /* Pointer color - low */
+            bottom: 0;
+            left: 0; /* Will be updated by JS */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Label above pointer line */
+            color: blue; /* Label color - low */
+            font-size: 0.7em;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: left 0.3s ease; /* Smooth movement */
+        }
+         .pointer::before {
+            content: attr(data-label); /* Use data-label for text */
+            position: absolute;
+            top: -1.5vh; /* Position label above the pointer line */
+            left: 50%;
+            transform: translateX(-50%);
+         }
+
+         #mid-pointer { background-color: red; color: red; } /* Pointer color - mid */
+         #high-pointer { background-color: green; color: green; } /* Pointer color - high */
+
+
+        #controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2vh;
+        }
+
+        #controls input, #controls button {
+            font-family: monospace;
+            margin: 0 0.5vw;
+            padding: 0.5vh 1vw;
+            font-size: 0.9em;
+            border: 1px solid black;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+        }
+
+        #controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #controls button:active:not(:disabled) {
+             background-color: black;
+             color: white;
+        }
+
+        #status {
+            font-size: 1em;
+            height: 3vh; /* Allocate space for status messages */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+             color: #888888; /* Light gray for status text */
+        }
+
+        #footer {
+            height: 7vh; /* Allocate height for footer */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            border-top: 1px solid black;
+            box-sizing: border-box;
+        }
+
+        #footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+         #footer a:hover {
+             text-decoration: underline;
+         }
+
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        Binary Search Visualizer (O(log N))
+    </div>
+
+    <div id="main-content">
+        <div id="array-container">
+            <!-- Array items will be rendered here by JS -->
+        </div>
+         <div id="pointers">
+             <div class="pointer" id="low-pointer" data-label="low"></div>
+             <div class="pointer" id="mid-pointer" data-label="mid"></div>
+             <div class="pointer" id="high-pointer" data-label="high"></div>
+         </div>
+
+        <div id="controls">
+            Target: <input type="number" id="targetInput" value="23" min="1" max="100">
+            <button id="startButton">Start Search</button>
+            <button id="nextButton" disabled>Next Step</button>
+            <button id="resetButton">Reset</button>
+        </div>
+
+        <div id="status">
+            Enter a target value and click 'Start Search'.
+        </div>
+    </div>
+
+    <div id="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        const arrayContainer = document.getElementById('array-container');
+        const targetInput = document.getElementById('targetInput');
+        const startButton = document.getElementById('startButton');
+        const nextButton = document.getElementById('nextButton');
+        const resetButton = document.getElementById('resetButton');
+        const statusDiv = document.getElementById('status');
+        const lowPointer = document.getElementById('low-pointer');
+        const midPointer = document.getElementById('mid-pointer');
+        const highPointer = document.getElementById('high-pointer');
+        const pointersContainer = document.getElementById('pointers');
+
+
+        // --- Array Data ---
+        const sortedArray = [
+            2, 5, 8, 12, 16, 23, 38, 56, 72, 91
+        ]; // A fixed, sorted array for demonstration
+
+        // --- State Variables ---
+        let low = 0;
+        let high = sortedArray.length - 1;
+        let mid = -1;
+        let target = -1;
+        let foundIndex = -1;
+        let isSearching = false;
+
+        // --- Helper Functions ---
+
+        function renderArray() {
+            arrayContainer.innerHTML = ''; // Clear previous rendering
+            sortedArray.forEach((value, index) => {
+                const item = document.createElement('div');
+                item.classList.add('array-item');
+                item.textContent = value;
+                item.dataset.index = index; // Store index for positioning
+                arrayContainer.appendChild(item);
+            });
+            // Position pointers initially outside or hidden - done in updateVisualization
+        }
+
+        function updateVisualization() {
+            const items = arrayContainer.querySelectorAll('.array-item');
+
+            // 1. Remove previous highlights and reset text color
+            items.forEach(item => {
+                item.classList.remove('active-range', 'checking', 'found');
+                item.style.color = 'black'; // Reset text color
+            });
+
+            // 2. Highlight the active search range [low, high]
+            if (isSearching) {
+                for (let i = low; i <= high; i++) {
+                    if (items[i]) {
+                         items[i].classList.add('active-range');
+                    }
+                }
+            }
+
+            // 3. Highlight the element being checked (mid) BEFORE comparison
+            if (mid >= 0 && mid < sortedArray.length && isSearching) {
+                 if (items[mid]) {
+                    items[mid].classList.add('checking');
+                 }
+            }
+
+            // 4. Highlight if found (after comparison step)
+            if (foundIndex !== -1) {
+                if (items[foundIndex]) {
+                    items[foundIndex].classList.remove('checking', 'active-range'); // Remove other highlights
+                    items[foundIndex].classList.add('found');
+                     items[foundIndex].style.color = 'white'; // Better contrast for green background
+                }
+            }
+
+            // 5. Position the pointers
+            if (isSearching && foundIndex === -1) {
+                positionPointer(lowPointer, low, 'low');
+                positionPointer(midPointer, mid, 'mid');
+                positionPointer(highPointer, high, 'high');
+            } else {
+                // Hide pointers if search is not active or finished
+                 lowPointer.style.display = 'none';
+                 midPointer.style.display = 'none';
+                 highPointer.style.display = 'none';
+            }
+        }
+
+        function positionPointer(pointerElement, index, label) {
+            const items = arrayContainer.querySelectorAll('.array-item');
+            if (index >= 0 && index < items.length) {
+                const item = items[index];
+                // Calculate the center of the item relative to the array container's left edge
+                 const itemRect = item.getBoundingClientRect();
+                 const arrayContainerRect = arrayContainer.getBoundingClientRect();
+                 const pointersContainerRect = pointersContainer.getBoundingClientRect();
+
+                 // Position relative to the pointers container's left edge
+                 // We need the item's position relative to the array container,
+                 // and since pointers container aligns with array container, this offset works.
+                 const itemCenterXRelativeToPointersContainer = (itemRect.left + itemRect.width / 2) - arrayContainerRect.left;
+
+
+                pointerElement.style.left = `${itemCenterXRelativeToPointersContainer}px`;
+                pointerElement.style.display = 'block'; // Show the pointer
+            } else {
+                pointerElement.style.display = 'none'; // Hide the pointer if index is out of bounds
+            }
+             pointerElement.setAttribute('data-label', label);
+        }
+
+
+        // --- Algorithm Steps ---
+
+        function startSearch() {
+            const inputTarget = parseInt(targetInput.value, 10);
+            if (isNaN(inputTarget) || inputTarget < 1 || inputTarget > 100) { // Basic validation based on min/max attributes
+                statusDiv.textContent = 'Please enter a valid number (1-100).';
+                statusDiv.style.color = 'red'; // Indicate error
+                return;
+            }
+
+            statusDiv.style.color = '#888888'; // Reset status color
+            target = inputTarget;
+            resetSearch(); // Ensure clean state
+
+            statusDiv.textContent = `Searching for ${target}...`;
+            startButton.disabled = true;
+            nextButton.disabled = false;
+            isSearching = true;
+
+             // Initial state before the first step calculation
+             low = 0;
+             high = sortedArray.length - 1;
+             mid = -1; // Mid is calculated in the first 'next' step
+             foundIndex = -1;
+
+            updateVisualization(); // Show initial range and hidden pointers
+        }
+
+        function nextStep() {
+             // Check end condition at the beginning of the step
+             if (!isSearching || low > high) {
+                 if (foundIndex === -1) {
+                    statusDiv.textContent = `Target ${target} not found. (low > high)`;
+                 }
+                 nextButton.disabled = true; // End of search
+                 isSearching = false;
+                 updateVisualization(); // Final visualization update
+                 return;
+             }
+
+            // Calculate mid for the current step
+             mid = Math.floor((low + high) / 2);
+
+            // Update visualization to show current range and mid BEFORE comparison
+             updateVisualization();
+
+            // Delay briefly to show the 'checking' highlight before moving pointers
+             setTimeout(() => {
+                 const midValue = sortedArray[mid];
+
+                 if (midValue === target) {
+                     foundIndex = mid;
+                     statusDiv.textContent = `Found ${target} at index ${foundIndex}!`;
+                     isSearching = false;
+                     nextButton.disabled = true; // Search finished successfully
+                 } else if (target < midValue) {
+                     high = mid - 1;
+                     statusDiv.textContent = `Target (${target}) < mid value (${midValue}). Search left half [${low}, ${high}].`;
+                 } else { // target > midValue
+                     low = mid + 1;
+                     statusDiv.textContent = `Target (${target}) > mid value (${midValue}). Search right half [${low}, ${high}].`;
+                 }
+
+                 // Update visualization AFTER updating low/high/foundIndex
+                 updateVisualization();
+
+                 // Check if search ended after this step (either found or low > high)
+                 if (!isSearching && foundIndex === -1) {
+                      statusDiv.textContent = `Target ${target} not found. (low > high)`;
+                      nextButton.disabled = true;
+                 } else if (foundIndex !== -1) {
+                      nextButton.disabled = true;
+                 }
+
+
+             }, 500); // Short delay to see 'checking' state
+        }
+
+        function resetSearch() {
+            low = 0;
+            high = sortedArray.length - 1;
+            mid = -1;
+            target = -1;
+            foundIndex = -1;
+            isSearching = false;
+
+            startButton.disabled = false;
+            nextButton.disabled = true;
+            statusDiv.textContent = 'Enter a target value and click \'Start Search\'.';
+             statusDiv.style.color = '#888888'; // Reset status color
+
+            renderArray(); // Re-render array to clear all highlights
+            updateVisualization(); // Ensure pointers are hidden
+        }
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', startSearch);
+        nextButton.addEventListener('click', nextStep);
+        resetButton.addEventListener('click', resetSearch);
+
+         // Allow pressing Enter in the input field to start the search
+         targetInput.addEventListener('keypress', function(event) {
+             if (event.key === 'Enter' && !startButton.disabled) {
+                 event.preventDefault(); // Prevent default form submission behavior
+                 startSearch();
+             }
+         });
+
+
+        // --- Initial Setup ---
+        renderArray(); // Display the initial array
+        updateVisualization(); // Ensure pointers are hidden initially
+
+    </script>
+
+</body>
+</html>

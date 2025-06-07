@@ -1,0 +1,585 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal DFS Visualizer</title>
+    <style>
+        /* Minimal CSS Reset */
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            font-family: monospace;
+            color: black;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure body takes full viewport height */
+            overflow: hidden; /* Crucial: Prevent scrolling */
+        }
+
+        header {
+            text-align: center;
+            padding: 1vh 0;
+            height: 8vh; /* Allocate space for header */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid black;
+        }
+
+        header h1 {
+            margin: 0; /* Remove default margin */
+            font-size: 1.5rem; /* Adjust size */
+        }
+
+        main {
+            flex-grow: 1; /* Allow main area to take remaining space */
+            display: flex;
+            flex-direction: column; /* Stack canvas, controls, status vertically */
+            align-items: center; /* Center content horizontally */
+            justify-content: center; /* Center content vertically */
+            padding: 1vh; /* Add some internal padding */
+            box-sizing: border-box;
+        }
+
+        canvas {
+            border: 1px solid black;
+            /* Max dimensions to fit within main area while respecting aspect ratio */
+            max-width: 98vw; /* Use more width */
+            max-height: 70vh; /* Keep canvas height reasonable */
+            background-color: white;
+            display: block; /* Remove potential extra space below canvas */
+        }
+
+        #controls, #status {
+            margin-top: 1.5vh; /* Space above controls/status */
+            text-align: center;
+            height: 4vh; /* Allocate fixed space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+        }
+
+        #controls button {
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+            padding: 0.5vh 1vw;
+            margin: 0 0.5vw; /* Adjust margin */
+            cursor: pointer;
+            font-size: 1rem; /* Adjust size as needed */
+            height: 100%; /* Make buttons fill control height */
+            display: flex; /* Center text vertically */
+            align-items: center;
+             min-width: fit-content; /* Prevent buttons from shrinking too much */
+        }
+
+        #controls button:hover:not(:disabled) {
+            background-color: black;
+            color: white;
+        }
+
+        #controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+         #controls label {
+             font-family: monospace;
+             font-size: 1rem;
+             height: 100%; /* Align with buttons */
+             display: flex;
+             align-items: center;
+             margin-left: 1vw;
+             cursor: pointer; /* Indicate clickable label */
+             min-width: fit-content; /* Prevent label from shrinking too much */
+         }
+
+         #controls label input[type="checkbox"] {
+             margin-right: 0.5vw;
+             /* Add minimalist checkbox styling if needed, but default is okay */
+         }
+
+
+        #status {
+             font-size: 1rem;
+             color: #555; /* Slightly lighter grey for status */
+             height: 3vh; /* Status can be slightly shorter */
+             overflow: hidden; /* Prevent status text from expanding and causing scroll */
+             text-overflow: ellipsis; /* Add ellipsis if text overflows */
+             white-space: nowrap; /* Keep status text on a single line */
+        }
+
+
+        footer {
+            text-align: center;
+            padding: 1vh 0;
+            height: 8vh; /* Allocate space for footer */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid black;
+            font-size: 0.9rem; /* Slightly smaller font for footer */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw; /* Use viewport width for horizontal margin */
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Depth-First Search (DFS) Visualizer</h1>
+    </header>
+
+    <main>
+        <canvas id="dfsCanvas"></canvas>
+        <div id="controls">
+            <button id="startButton">Start DFS (from A)</button>
+            <!-- Other buttons and controls will be added here by JavaScript -->
+            <button id="resetButton">Reset</button>
+        </div>
+        <div id="status"></div> <!-- Status div will be populated by JS -->
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('dfsCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const controlsDiv = document.getElementById('controls'); // Get controls div to insert new buttons
+        const statusDiv = document.getElementById('status');
+
+
+        // --- Graph Data (Fixed Example) ---
+        // Adjacency List
+        const graph = {
+            'A': ['B', 'C'],
+            'B': ['A', 'D', 'E'],
+            'C': ['A', 'F'],
+            'D': ['B'],
+            'E': ['B', 'F'],
+            'F': ['C', 'E']
+        };
+        const nodes = Object.keys(graph);
+
+        // Node positions (manual placement for fixed graph)
+        // Coordinates are relative to canvas, will be scaled
+        const nodePositions = {
+            'A': { x: 0.2, y: 0.5 },
+            'B': { x: 0.5, y: 0.2 },
+            'C': { x: 0.5, y: 0.8 },
+            'D': { x: 0.8, y: 0.1 },
+            'E': { x: 0.8, y: 0.5 },
+            'F': { x: 0.8, y: 0.9 }
+        };
+
+        // Filter nodes to ensure they exist in nodePositions
+        const availableNodesWithPositions = nodes.filter(node => nodePositions[node]);
+
+        // --- DFS State ---
+        let visited = {}; // Tracks nodes visited during the *current* DFS run visualization (for drawing state)
+        let animationSteps = []; // Stores sequence of visualization steps
+        let currentStepIndex = 0;
+        let autoPlayTimer = null; // Timer ID for auto-play
+        const autoPlayDelay = 700; // Milliseconds delay for auto-play
+
+        // --- Drawing Constants ---
+        const nodeRadius = 15; // px
+        const defaultColor = 'black';
+        const visitedColor = '#aaaaaa'; // Grey
+        const highlightColor = defaultColor; // Use black for highlight, distinguish with thickness
+        const textColor = 'white'; // Node text color on default nodes
+        const visitedTextColor = defaultColor; // Node text color on visited nodes
+
+
+        // --- Canvas Setup ---
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            drawGraph(); // Redraw after resize (which clears canvas)
+        }
+
+        // --- Drawing Functions ---
+        // drawGraph now accepts optional parameters for highlighting
+        function drawGraph(highlightNode = null, highlightEdge = null) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Edges first
+            ctx.strokeStyle = defaultColor;
+            ctx.lineWidth = 2;
+            for (const node in graph) {
+                 // Ensure node exists in positions before drawing edges from it
+                 if (!nodePositions[node]) continue;
+
+                const startPos = getNodeCanvasPos(nodePositions[node]);
+                // Ensure neighbors array exists and is iterable
+                const neighbors = graph[node] || [];
+                for (const neighbor of neighbors) {
+                     // Ensure neighbor exists in positions before drawing edges to it
+                     if (!nodePositions[neighbor]) continue;
+
+                    // Draw edge only once (e.g., A-B vs B-A)
+                    // Simple check: draw if current node comes alphabetically before neighbor
+                     if (node < neighbor) {
+                        const endPos = getNodeCanvasPos(nodePositions[neighbor]);
+                        ctx.beginPath();
+                        ctx.moveTo(startPos.x, startPos.y);
+                        ctx.lineTo(endPos.x, endPos.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+             // Draw Highlighted Edge (if any) - Draw *over* existing edges
+             if (highlightEdge && nodePositions[highlightEdge.from] && nodePositions[highlightEdge.to]) {
+                const startPos = getNodeCanvasPos(nodePositions[highlightEdge.from]);
+                const endPos = getNodeCanvasPos(nodePositions[highlightEdge.to]);
+                ctx.strokeStyle = highlightColor; // Use defaultColor (black)
+                ctx.lineWidth = 4; // Thicker
+                ctx.beginPath();
+                ctx.moveTo(startPos.x, startPos.y);
+                ctx.lineTo(endPos.x, endPos.y);
+                ctx.stroke();
+             }
+
+
+            // Draw Nodes (and Node Highlights) last
+            for (const node of nodes) {
+                 // Ensure node exists in positions before drawing
+                 if (!nodePositions[node]) continue;
+
+                const pos = getNodeCanvasPos(nodePositions[node]);
+                const isVisited = visited[node];
+                const isHighlighted = highlightNode === node;
+
+                // Draw node circle
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+                ctx.fillStyle = isVisited ? visitedColor : defaultColor;
+                ctx.fill();
+
+                // Draw outline (thicker if highlighted)
+                ctx.strokeStyle = isHighlighted ? highlightColor : defaultColor;
+                ctx.lineWidth = isHighlighted ? 4 : 2; // Thicker if highlighted
+                ctx.stroke();
+
+                // Draw node text
+                ctx.fillStyle = isVisited ? visitedTextColor : textColor; // Text color depends on fill
+                ctx.font = `${nodeRadius * 1.2}px monospace`; // Adjusted font size
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node, pos.x, pos.y);
+            }
+        }
+
+        // Convert relative node positions (0-1) to canvas pixel coordinates
+        function getNodeCanvasPos(relativePos) {
+             // Ensure relativePos is valid
+             if (!relativePos) return { x: 0, y: 0 };
+            return {
+                x: relativePos.x * canvas.width,
+                y: relativePos.y * canvas.height
+            };
+        }
+
+        // --- DFS Logic (Generates Steps) ---
+         // Iterative DFS Algo for Step Generation
+         function generateDFSSteps(startNode) {
+            const steps = [];
+            const visitedGen = new Set(); // Use a Set for state during generation
+            const stackGen = [startNode]; // Algorithm stack
+
+            // Initial step
+            steps.push({ type: 'start', node: startNode, message: `Preparing to start DFS from ${startNode}.` });
+
+            // Add the initial visit step for the start node
+            // In iterative DFS, the start node is typically visited/marked after popping it initially.
+            // We can add a conceptual visit step before the loop starts for visualization clarity.
+            // Or handle it within the loop's first iteration. Let's handle in loop.
+
+            while (stackGen.length > 0) {
+                const currentNode = stackGen.pop(); // Get node from stack
+
+                // Process node if not visited
+                if (!visitedGen.has(currentNode)) {
+                    visitedGen.add(currentNode); // Mark as visited *now*
+                    steps.push({ type: 'visit', node: currentNode, message: `Visiting and processing node ${currentNode}.` });
+
+                    // Get neighbors in reverse order to simulate deeper exploration first (like recursive)
+                    // Ensure node exists in graph before accessing neighbors
+                    const neighborsGen = graph[currentNode] ? graph[currentNode].slice().reverse() : [];
+
+                    // Add steps for exploring edges and pushing unvisited neighbors
+                    for (const neighbor of neighborsGen) {
+                         // Ensure neighbor exists in graph before checking/exploring
+                         if (!graph[neighbor] || !nodePositions[neighbor]) { // Also check position exists
+                              steps.push({ type: 'info', message: `Skipping invalid neighbor ${neighbor} listed for ${currentNode}.`});
+                              continue;
+                         }
+                        steps.push({
+                             type: 'explore_edge',
+                             from: currentNode,
+                             to: neighbor,
+                             isVisitedNeighbor: visitedGen.has(neighbor), // Check against current visited state
+                             message: `Checking edge ${currentNode} -> ${neighbor}. ${neighbor} is ${visitedGen.has(neighbor) ? 'visited' : 'unvisited'}.`
+                        });
+
+                        if (!visitedGen.has(neighbor)) {
+                            // Only push if unvisited. It will be visited when it's later popped.
+                            stackGen.push(neighbor);
+                            // steps.push({ type: 'push', node: neighbor, message: `Push ${neighbor} to stack.`}); // Conceptual step
+                        }
+                    }
+                } else {
+                    // Node was already visited when popped (can happen in graphs with cycles)
+                    // Add a step to show that this pop occurred but the node was skipped
+                    steps.push({ type: 'pop_visited_skipped', node: currentNode, message: `Popped ${currentNode} (already visited, skipping).` });
+                }
+            }
+
+            steps.push({ type: 'end', message: `DFS finished.` });
+
+            return steps;
+         }
+
+
+        // --- Animation Control ---
+        function nextStep() {
+             // If autoplay is active, clear the timer before manual step
+             if (autoPlayTimer) {
+                 clearTimeout(autoPlayTimer);
+                 autoPlayTimer = null;
+                 // Ensure checkbox reflects state if user manually clicks next
+                 const autoPlayCheckbox = document.getElementById('autoPlayCheckbox');
+                 if (autoPlayCheckbox) autoPlayCheckbox.checked = false;
+             }
+
+            if (currentStepIndex >= animationSteps.length) {
+                // Animation is already finished, nothing to do
+                return;
+            }
+
+            const step = animationSteps[currentStepIndex];
+            statusDiv.textContent = step.message;
+
+            let highlightNode = null;
+            let highlightEdge = null;
+
+            // Apply state changes and determine highlight based on step type
+            switch (step.type) {
+                 case 'start':
+                     // Initial state, reset visited state for drawing
+                     visited = {};
+                     // No drawing update needed for 'start', the graph is already drawn by reset/startDFS
+                     // Just update status and move to the next step immediately
+                     currentStepIndex++;
+                     nextStep(); // Process the next step right away
+                     return; // Exit this call
+                 case 'visit':
+                     visited[step.node] = true; // Mark node as visited permanently for drawing
+                     highlightNode = step.node; // Highlight the visited node
+                     break;
+                 case 'pop_visited_skipped': // Node was popped but already visited
+                     highlightNode = step.node; // Briefly highlight the node being skipped
+                     break;
+                 case 'explore_edge':
+                     highlightEdge = { from: step.from, to: step.to };
+                     // Optionally highlight the source node while exploring from it
+                     highlightNode = step.from;
+                     break;
+                 case 'info':
+                     // Just status update, no visual change or highlight
+                     break;
+                 case 'end':
+                     // Ensure no highlights on the final step
+                     highlightNode = null;
+                     highlightEdge = null;
+                     // The state (visited nodes) remains from the last step
+                     break;
+                 default:
+                     // Handle unknown step types or conceptual steps without visual representation
+                     // No drawing or state change needed
+                     break;
+            }
+
+            // Redraw graph with current state and highlighting
+            drawGraph(highlightNode, highlightEdge);
+
+            currentStepIndex++; // Move to the next step index
+
+            // Handle end of animation or schedule next step for auto-play
+            if (currentStepIndex >= animationSteps.length) {
+                 // Reached the end of steps
+                 const nextButton = document.getElementById('nextButton');
+                 if(nextButton) nextButton.disabled = true; // Disable Next button
+
+                 // Ensure auto-play checkbox is off and timer cleared
+                 const autoPlayCheckbox = document.getElementById('autoPlayCheckbox');
+                 if (autoPlayCheckbox) autoPlayCheckbox.checked = false;
+                 if (autoPlayTimer) {
+                     clearTimeout(autoPlayTimer);
+                     autoPlayTimer = null;
+                 }
+                 statusDiv.textContent = animationSteps[animationSteps.length - 1].message; // Ensure final message is shown
+                 // Final draw is done by the case 'end' or just before this block if not the 'end' step
+                 drawGraph(); // Ensure final state without highlights is drawn
+            } else {
+                 // If auto-play is active, schedule the next step
+                 const autoPlayCheckbox = document.getElementById('autoPlayCheckbox');
+                 if (autoPlayCheckbox && autoPlayCheckbox.checked) {
+                      autoPlayTimer = setTimeout(nextStep, autoPlayDelay);
+                 }
+            }
+        }
+
+        function reset() {
+            // Stop any ongoing auto-play
+            if (autoPlayTimer) {
+                 clearTimeout(autoPlayTimer);
+                 autoPlayTimer = null;
+            }
+            // Reset auto-play checkbox state
+             const autoPlayCheckbox = document.getElementById('autoPlayCheckbox');
+             if (autoPlayCheckbox) autoPlayCheckbox.checked = false;
+
+            visited = {}; // Clear visited state for drawing
+            animationSteps = []; // Clear generated steps
+            currentStepIndex = 0; // Reset step index
+
+            // Enable/Disable buttons appropriately
+            startButton.disabled = false;
+            // Next button might not exist yet if controls are built dynamically, add null check
+            const nextButton = document.getElementById('nextButton');
+             if(nextButton) nextButton.disabled = true;
+
+            // Reset random start button text
+             const randomStartButton = document.getElementById('randomStartButton');
+             if (randomStartButton) randomStartButton.textContent = 'Random Start';
+
+
+            statusDiv.textContent = 'Graph reset. Click \'Start DFS\' or \'Random Start\'.';
+
+            // Redraw canvas in reset state (empty visited state)
+            resizeCanvas(); // This calls drawGraph()
+        }
+
+        function startDFS(startNode = null) {
+            reset(); // Reset any ongoing animation/state
+
+            // Pick a random start node if none specified or if random button was clicked
+            if (availableNodesWithPositions.length === 0) {
+                 statusDiv.textContent = 'Error: No nodes with defined positions.';
+                 return; // Cannot start DFS without nodes
+            }
+            const actualStartNode = startNode && availableNodesWithPositions.includes(startNode) ? startNode : availableNodesWithPositions[Math.floor(Math.random() * availableNodesWithPositions.length)];
+
+
+             // Update Random Start button text to show start node
+             const randomStartButton = document.getElementById('randomStartButton');
+             if (randomStartButton) randomStartButton.textContent = `Random Start (from ${actualStartNode})`;
+
+            // Ensure canvas size is correct before generating steps
+            resizeCanvas(); // Calls drawGraph() for initial blank state
+
+            // Generate steps using the final refined logic
+            animationSteps = generateDFSSteps(actualStartNode);
+            currentStepIndex = 0; // Start before the first step
+
+            // Update button states
+            startButton.disabled = true;
+             const nextButton = document.getElementById('nextButton');
+             if(nextButton) nextButton.disabled = false;
+
+             // The first step ('start') is processed immediately by calling nextStep once.
+             // Subsequent steps require user click or auto-play.
+             // nextStep will handle setting the initial status text based on the first step.
+             nextStep(); // Start the visualization process (processes 'start' step then the next one)
+        }
+
+        // --- Add Next Step, Random Start Button and Auto Play Checkbox dynamically ---
+        // These buttons are needed in the controls div
+         // Next Step Button
+         const nextButton = document.createElement('button');
+         nextButton.id = 'nextButton';
+         nextButton.textContent = 'Next Step';
+         nextButton.disabled = true; // Initially disabled
+         controlsDiv.insertBefore(nextButton, resetButton); // Insert before resetButton
+
+         // Random Start Button
+         const randomStartButton = document.createElement('button');
+         randomStartButton.id = 'randomStartButton';
+         randomStartButton.textContent = 'Random Start';
+         controlsDiv.insertBefore(randomStartButton, resetButton); // Insert before resetButton
+
+         // Auto Play Checkbox/Label
+         const autoPlayLabel = document.createElement('label');
+         // Adding basic inline style to match minimalist theme font and spacing
+         autoPlayLabel.innerHTML = '<input type="checkbox" id="autoPlayCheckbox" style="margin-right: 0.5vw;"> Auto Play';
+         autoPlayLabel.style.fontFamily = 'monospace';
+         autoPlayLabel.style.marginLeft = '1vw';
+         autoPlayLabel.style.display = 'flex'; // Use flex to align checkbox and text
+         autoPlayLabel.style.alignItems = 'center';
+         autoPlayLabel.style.cursor = 'pointer'; // Indicate clickable
+         controlsDiv.appendChild(autoPlayLabel); // Add after Reset button
+
+
+        // --- Event Listeners ---
+        // Event listeners must be added *after* the elements are created
+        startButton.addEventListener('click', () => startDFS('A')); // Start specifically from A
+        randomStartButton.addEventListener('click', () => startDFS()); // Start from random node
+        nextButton.addEventListener('click', nextStep);
+        resetButton.addEventListener('click', reset);
+
+        const autoPlayCheckbox = document.getElementById('autoPlayCheckbox');
+        autoPlayCheckbox.addEventListener('change', (event) => {
+             if (event.target.checked) {
+                 // Start autoplay if there are steps left and not already playing
+                 // Ensure Next button is enabled if Auto Play is checked and not finished
+                 const nextBtn = document.getElementById('nextButton');
+                 if (currentStepIndex < animationSteps.length && !autoPlayTimer) {
+                      if (nextBtn) nextBtn.disabled = false; // Enable next if not already enabled by start
+                      autoPlayTimer = setTimeout(nextStep, autoPlayDelay);
+                 } else if (currentStepIndex >= animationSteps.length) {
+                      // If already finished, just uncheck the box
+                      event.target.checked = false;
+                 }
+             } else {
+                 // Stop autoplay
+                 if (autoPlayTimer) {
+                     clearTimeout(autoPlayTimer);
+                     autoPlayTimer = null;
+                 }
+             }
+        });
+
+
+        // --- Initial Setup ---
+        // Set initial canvas size and draw the graph
+        window.addEventListener('resize', resizeCanvas); // Add resize listener
+        window.requestAnimationFrame(resizeCanvas); // Initial draw happens here via resizeCanvas
+
+         // Initial status message displayed after elements are created
+        statusDiv.textContent = 'Graph ready. Click \'Start DFS (from A)\' or \'Random Start\'.';
+
+    </script>
+</body>
+</html>

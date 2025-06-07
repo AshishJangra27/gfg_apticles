@@ -1,0 +1,352 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Lists Explained</title>
+    <style>
+        /* Basic Reset and Layout Setup */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Crucial for non-scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure body takes full viewport height */
+            width: 100vw; /* Ensure body takes full viewport width */
+            box-sizing: border-box; /* Include padding in height/width if added later */
+        }
+
+        /* Header */
+        header {
+            flex-shrink: 0; /* Don't shrink header */
+            padding: 1vh;
+            text-align: center;
+            border-bottom: 1px solid black;
+            font-size: 1.8vh; /* Relative font size */
+            box-sizing: border-box;
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1; /* Occupy remaining space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            align-items: center; /* Center content horizontally */
+            padding: 2vh;
+            box-sizing: border-box; /* Include padding in height/width */
+            overflow-y: auto; /* Allow main content to scroll if it exceeds height */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+
+        /* List Visualization Area (Canvas substitute) */
+        #list-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap if too many */
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 15vh; /* Give it some space */
+            border: 1px solid black;
+            padding: 1vh;
+            margin-bottom: 2vh;
+            width: 90%; /* Relative width */
+            max-width: 80vw; /* Max width */
+            box-sizing: border-box;
+            overflow: auto; /* Allow internal scrolling IF list grows huge */
+        }
+
+        /* Individual List Item */
+        .list-item {
+            margin: 0.5vh;
+            padding: 0.5vh 1vh;
+            border: 1px solid black;
+            background-color: #eeeeee; /* Light grey background */
+            cursor: pointer; /* Indicate clickable */
+            font-size: 1.5vh;
+            text-align: center;
+            transition: background-color 0.1s ease; /* Simple hover effect */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none; /* Prevent text selection on click */
+        }
+
+        .list-item:hover {
+            background-color: #cccccc; /* Darker grey on hover */
+        }
+
+        .list-item .index {
+            font-size: 0.8em;
+            color: #555555; /* Dimmer index */
+            margin-bottom: 0.2vh;
+        }
+         .list-item .type {
+            font-size: 0.8em;
+            color: #777777; /* Dimmer type */
+            margin-top: 0.2vh;
+        }
+
+
+        /* Controls Area */
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1vh; /* Space between buttons */
+            font-size: 1.5vh;
+            margin-bottom: 2vh; /* Space below controls */
+        }
+
+        #controls button {
+            padding: 0.8vh 1.5vh;
+            font-family: monospace;
+            font-size: 1.5vh;
+            border: 1px solid black;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+            user-select: none;
+        }
+
+        #controls button:hover {
+            background-color: #f0f0f0;
+        }
+
+        #controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Footer */
+        footer {
+            flex-shrink: 0; /* Don't shrink footer */
+            padding: 1vh;
+            text-align: center;
+            border-top: 1px solid black;
+            font-size: 1.2vh; /* Smaller font for footer */
+            width: 100vw;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 0.5vh;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Text Explanation Area */
+        #explanation {
+             padding: 1vh;
+             border-top: 1px dashed black;
+             width: 90%;
+             max-width: 80vw;
+             font-size: 1.4vh;
+             text-align: center;
+             box-sizing: border-box;
+             color: #333333; /* Slightly darker grey for text */
+        }
+         #explanation strong {
+             color: black; /* Make keywords stand out */
+         }
+    </style>
+</head>
+<body>
+
+    <header>
+        Basic Python Lists: Interactive Concept
+    </header>
+
+    <main>
+        <div id="list-container">
+            <!-- List items will be rendered here by JavaScript -->
+             <div style="font-size: 1.5vh; color: #555; margin: auto;">List is empty! Add some items.</div>
+        </div>
+
+        <div id="controls">
+            <button id="add-int">Add INT</button>
+            <button id="add-str">Add STR</button>
+            <button id="add-float">Add FLOAT</button>
+            <button id="add-list">Add LIST</button>
+            <button id="remove-last">Remove Last</button>
+            <button id="reset-list">Reset</button>
+        </div>
+
+         <div id="explanation">
+            Python lists are **ordered** collections of items, visualized above as indexed boxes.
+            They are **mutable** (you can add/remove items) and **dynamic** (their size can change).
+            They can store items of **different data types**.
+            <br>Click on an item above to remove it by its index!
+        </div>
+
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const listContainer = document.getElementById('list-container');
+        const addIntButton = document.getElementById('add-int');
+        const addStrButton = document.getElementById('add-str');
+        const addFloatButton = document.getElementById('add-float');
+        const addListButton = document.getElementById('add-list');
+        const removeLastButton = document.getElementById('remove-last');
+        const resetListButton = document.getElementById('reset-list');
+        const explanationDiv = document.getElementById('explanation');
+
+
+        // Internal representation of the list
+        let pythonList = [];
+
+        // Function to determine and format item content and type for display
+        function formatItemForDisplay(item) {
+            let itemContent = '';
+            let itemType = 'UNKNOWN';
+
+            if (typeof item === 'number' && Number.isInteger(item)) {
+                itemContent = item;
+                itemType = 'INT';
+            } else if (typeof item === 'string') {
+                 // Truncate long strings for display, show quotes
+                itemContent = '"' + (item.length > 7 ? item.substring(0, 6) + '...' : item) + '"';
+                itemType = 'STR';
+            } else if (typeof item === 'number' && !Number.isInteger(item)) {
+                itemContent = item.toFixed(2); // Display floats with two decimals
+                itemType = 'FLOAT';
+            } else if (Array.isArray(item)) {
+                 // Represent nested lists simply, maybe show length
+                 itemContent = `[ ${item.length} items ]`;
+                 itemType = 'LIST';
+            } else if (item === null) {
+                itemContent = 'None'; // Represent Python None
+                itemType = 'NoneType';
+            }
+            else {
+                 // Fallback for other types like booleans, objects etc.
+                 itemContent = String(item);
+                 itemType = typeof item;
+                 // Capitalize first letter of type
+                 itemType = itemType.charAt(0).toUpperCase() + itemType.slice(1);
+            }
+
+            return { content: itemContent, type: itemType };
+        }
+
+        // Function to render the list visually
+        function renderList() {
+            listContainer.innerHTML = ''; // Clear current visualization
+
+            if (pythonList.length === 0) {
+                 listContainer.innerHTML = '<div style="font-size: 1.5vh; color: #555; margin: auto;">List is empty! Add some items.</div>';
+                 explanationDiv.innerHTML = `Python lists are **ordered** collections of items, visualized above as indexed boxes.
+                    They are **mutable** (you can add/remove items) and **dynamic** (their size can change).
+                    They can store items of **different data types**.`;
+
+            } else {
+                 // Update explanation based on content presence
+                 explanationDiv.innerHTML = `Python lists are **ordered** collections of items, visualized above as indexed boxes.
+                    They are **mutable** (you can add/remove items) and **dynamic** (their size can change).
+                    They can store items of **different data types**.
+                    <br>Click on an item above to remove it by its index!`;
+
+                pythonList.forEach((item, index) => {
+                    const itemElement = document.createElement('div');
+                    itemElement.classList.add('list-item');
+                    // Store index as data attribute, useful for removal
+                    itemElement.dataset.index = index;
+
+                    const formatted = formatItemForDisplay(item);
+
+                    itemElement.innerHTML = `<div class="index">${index}</div><div>${formatted.content}</div><div class="type">${formatted.type}</div>`;
+
+                    // Add click listener for removal by index
+                    itemElement.addEventListener('click', function() {
+                        const clickedIndex = parseInt(this.dataset.index);
+                        removeItemByIndex(clickedIndex);
+                    });
+
+                    listContainer.appendChild(itemElement);
+                });
+            }
+
+            // Disable remove button if list is empty
+            removeLastButton.disabled = pythonList.length === 0;
+        }
+
+        // Function to add an item
+        function addItem(type) {
+             let newItem;
+             switch (type) {
+                 case 'INT':
+                     newItem = Math.floor(Math.random() * 101); // 0 to 100
+                     break;
+                 case 'STR':
+                     const possibleStrings = ["hello", "world", "python", "list", "data", "concept", "example"];
+                     newItem = possibleStrings[Math.floor(Math.random() * possibleStrings.length)];
+                     // Add a chance for a longer string
+                     if (Math.random() > 0.7) {
+                         newItem = "a_longer_string_example_" + Math.floor(Math.random() * 1000);
+                     }
+                     break;
+                 case 'FLOAT':
+                     newItem = parseFloat((Math.random() * 100).toFixed(2)); // 0 to 100, 2 decimals
+                     break;
+                 case 'LIST':
+                      // Example nested list with mixed types
+                      newItem = [Math.floor(Math.random() * 10), "nested", true, null];
+                      break;
+                 default:
+                     newItem = "unknown";
+             }
+             pythonList.push(newItem);
+             renderList(); // Re-render after adding
+        }
+
+        // Function to remove the last item
+        function removeLastItem() {
+            if (pythonList.length > 0) {
+                pythonList.pop();
+                renderList(); // Re-render after removing
+            }
+        }
+
+         // Function to remove an item by index
+         function removeItemByIndex(index) {
+             // Basic check to ensure index is valid
+             if (index >= 0 && index < pythonList.length) {
+                 pythonList.splice(index, 1); // Remove 1 element at index
+                 renderList(); // Re-render after removing
+             }
+         }
+
+        // Event Listeners for buttons
+        addIntButton.addEventListener('click', () => addItem('INT'));
+        addStrButton.addEventListener('click', () => addItem('STR'));
+        addFloatButton.addEventListener('click', () => addItem('FLOAT'));
+        addListButton.addEventListener('click', () => addItem('LIST'));
+        removeLastButton.addEventListener('click', removeLastItem);
+
+        resetListButton.addEventListener('click', function() {
+            pythonList = []; // Clear the array
+            renderList();    // Re-render to show empty state
+        });
+
+        // Initial render when the page loads
+        renderList();
+
+    </script>
+
+</body>
+</html>

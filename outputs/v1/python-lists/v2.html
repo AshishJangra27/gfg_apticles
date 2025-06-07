@@ -1,0 +1,323 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Python List Visualizer</title>
+<style>
+  /* Minimal Reset & Body Styling */
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Non-negotiable: No scrolling */
+    font-family: monospace; /* Non-negotiable: Monospace */
+    background-color: white; /* Non-negotiable: White background */
+    color: black; /* Non-negotiable: Black text */
+    width: 100vw; /* Fixed viewport width */
+    height: 100vh; /* Fixed viewport height */
+    display: flex; /* Use flexbox for main layout */
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between; /* Space header, main, footer */
+  }
+
+  /* Header Styling */
+  header {
+    width: 100%;
+    height: 8vh; /* Fixed height */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid black;
+    box-sizing: border-box; /* Include border in height */
+    flex-shrink: 0; /* Prevent shrinking */
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 2.5vh; /* Responsive font size */
+  }
+
+  header p {
+    margin: 0.5vh 0 0 0;
+    font-size: 1.5vh; /* Responsive font size */
+    color: #555; /* Secondary color for explanation */
+  }
+
+  /* Main Content Area (Interactive List) */
+  main {
+    width: 90vw; /* Use most of the width */
+    flex-grow: 1; /* Take remaining height */
+    display: flex;
+    flex-direction: column; /* Stack list and controls vertically */
+    align-items: center; /* Horizontally center items in main */
+    justify-content: center; /* Vertically center content in main */
+    padding: 2vh 0; /* Add some padding */
+    box-sizing: border-box; /* Include padding in height */
+  }
+
+  #list-container {
+    display: flex; /* Arrange list items horizontally */
+    align-items: flex-start; /* Align items to the top */
+    gap: 1vw; /* Space between list items */
+    margin-bottom: 3vh; /* Space below list */
+    flex-wrap: wrap; /* Allow wrapping if list gets too long horizontally */
+    justify-content: center; /* Center items if they wrap */
+    max-height: 50vh; /* Prevent list from growing too tall */
+    overflow: hidden; /* Hide overflow if somehow happens */
+  }
+
+  .list-item-wrapper {
+      display: flex;
+      flex-direction: column; /* Stack index above value */
+      align-items: center;
+      cursor: pointer; /* Indicate interactivity */
+      transition: transform 0.1s ease-in-out; /* Simple hover effect */
+      user-select: none; /* Prevent text selection on click */
+  }
+
+  .list-item-wrapper:hover {
+      transform: translateY(-0.5vh); /* Lift slightly on hover */
+  }
+
+  .list-item-index {
+    font-size: 1.8vh; /* Responsive index font size */
+    margin-bottom: 0.5vh;
+    text-align: center;
+    width: 100%; /* Make index span item width */
+    color: #555; /* Secondary color for index */
+  }
+
+  .list-item-value {
+    border: 1px solid black;
+    padding: 1vh 1vw; /* Responsive padding */
+    font-size: 2vh; /* Responsive value font size */
+    text-align: center;
+    min-width: 5vw; /* Minimum width for box */
+    max-width: 12vw; /* Maximum width for box */
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Hide overflow if text too long */
+    text-overflow: ellipsis; /* Show ellipsis for long text */
+    background-color: #eee; /* Slight grey background for boxes */
+    box-sizing: border-box; /* Include padding and border in size */
+  }
+
+  /* Button Container */
+  #button-container {
+      display: flex;
+      gap: 2vw; /* Space between buttons */
+  }
+
+  /* Button Styling */
+  button {
+    padding: 1vh 2vw;
+    font-size: 2vh;
+    font-family: monospace;
+    background-color: black;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    user-select: none; /* Prevent text selection on click */
+  }
+
+  button:hover {
+    background-color: #333;
+  }
+
+
+  /* Footer Styling */
+  footer {
+    width: 100%;
+    height: 5vh; /* Fixed height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid black;
+    box-sizing: border-box; /* Include border in height */
+    flex-shrink: 0; /* Prevent shrinking */
+    font-size: 1.5vh; /* Responsive font size */
+  }
+
+  footer a {
+    color: black;
+    text-decoration: none;
+    margin: 0 1vw; /* Space between links */
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+</style>
+</head>
+<body>
+
+  <header>
+    <h1>Python List Visualizer</h1>
+    <p>Dynamic, Ordered, Mutable Arrays (Accessible via Indexing)</p>
+  </header>
+
+  <main>
+    <div id="list-container">
+      <!-- List items will be rendered here by JavaScript -->
+    </div>
+    <div id="button-container">
+        <button id="randomize-button">Randomize List</button>
+        <button id="reset-button">Reset Demo</button>
+    </div>
+  </main>
+
+  <footer>
+    <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+  </footer>
+
+  <script>
+    // Sample Python list data
+    let initialListData = [
+        10,
+        "hello",
+        true,
+        [1, 2], // Example of a nested list
+        null,
+        { 'a': 1, 'b': 2 }, // Example of a dictionary
+        "another string",
+        false,
+        99
+    ];
+
+    // Use a working copy of the data for interaction
+    let currentListData = [...initialListData]; // Simple shallow copy
+
+    const listContainer = document.getElementById('list-container');
+    const resetButton = document.getElementById('reset-button');
+    const randomizeButton = document.getElementById('randomize-button');
+
+    // Helper function to generate a random value for randomization or replacement
+    function generateRandomValue() {
+        const types = ['number', 'string', 'boolean', 'null', 'array', 'object'];
+        const randomType = types[Math.floor(Math.random() * types.length)];
+
+        switch (randomType) {
+            case 'number': return Math.floor(Math.random() * 1000);
+            case 'string': {
+                const len = Math.floor(Math.random() * 5) + 3; // 3 to 7 chars
+                return Math.random().toString(36).substring(2, 2 + len);
+            }
+            case 'boolean': return Math.random() > 0.5;
+            case 'null': return null;
+            case 'array': return [generateRandomValue(), generateRandomValue()].slice(0, Math.random() > 0.5 ? 2 : 1); // Small random array
+            case 'object': return { key: generateRandomValue() }; // Small random object
+            default: return undefined; // Should not happen
+        }
+    }
+
+     // Helper function to generate a random list for the "Randomize" button
+    function generateRandomList() {
+        const length = Math.floor(Math.random() * 7) + 5; // 5 to 11 items
+        const newList = [];
+        for (let i = 0; i < length; i++) {
+            newList.push(generateRandomValue());
+        }
+        return newList;
+    }
+
+
+    // Function to render the list visually
+    function renderList() {
+      listContainer.innerHTML = ''; // Clear previous content
+
+      if (currentListData.length === 0) {
+          listContainer.textContent = "(Empty List)";
+          listContainer.style.justifyContent = 'center';
+          listContainer.style.alignItems = 'center';
+          listContainer.style.color = '#555';
+          listContainer.style.fontSize = '2vh';
+          return;
+      }
+
+      listContainer.style.justifyContent = 'center'; // Reset alignment if it was changed
+      listContainer.style.alignItems = 'flex-start';
+      listContainer.style.color = 'black'; // Reset color
+      listContainer.style.fontSize = '';
+
+
+      currentListData.forEach((item, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('list-item-wrapper');
+        wrapper.dataset.index = index; // Store index on the element
+
+        const indexDiv = document.createElement('div');
+        indexDiv.classList.add('list-item-index');
+        indexDiv.textContent = index; // Display the index
+
+        const valueDiv = document.createElement('div');
+        valueDiv.classList.add('list-item-value');
+        // Display item value, handle complex types simply
+        try {
+            // Use JSON.stringify for clarity on complex types, handle undefined/null
+            if (item === undefined) {
+                valueDiv.textContent = "undefined"; // Though Python lists don't have undefined
+            } else if (item === null) {
+                 valueDiv.textContent = "None"; // Python's null is None
+            }
+             else if (typeof item === 'string') {
+                 valueDiv.textContent = `"${item}"`; // Represent strings with quotes
+             }
+             else {
+                valueDiv.textContent = JSON.stringify(item);
+             }
+        } catch (e) {
+            valueDiv.textContent = String(item); // Fallback
+        }
+
+        // Add click interaction for mutability demo
+        wrapper.addEventListener('click', handleClickItem);
+
+        wrapper.appendChild(indexDiv);
+        wrapper.appendChild(valueDiv);
+        listContainer.appendChild(wrapper);
+      });
+    }
+
+    // Handle clicks on list items to demonstrate mutability
+    function handleClickItem(event) {
+      const wrapper = event.currentTarget;
+      const index = parseInt(wrapper.dataset.index, 10);
+
+      if (index >= 0 && index < currentListData.length) {
+          // Simple demo of mutability: change the value at this index
+          // Replace it with a new random value
+          currentListData[index] = generateRandomValue(); // Modify the data array
+
+          // Re-render the list to show the change
+          renderList();
+      }
+    }
+
+    // Handle reset button click
+    function handleResetClick() {
+      // Reset the data to the initial state
+      currentListData = [...initialListData]; // Shallow copy again
+      renderList(); // Re-render the list
+    }
+
+    // Handle randomize button click
+    function handleRandomizeClick() {
+        currentListData = generateRandomList(); // Generate a new random list
+        renderList(); // Re-render the list
+    }
+
+
+    // Attach button listeners
+    resetButton.addEventListener('click', handleResetClick);
+    randomizeButton.addEventListener('click', handleRandomizeClick);
+
+    // Initial render when the page loads
+    renderList();
+
+  </script>
+
+</body>
+</html>

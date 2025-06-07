@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python List Visualizer</title>
+    <style>
+        /* --- Global Styles --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: black;
+            font-family: monospace;
+            overflow: hidden; /* Non-negotiable: No scrolling */
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure body takes full viewport height */
+        }
+
+        /* --- Header --- */
+        header {
+            height: 10vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid black;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5vw; /* Responsive font size */
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            flex-grow: 1; /* Take remaining vertical space */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* justify-content: center; /* Removed to allow elements to flow */ */
+            padding: 2vh 1vw; /* Add some padding */
+            box-sizing: border-box; /* Include padding in size */
+            overflow: hidden; /* Prevent scrolling in main content */
+             /* Added space-around to distribute elements vertically */
+            justify-content: space-around;
+        }
+
+        .explanation {
+             margin-bottom: 2vh;
+             text-align: center;
+             font-size: 1vw;
+             flex-shrink: 0;
+        }
+
+        /* --- List Visualization --- */
+        .list-container-wrapper {
+             flex-grow: 1; /* Allow wrapper to take available space */
+             display: flex;
+             align-items: center; /* Vertically center the list within its wrapper */
+             max-height: 30vh; /* Limit height to prevent excessive growth */
+             overflow: hidden; /* Hide overflow if list grows too tall */
+             width: 100%; /* Take full width */
+             justify-content: center; /* Center list horizontally if it's narrow */
+             flex-shrink: 0; /* Prevent shrinking */
+             padding: 1vh 0; /* Add some vertical padding */
+        }
+
+        .list-container {
+            display: flex;
+            border: 1px solid black;
+            max-width: 95vw; /* Prevent list from pushing container too wide */
+            overflow-x: auto; /* Allow horizontal scrolling within container if needed */
+            overflow-y: hidden; /* Prevent vertical scrolling within container */
+             white-space: nowrap; /* Keep items in a single line */
+            flex-shrink: 0; /* Prevent list itself from shrinking */
+            padding: 0; /* Remove internal padding */
+            margin: 0; /* Remove internal margin */
+            box-sizing: border-box;
+        }
+
+        .list-container.empty {
+             justify-content: center;
+             align-items: center;
+             height: 8vh; /* Give empty list a bit of height */
+        }
+
+        .list-item {
+            display: inline-flex; /* Use inline-flex to keep them in a row */
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid black;
+            padding: 1vh 1vw;
+            min-width: 8vw; /* Minimum width for items */
+             max-width: 15vw; /* Maximum width to prevent overly wide items */
+            box-sizing: border-box;
+             white-space: normal; /* Allow text wrapping within item */
+             overflow: hidden; /* Hide item content overflow if it's too large */
+             text-overflow: ellipsis; /* Indicate clipped text */
+        }
+
+        .list-item:last-child {
+            border-right: none; /* No border on the last item */
+        }
+
+        .item-index {
+            font-size: 0.8vw;
+            margin-bottom: 0.5vh;
+            color: #888888; /* Light gray for secondary info */
+             flex-shrink: 0;
+        }
+
+        .item-value {
+            font-size: 1.2vw;
+            cursor: pointer; /* Indicate interactivity */
+            padding: 0.5vh 0.5vw;
+            border: 1px dashed transparent; /* Placeholder border for editing */
+            word-break: break-word; /* Allow breaking long words */
+             text-align: center; /* Center the value */
+             flex-grow: 1; /* Allow value div to take space */
+             width: 100%; /* Take full width of parent (.list-item) */
+             display: flex; /* Use flex for centering content */
+             align-items: center; /* Vertically center content */
+             justify-content: center; /* Horizontally center content */
+        }
+
+        .item-value:hover:not(.editing) {
+            border-color: #cccccc; /* Indicate hover interaction with light gray */
+        }
+
+         .item-value.editing {
+             cursor: auto;
+             border: 1px solid black;
+             padding: 0; /* Remove padding when input is inside */
+             overflow: visible; /* Allow input outline to be visible */
+             display: block; /* Use block for input container */
+         }
+
+        .item-value input[type="text"] {
+            font-family: monospace;
+            font-size: 1.2vw;
+            border: none;
+            outline: none;
+            width: 100%;
+            height: 100%; /* Take full height of parent (.item-value.editing) */
+            text-align: center;
+            background: none;
+            color: black;
+            padding: 0.5vh 0.5vw; /* Restore padding inside input */
+            box-sizing: border-box;
+        }
+
+        /* --- Controls --- */
+        .controls {
+            display: flex;
+            gap: 1vw; /* Space between controls */
+            align-items: center;
+            font-size: 1vw;
+             flex-shrink: 0;
+             padding: 1vh 0;
+             flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+             justify-content: center; /* Center controls when wrapped */
+        }
+
+        .controls input[type="text"] {
+            font-family: monospace;
+            font-size: 1vw;
+            padding: 0.5vh 0.5vw;
+            border: 1px solid black;
+            outline: none;
+            background-color: white;
+            color: black;
+            box-sizing: border-box;
+             min-width: 15vw; /* Ensure input is not too small */
+        }
+
+        .controls button {
+            font-family: monospace;
+            font-size: 1vw;
+            padding: 0.5vh 1vw;
+            border: 1px solid black;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        .controls button:hover {
+            background-color: #f0f0f0; /* Light hover effect */
+        }
+
+        /* Style for empty list message */
+         .empty-list-message {
+             padding: 1vh 1vw;
+             font-size: 1vw;
+             color: #888888; /* Light gray message */
+         }
+
+
+        /* --- Footer --- */
+        footer {
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+            font-size: 1vw;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Python List Properties</h1>
+    </header>
+
+    <main>
+        <div class="explanation">
+            Python lists are ordered, mutable, dynamic arrays storing references. Interact below.
+        </div>
+
+        <div class="list-container-wrapper">
+            <div id="list-container" class="list-container">
+                <!-- List items will be rendered here by JavaScript -->
+            </div>
+        </div>
+
+
+        <div class="controls">
+            <input type="text" id="add-value-input" placeholder="Value to add">
+            <button id="add-button">Add Item</button>
+            <button id="remove-button">Remove Last</button>
+            <button id="randomize-button">Randomize List</button>
+            <button id="reset-button">Reset List</button>
+        </div>
+
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- JavaScript Logic ---
+
+        const initialList = [10, "hello", true, null, [1, 2]]; // Initial mixed data types
+        let pythonList = [...initialList]; // Clone initial list
+
+        const listContainer = document.getElementById('list-container');
+        const addValueInput = document.getElementById('add-value-input');
+        const addButton = document.getElementById('add-button');
+        const removeButton = document.getElementById('remove-button');
+        const randomizeButton = document.getElementById('randomize-button');
+        const resetButton = document.getElementById('reset-button');
+
+        // Function to render the list visually
+        function renderList() {
+            listContainer.innerHTML = ''; // Clear current visualization
+            if (pythonList.length === 0) {
+                 listContainer.innerHTML = '<div class="empty-list-message">List is empty</div>';
+                 listContainer.classList.add('empty');
+                 return;
+            } else {
+                 listContainer.classList.remove('empty');
+            }
+
+            pythonList.forEach((item, index) => {
+                const listItemDiv = document.createElement('div');
+                listItemDiv.classList.add('list-item');
+
+                const itemIndexDiv = document.createElement('div');
+                itemIndexDiv.classList.add('item-index');
+                itemIndexDiv.textContent = `[${index}]`;
+
+                const itemValueDiv = document.createElement('div');
+                itemValueDiv.classList.add('item-value');
+
+                // Display complex types simply, otherwise show value
+                let displayValue = String(item);
+                if (item === null) displayValue = 'null';
+                else if (typeof item === 'boolean') displayValue = String(item);
+                else if (Array.isArray(item)) displayValue = '[' + item.map(v => {
+                    if (v === null) return 'null';
+                    if (typeof v === 'string') return `"${v}"`;
+                    if (Array.isArray(v)) return '[...]'; // Prevent deep nesting display
+                    return String(v);
+                }).join(', ') + ']';
+                else if (typeof item === 'string') displayValue = `"${item}"`; // Quote strings
+
+                itemValueDiv.textContent = displayValue;
+                itemValueDiv.dataset.index = index; // Store index for editing
+
+                // Add click listener for mutability
+                itemValueDiv.addEventListener('click', handleItemClick);
+
+                listItemDiv.appendChild(itemIndexDiv);
+                listItemDiv.appendChild(itemValueDiv);
+
+                listContainer.appendChild(listItemDiv);
+            });
+        }
+
+        // Handle clicking on an item value to edit
+        function handleItemClick(event) {
+            const itemValueDiv = event.target;
+            const index = parseInt(itemValueDiv.dataset.index);
+
+            // Prevent multiple edits at once or if target is the input itself
+            if (itemValueDiv.classList.contains('editing') || event.target.tagName === 'INPUT') {
+                return;
+            }
+
+            itemValueDiv.classList.add('editing');
+
+            const currentValue = pythonList[index];
+            const input = document.createElement('input');
+            input.type = 'text';
+            // Provide a simple string representation for editing. Complex types edited as strings.
+             let initialValueString = String(currentValue);
+             if (currentValue === null) initialValueString = 'null';
+             else if (typeof currentValue === 'boolean') initialValueString = String(currentValue);
+             else if (Array.isArray(currentValue)) initialValueString = '[' + currentValue.map(String).join(', ') + ']';
+             else if (typeof currentValue === 'string') initialValueString = currentValue; // Edit string without quotes
+
+            input.value = initialValueString;
+
+
+            // Replace the value div's content with the input
+            itemValueDiv.innerHTML = ''; // Clear current content
+            itemValueDiv.appendChild(input);
+            input.focus(); // Focus the input field
+
+            // Function to save the new value
+            function saveValue() {
+                const newValue = input.value;
+                let parsedValue = newValue; // Default to string
+
+                // Attempt to parse common literal types back (basic for demo)
+                if (newValue === 'true') parsedValue = true;
+                else if (newValue === 'false') parsedValue = false;
+                else if (newValue === 'null') parsedValue = null;
+                else if (!isNaN(newValue) && newValue.trim() !== '') parsedValue = parseFloat(newValue);
+                 // For demo, complex inputs like lists "[1, 2]" will just be strings unless manually parsed, which is out of scope for simplicity.
+
+                pythonList[index] = parsedValue; // Demonstrate mutability
+                renderList(); // Re-render the list to show the change
+            }
+
+            // Save on blur
+            input.addEventListener('blur', saveValue);
+
+            // Save on Enter key press
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    input.blur(); // Trigger blur to save
+                }
+            });
+        }
+
+        // Handle Add button click
+        addButton.addEventListener('click', () => {
+            const valueToAdd = addValueInput.value;
+             if (valueToAdd.trim() === '') {
+                 // Simple validation: don't add empty strings from blank input
+                 // Optionally add null if the input is explicitly "null"
+                 if (valueToAdd.toLowerCase() === 'null') {
+                      pythonList.push(null);
+                 } else {
+                     return;
+                 }
+             } else {
+                 // Basic attempt to parse common literal types
+                 let parsedValue = valueToAdd;
+                 if (valueToAdd.toLowerCase() === 'true') parsedValue = true;
+                 else if (valueToAdd.toLowerCase() === 'false') parsedValue = false;
+                 else if (valueToAdd.toLowerCase() === 'null') parsedValue = null;
+                 else if (!isNaN(valueToAdd)) parsedValue = parseFloat(valueToAdd);
+                  // For demo, complex inputs like lists "[1, 2]" will just be strings
+
+                pythonList.push(parsedValue); // Demonstrate dynamic nature (adding)
+             }
+
+            renderList(); // Re-render
+            addValueInput.value = ''; // Clear input field
+        });
+
+        // Handle Remove button click
+        removeButton.addEventListener('click', () => {
+            if (pythonList.length > 0) {
+                pythonList.pop(); // Demonstrate dynamic nature (removing)
+                renderList(); // Re-render
+            }
+        });
+
+        // Handle Randomize button click
+        randomizeButton.addEventListener('click', () => {
+            const randomLength = Math.floor(Math.random() * 10) + 3; // 3 to 12 items
+            const newPythonList = [];
+            const possibleValues = [
+                1, 42, -5, 0, 3.14,
+                "apple", "banana", "cherry", "data",
+                true, false,
+                null
+            ];
+
+            for (let i = 0; i < randomLength; i++) {
+                 const valueType = Math.random();
+                 let randomValue;
+                 if (valueType < 0.4) { // Number (40%)
+                     randomValue = Math.floor(Math.random() * 100) - 50; // Random integer
+                 } else if (valueType < 0.7) { // String (30%)
+                      randomValue = possibleValues[Math.floor(Math.random() * 4) + 5]; // Pick from string options
+                 } else if (valueType < 0.85) { // Boolean (15%)
+                      randomValue = Math.random() < 0.5;
+                 } else if (valueType < 0.95) { // Null (10%)
+                      randomValue = null;
+                 } else { // Simple array (5%) - for visual demo, no deep interaction
+                     randomValue = [Math.floor(Math.random()*10), Math.floor(Math.random()*10)];
+                 }
+                 newPythonList.push(randomValue);
+            }
+            pythonList = newPythonList;
+            renderList();
+        });
+
+        // Handle Reset button click
+        resetButton.addEventListener('click', () => {
+            pythonList = [...initialList]; // Reset to the initial state
+            renderList();
+        });
+
+
+        // Initial render when the page loads
+        renderList();
+
+    </script>
+
+</body>
+</html>

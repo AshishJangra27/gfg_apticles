@@ -1,0 +1,433 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KNN Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Non-negotiable: no scrolling */
+            font-family: monospace;
+            color: #000;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use full viewport height */
+            width: 100vw; /* Use full viewport width */
+            box-sizing: border-box;
+        }
+        header {
+            flex-shrink: 0; /* Don't shrink */
+            height: 8vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #000;
+            box-sizing: border-box;
+            font-size: 1.2em;
+        }
+        main {
+            flex-grow: 1; /* Take remaining space */
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls */
+            align-items: center;
+            justify-content: flex-start; /* Align items to the top, let canvas take space */
+            height: 84vh; /* Fixed height for main area */
+            box-sizing: border-box;
+            padding-top: 1vh; /* Small padding at the top */
+        }
+        canvas {
+            border: 1px solid #000;
+            margin-bottom: 1vh; /* Space below canvas */
+            box-sizing: border-box;
+            width: 80vw; /* Example width */
+            max-width: 90%; /* Prevent overflow on smaller screens */
+            flex-grow: 1; /* Allow canvas to grow */
+            max-height: 70vh; /* Max height constraint */
+            /* Actual height will be determined by flex-grow within main and max-height */
+        }
+        .controls {
+            flex-shrink: 0; /* Don't shrink */
+            height: 6vh; /* Fixed height for controls */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            margin-bottom: 1vh; /* Space below controls */
+        }
+        .controls label, .controls input, .controls button {
+            font-family: monospace;
+            margin: 0 0.8vw;
+            font-size: 1em;
+        }
+         .controls input[type="number"] {
+            width: 4ch; /* Fixed width for input */
+            padding: 0.5vh;
+            border: 1px solid #000;
+            background-color: #fff;
+            color: #000;
+            text-align: center;
+            -moz-appearance: textfield; /* Hide arrows in Firefox */
+         }
+         .controls input[type="number"]::-webkit-outer-spin-button,
+         .controls input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none; /* Hide arrows in Webkit browsers */
+            margin: 0;
+         }
+
+        .controls button {
+            padding: 0.5vh 1vw;
+            border: 1px solid #000;
+            background-color: #fff;
+            color: #000;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background-color: #f0f0f0; /* Light gray hover effect */
+        }
+
+        #info {
+            flex-shrink: 0; /* Don't shrink */
+            height: 3vh; /* Fixed height for info text */
+            text-align: center;
+            font-size: 0.8em;
+            color: #555; /* Slightly lighter gray for info */
+            box-sizing: border-box;
+        }
+
+
+        footer {
+            flex-shrink: 0; /* Don't shrink */
+            height: 8vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid #000;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        footer a {
+            color: #000;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+        footer a:hover {
+            text-decoration: underline;
+            color: #555; /* Darker gray underline on hover */
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>K-Nearest Neighbors (KNN) Concept</h1>
+    </header>
+
+    <main>
+        <canvas id="knnCanvas"></canvas>
+        <div class="controls">
+             <label for="kValue">Set k:</label>
+             <input type="number" id="kValue" value="5" min="1" max="50"> <!-- Increased max k -->
+             <button id="randomizeBtn">Randomize Points</button>
+             <button id="resetBtn">Reset</button>
+        </div>
+         <div id="info">Click anywhere on the box above to classify a new point.</div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kInput = document.getElementById('kValue');
+        const infoDiv = document.getElementById('info');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let dataPoints = []; // Array to hold data points
+        let newPoint = null; // The point to be classified
+        let currentK = parseInt(kInput.value);
+        const maxDataPoints = 50; // Limit the number of random points
+
+        // Function to generate random data points
+        function generateRandomDataPoints(numPoints = 20) {
+             dataPoints = [];
+             const padding = 20; // Keep points away from edges
+             for (let i = 0; i < numPoints; i++) {
+                 // Distribute points into rough clusters
+                 let x, y, className;
+                 if (Math.random() < 0.5) { // Class A cluster
+                     x = Math.random() * (canvas.width / 2 - padding * 2) + padding;
+                     y = Math.random() * (canvas.height - padding * 2) + padding;
+                     className = 'A';
+                 } else { // Class B cluster
+                      x = Math.random() * (canvas.width / 2 - padding * 2) + canvas.width / 2 + padding;
+                     y = Math.random() * (canvas.height - padding * 2) + padding;
+                     className = 'B';
+                 }
+                  // Add some noise to the clusters
+                 x += (Math.random() - 0.5) * 50;
+                 y += (Math.random() - 0.5) * 50;
+
+                 // Ensure points stay within bounds after noise
+                 x = Math.max(padding, Math.min(canvas.width - padding, x));
+                 y = Math.max(padding, Math.min(canvas.height - padding, y));
+
+
+                 dataPoints.push({ x: x, y: y, class: className });
+             }
+        }
+
+
+        // Function to calculate Euclidean distance
+        function getDistance(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // Function to draw a point
+        function drawPoint(x, y, classification, isNew = false) {
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2); // Circle radius 5
+
+            if (isNew) {
+                ctx.strokeStyle = 'rgba(0, 128, 0, 0.8)'; // Green outline
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = classification === 'A' ? 'rgba(255, 0, 0, 0.6)' : 'rgba(0, 0, 255, 0.6)'; // Red or Blue fill
+                ctx.fill();
+                 ctx.strokeStyle = '#000'; // Black outline for data points
+                 ctx.lineWidth = 1;
+                 ctx.stroke();
+            }
+        }
+
+         // Function to draw lines to neighbors
+        function drawNeighborLine(p1, p2) {
+             ctx.beginPath();
+             ctx.moveTo(p1.x, p1.y);
+             ctx.lineTo(p2.x, p2.y);
+             ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)'; // Gray, semi-transparent
+             ctx.lineWidth = 1;
+             ctx.stroke();
+        }
+
+        // Function to draw classification circle around new point
+        function drawClassificationCircle(point, classification) {
+             ctx.beginPath();
+             ctx.arc(point.x, point.y, 15, 0, Math.PI * 2); // Circle around new point
+             ctx.strokeStyle = classification === 'A' ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 0, 255, 0.8)'; // Red or Blue outline based on class
+             ctx.lineWidth = 3;
+             ctx.stroke();
+             ctx.beginPath();
+             ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
+             ctx.setLineDash([5, 5]); // Dashed line
+             ctx.strokeStyle = '#000'; // Black dashed outline
+             ctx.lineWidth = 1;
+             ctx.stroke();
+             ctx.setLineDash([]); // Reset line dash
+        }
+
+
+        // Main drawing function
+        function draw() {
+            // Resize canvas to fit its computed size
+            // This must be done before drawing to get correct coordinate space
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            // Draw existing data points
+            dataPoints.forEach(point => {
+                drawPoint(point.x, point.y, point.class);
+            });
+
+            // If a new point exists, perform KNN and draw
+            if (newPoint) {
+                drawPoint(newPoint.x, newPoint.y, null, true); // Draw the new point outline
+
+                // 1. Calculate distances
+                const distances = dataPoints.map(point => ({
+                    point: point,
+                    distance: getDistance(newPoint, point)
+                }));
+
+                // 2. Sort by distance
+                distances.sort((a, b) => a.distance - b.distance);
+
+                // 3. Get k nearest neighbors
+                // Ensure k is not more than available points
+                const effectiveK = Math.min(currentK, dataPoints.length);
+                const neighbors = distances.slice(0, effectiveK);
+
+
+                // 4. Determine majority class
+                const classCounts = {};
+                let maxCount = 0;
+                let classifiedClass = null;
+
+                neighbors.forEach(neighbor => {
+                    const className = neighbor.point.class;
+                    classCounts[className] = (classCounts[className] || 0) + 1;
+                    // Simple majority tie-breaking: update if count is strictly greater
+                    // For ties, the class encountered first in the loop wins.
+                    if (classCounts[className] > maxCount) {
+                         maxCount = classCounts[className];
+                         classifiedClass = className;
+                    }
+                });
+
+                // Handle edge case: no neighbors (e.g., k=0 or no data points)
+                if (neighbors.length === 0) {
+                     classifiedClass = 'Undetermined (No points)';
+                } else if (maxCount === 0) {
+                    // This case should not happen if neighbors.length > 0, but as a safeguard
+                    classifiedClass = 'Undetermined (Tie)';
+                }
+
+
+                // 5. Draw lines to neighbors and indicate classification
+                neighbors.forEach(neighbor => {
+                    drawNeighborLine(newPoint, neighbor.point);
+                     // Optional: Highlight neighbor points slightly
+                    ctx.beginPath();
+                    ctx.arc(neighbor.point.x, neighbor.point.y, 7, 0, Math.PI * 2); // Slightly larger circle
+                    ctx.strokeStyle = '#888'; // Light gray outline
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+
+                // Draw a circle around the new point indicating its classification
+                if (classifiedClass && classifiedClass.startsWith('Undetermined')) {
+                    // Draw a neutral/gray circle for undetermined
+                     ctx.beginPath();
+                     ctx.arc(newPoint.x, newPoint.y, 15, 0, Math.PI * 2);
+                     ctx.strokeStyle = '#888'; // Gray outline
+                     ctx.lineWidth = 3;
+                     ctx.stroke();
+                     ctx.beginPath();
+                     ctx.arc(newPoint.x, newPoint.y, 15, 0, Math.PI * 2);
+                     ctx.setLineDash([5, 5]); // Dashed line
+                     ctx.strokeStyle = '#000'; // Black dashed outline
+                     ctx.lineWidth = 1;
+                     ctx.stroke();
+                     ctx.setLineDash([]); // Reset line dash
+
+                     infoDiv.textContent = `k=${effectiveK}. ${classifiedClass}`;
+
+                }
+                else if (classifiedClass) {
+                     drawClassificationCircle(newPoint, classifiedClass);
+                     infoDiv.textContent = `k=${effectiveK}. Classified as Class ${classifiedClass}.`;
+                 } else {
+                      // Should be covered by the 'Undetermined (Tie)' case
+                      infoDiv.textContent = `k=${effectiveK}. Classification: Undetermined`;
+                 }
+
+            } else {
+                 // No new point yet
+                 infoDiv.textContent = "Click anywhere on the box above to classify a new point.";
+            }
+        }
+
+        // --- Event Listeners ---
+
+        // Event listener for canvas click
+        canvas.addEventListener('click', function(event) {
+            // Get click coordinates relative to the canvas element
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            newPoint = { x: x, y: y };
+            draw(); // Redraw with the new point
+        });
+
+        // Event listener for K value change
+        kInput.addEventListener('input', function() {
+             const value = parseInt(this.value);
+             // Validate k: must be a number >= 1 and <= maxDataPoints (or current dataPoints.length)
+             if (isNaN(value) || value < 1) {
+                 currentK = 1;
+                 this.value = 1;
+             } else if (value > maxDataPoints) {
+                  currentK = maxDataPoints;
+                  this.value = maxDataPoints;
+             }
+             else {
+                 currentK = value;
+             }
+            // Only redraw if a point has already been placed OR if dataPoints exist
+            if (newPoint || dataPoints.length > 0) {
+                draw();
+            } else {
+                 // Update info div if no point is placed yet and no data points
+                 infoDiv.textContent = `k set to ${currentK}. Click to classify or Randomize points.`;
+            }
+        });
+
+        // Event listener for Randomize button
+        randomizeBtn.addEventListener('click', function() {
+            generateRandomDataPoints(30); // Generate 30 random points
+            newPoint = null; // Clear the old classified point
+            kInput.value = Math.min(parseInt(kInput.value), dataPoints.length > 0 ? dataPoints.length : 1); // Adjust k if needed
+            currentK = parseInt(kInput.value);
+            draw(); // Redraw with new data
+        });
+
+        // Event listener for Reset button
+        resetBtn.addEventListener('click', function() {
+             dataPoints = []; // Clear data points
+             newPoint = null; // Clear the classified point
+             kInput.value = 5; // Reset k input value
+             currentK = 5; // Reset current k
+             draw(); // Redraw blank canvas
+        });
+
+        // --- Initialization ---
+
+        // Initial setup: Generate some points, draw, and handle resize
+        function initialize() {
+             // Resize canvas initially
+             const rect = canvas.getBoundingClientRect();
+             canvas.width = rect.width;
+             canvas.height = rect.height;
+
+             generateRandomDataPoints(30); // Generate initial random points
+             currentK = parseInt(kInput.value); // Ensure initial k is read
+             // Adjust k if data points are fewer than default k value
+             kInput.value = Math.min(currentK, dataPoints.length > 0 ? dataPoints.length : 1);
+             currentK = parseInt(kInput.value);
+
+             draw(); // Initial draw
+        }
+
+        // Redraw on window resize to recalculate canvas size and redraw points correctly
+        // Points positions are stored as pixels relative to canvas top-left,
+        // so resizing the canvas changes the drawing area, but points stay in their pixel locations.
+        // If the aspect ratio changes drastically, their visual relationship might change,
+        // but they remain on screen due to responsive canvas sizing.
+        window.addEventListener('resize', initialize); // Use initialize to regenerate points or just draw?
+        // Drawing is sufficient; regenerating points on every minor resize is not good UX.
+        // Let's just redraw. The data points are fixed once randomized/generated.
+        window.addEventListener('resize', draw);
+
+
+        // Initial call
+        initialize();
+
+
+    </script>
+
+</body>
+</html>

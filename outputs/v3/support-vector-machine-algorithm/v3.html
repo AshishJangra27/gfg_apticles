@@ -1,0 +1,677 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVM Visual Basic</title>
+    <style>
+        /* Basic Reset & Body Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            overflow: hidden; /* Prevent scrolling */
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure full viewport height */
+            width: 100vw; /* Ensure full viewport width */
+            box-sizing: border-box;
+        }
+
+        /* Header Styles */
+        header {
+            height: 8vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid black;
+            box-sizing: border-box; /* Include border in height */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1; /* Take remaining space */
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center;
+            justify-content: center; /* Center content vertically */
+            padding: 1vh; /* Small padding */
+            box-sizing: border-box;
+        }
+
+        /* Canvas Container - Used for positioning within main */
+        .canvas-container {
+            width: 95vw; /* Use more width */
+            flex-grow: 1; /* Allow canvas to take available height */
+            max-height: 65vh; /* Max height to leave space for controls/info */
+            /* Maintain ~4:3 aspect ratio for visualization, while fitting within available space */
+             max-width: calc(95vh * 4 / 3);
+             max-height: calc(95vw * 3 / 4);
+
+            display: flex; /* Center the canvas inside */
+            align-items: center;
+            justify-content: center;
+            border: 1px solid black;
+            box-sizing: border-box;
+            position: relative; /* For text labels positioning if needed */
+            margin-bottom: 1vh; /* Space between canvas and info/controls */
+        }
+
+        /* Canvas itself */
+        #svmCanvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%; /* Fit container */
+            height: 100%; /* Fit container */
+        }
+
+         /* Info/Legend Area */
+        .info {
+            width: 95vw; /* Match container width */
+            height: 4vh; /* Reduce height for info */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            text-align: center;
+            box-sizing: border-box;
+            margin-bottom: 1vh; /* Space between info and controls */
+             /* Ensure text doesn't overflow on small screens */
+            white-space: normal;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Controls Area */
+        .controls {
+            width: 95vw; /* Match container width */
+            height: 8vh; /* Fixed height for controls */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1em; /* Space between buttons */
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .controls button {
+            padding: 0.5em 1em;
+            font-family: monospace;
+            font-size: 1em;
+            color: black;
+            background-color: white;
+            border: 1px solid black;
+            cursor: pointer;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        .controls button:hover {
+            background-color: #f0f0f0; /* Light gray hover */
+        }
+
+        .controls button:active {
+             background-color: #cccccc; /* Darker gray active */
+        }
+
+        /* Footer Styles */
+        footer {
+            height: 8vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+            box-sizing: border-box; /* Include border in height */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1em;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>SVM Visual Basic</h1>
+    </header>
+
+    <main>
+        <div class="canvas-container">
+            <canvas id="svmCanvas"></canvas>
+        </div>
+         <div class="info" id="infoText">
+            Visualizing the hyperplane and margin for a simple 2D dataset. Support vectors are highlighted.
+        </div>
+        <div class="controls">
+            <button id="randomizeBtn">Randomize</button>
+            <button id="resetBtn">Reset</button>
+            <button id="autoDemoBtn">Start Auto-demo</button>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('svmCanvas');
+            const ctx = canvas.getContext('2d');
+            const infoTextDiv = document.getElementById('infoText');
+            const randomizeBtn = document.getElementById('randomizeBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const autoDemoBtn = document.getElementById('autoDemoBtn');
+
+            let autoDemoInterval = null;
+
+            // --- Configuration and Data ---
+            const PRESETS = [
+                { // Preset 0: X-separator
+                    name: "X-axis separation",
+                    info: "Separated by X=0. Margin defined by closest points to X=0.",
+                    dataPoints: [
+                        { x: 1.2, y: 1, label: 1 }, { x: 2, y: 2, label: 1 }, { x: 3, y: 1, label: 1 },
+                        { x: 4, y: 0.5, label: 1 }, { x: 5, y: 1.5, label: 1 }, { x: 1.5, y: -0.5, label: 1 },
+                        { x: 2.5, y: 2.5, label: 1 }, { x: 1.1, y: -2, label: 1 }, { x: 3.5, y: 3, label: 1 },
+
+
+                        { x: -1.2, y: -1, label: -1 }, { x: -2, y: -2, label: -1 }, { x: -3, y: -1, label: -1 },
+                        { x: -4, y: -0.5, label: -1 }, { x: -5, y: -1.5, label: -1 }, { x: -1.5, y: 0.5, label: -1 },
+                        { x: -2.5, y: -2.5, label: -1 }, { x: -1.1, y: 2, label: -1 }, { x: -3.5, y: -3, label: -1 },
+                    ],
+                    // Hyperplane: ax + by + c = 0
+                    hyperplaneParams: { a: 1, b: 0, c: 0 }, // x = 0
+                    // Define two points that lie on the desired margin boundaries for calculating margin width
+                    svCoordinatesForMargin: [{ x: 1, y: 0 }, { x: -1, y: 0 }] // Margin boundaries x=1 and x=-1
+                },
+                 { // Preset 1: Y-separator
+                    name: "Y-axis separation",
+                    info: "Separated by Y=0. Margin defined by closest points to Y=0.",
+                    dataPoints: [
+                        { x: 1, y: 1.2, label: 1 }, { x: 2, y: 2, label: 1 }, { x: 3, y: 0.5, label: 1 },
+                        { x: -1, y: 1.1, label: 1 }, { x: -2, y: 2.5, label: 1 }, { x: 0.5, y: 3, label: 1 },
+                         { x: 1.5, y: 1.5, label: 1 }, { x: -3, y: 1.3, label: 1 }, { x: 3.5, y: 2.8, label: 1 },
+
+
+                        { x: -1, y: -1.2, label: -1 }, { x: -2, y: -2, label: -1 }, { x: -3, y: -0.5, label: -1 },
+                        { x: 1, y: -1.1, label: -1 }, { x: 2, y: -2.5, label: -1 }, { x: -0.5, y: -3, label: -1 },
+                         { x: -1.5, y: -1.5, label: -1 }, { x: 3, y: -1.3, label: -1 }, { x: -3.5, y: -2.8, label: -1 },
+                    ],
+                    hyperplaneParams: { a: 0, b: 1, c: 0 }, // y = 0
+                     svCoordinatesForMargin: [{ x: 0, y: 1 }, { x: 0, y: -1 }] // Margin boundaries y=1 and y=-1
+                },
+                 { // Preset 2: Y=X separator
+                    name: "Y=X separation",
+                    info: "Separated by Y=X. Margin defined by closest points to Y=X.",
+                    dataPoints: [
+                        { x: 1, y: 3, label: 1 }, { x: 2, y: 4, label: 1 }, { x: 0, y: 2.2, label: 1 },
+                        { x: -1, y: 3, label: 1 }, { x: 1.5, y: 3.5, label: 1 }, { x: -0.5, y: 1.5, label: 1 },
+                         { x: -2, y: 1, label: 1 }, { x: 0.5, y: 2.5, label: 1 }, { x: -1.5, y: 2.8, label: 1 },
+
+
+                        { x: -1, y: -3, label: -1 }, { x: -2, y: -4, label: -1 }, { x: 0, y: -2.2, label: -1 },
+                        { x: 1, y: -3, label: -1 }, { x: -1.5, y: -3.5, label: -1 }, { x: 0.5, y: -1.5, label: -1 },
+                        { x: 2, y: -1, label: -1 }, { x: -0.5, y: -2.5, label: -1 }, { x: 1.5, y: -2.8, label: -1 },
+                    ],
+                    hyperplaneParams: { a: 1, b: -1, c: 0 }, // x - y = 0 => y = x
+                    // Points on margin boundary parallel to y=x: y=x+constant => x-y+constant=0.
+                    // Using (0, 2) and (0, -2) as points on the margin boundary lines:
+                    // For (0, 2): 1*0 - 1*2 + constant = 0 => constant = 2. Line: x-y+2=0
+                    // For (0, -2): 1*0 - 1*(-2) + constant = 0 => constant = -2. Line: x-y-2=0
+                    svCoordinatesForMargin: [{ x: 0, y: 2 }, { x: 0, y: -2 }]
+                }
+            ];
+            let currentPresetIndex = 0;
+            let currentDataPoints = [];
+            let currentHyperplaneParams = {};
+            let currentMargin1Params = {}; // For margin boundary on one side
+            let currentMarginMinus1Params = {}; // For margin boundary on the other side
+
+             // --- Canvas Drawing Functions ---
+
+            // Maps data coordinates (e.g., -6 to 6) to canvas pixels
+            const plotRange = 12; // Data spans from -plotRange/2 to +plotRange/2 on each axis
+
+            const dataToCanvas = (p) => {
+                const scaleX = canvas.width / plotRange;
+                const scaleY = canvas.height / plotRange;
+                const offsetX = canvas.width / 2;
+                const offsetY = canvas.height / 2;
+
+                const canvasX = p.x * scaleX + offsetX;
+                // Invert Y because canvas Y is downwards
+                const canvasY = -p.y * scaleY + offsetY;
+
+                return { x: canvasX, y: canvasY };
+            };
+
+            const drawPoint = (p, color, isSV = false) => {
+                const { x: canvasX, y: canvasY } = dataToCanvas(p);
+
+                ctx.beginPath();
+                ctx.arc(canvasX, canvasY, isSV ? 7 : 4, 0, Math.PI * 2, true); // Slightly smaller points, larger for SV
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                if (isSV) {
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = 'black';
+                    ctx.stroke();
+                }
+            };
+
+            const drawLine = (params, style, label = null) => {
+                // Draw line ax + by + c = 0
+                ctx.beginPath();
+                ctx.strokeStyle = style;
+                ctx.lineWidth = style === 'black' ? 2 : 1; // Hyperplane thicker
+                ctx.setLineDash([]); // Solid line by default
+
+                 // Find points at canvas edges corresponding to plot range
+                let p1_data, p2_data;
+                 const halfPlotRange = plotRange / 2;
+                 const absA = Math.abs(params.a);
+                 const absB = Math.abs(params.b);
+                 const epsilon = 1e-9; // Tolerance for checking against zero
+
+                if (absB < epsilon) { // Vertical line ax + c = 0 => x = -c/a
+                     if (absA < epsilon) return; // Both a and b are zero, not a line
+                    const x = -params.c / params.a;
+                    p1_data = { x: x, y: -halfPlotRange };
+                    p2_data = { x: x, y: halfPlotRange };
+                } else if (absA < epsilon) { // Horizontal line by + c = 0 => y = -c/b
+                     if (absB < epsilon) return; // Both a and b are zero
+                     const y = -params.c / params.b;
+                     p1_data = { x: -halfPlotRange, y: y };
+                     p2_data = { x: halfPlotRange, y: y };
+                } else { // General line y = (-a/b)x - c/b
+                    // Calculate points where the line intersects the boundaries of the plot range [-halfPlotRange, halfPlotRange]
+                    let points = [];
+
+                    // Intersection with x = -halfPlotRange
+                    let y1 = (-params.a * (-halfPlotRange) - params.c) / params.b;
+                    if (Math.abs(y1) <= halfPlotRange * 1.05) points.push({ x: -halfPlotRange, y: y1 }); // Add slight buffer
+
+                    // Intersection with x = halfPlotRange
+                    let y2 = (-params.a * halfPlotRange - params.c) / params.b;
+                    if (Math.abs(y2) <= halfPlotRange * 1.05) points.push({ x: halfPlotRange, y: y2 }); // Add slight buffer
+
+                    // Intersection with y = -halfPlotRange
+                    let x3 = (-params.b * (-halfPlotRange) - params.c) / params.a;
+                    if (Math.abs(x3) <= halfPlotRange * 1.05) points.push({ x: x3, y: -halfPlotRange }); // Add slight buffer
+
+                    // Intersection with y = halfPlotRange
+                    let x4 = (-params.b * halfPlotRange - params.c) / params.a;
+                     if (Math.abs(x4) <= halfPlotRange * 1.05) points.push({ x: x4, y: halfPlotRange }); // Add slight buffer
+
+                    // Remove duplicate points (due to corners) and ensure exactly two distinct points
+                    const uniquePoints = [];
+                    points.forEach(p => {
+                        if (!uniquePoints.some(up => Math.abs(up.x - p.x) < epsilon && Math.abs(up.y - p.y) < epsilon)) {
+                             uniquePoints.push(p);
+                        }
+                    });
+
+                    if (uniquePoints.length >= 2) {
+                       p1_data = uniquePoints[0];
+                       p2_data = uniquePoints[1];
+                    } else if (uniquePoints.length === 1) {
+                        // Line might be a single point within the view, or tangential
+                        // Not ideal for visualization, skip drawing or add a fallback
+                        console.warn("Line drawing found only one point within bounds.");
+                        return; // Skip drawing if only one point found
+                    } else {
+                         // Line is completely outside the view
+                         return; // Skip drawing
+                    }
+                }
+
+                 const { x: canvasX1, y: canvasY1 } = dataToCanvas(p1_data);
+                 const { x: canvasX2, y: canvasY2 } = dataToCanvas(p2_data);
+
+                ctx.moveTo(canvasX1, canvasY1);
+                ctx.lineTo(canvasX2, canvasY2);
+
+                ctx.stroke();
+
+                // Add label near the line (simplified placement)
+                if (label && p1_data && p2_data) { // Only draw label if line was drawn
+                     ctx.font = '12px monospace';
+                     ctx.fillStyle = 'black';
+
+                    // Place label near one of the endpoints, slightly offset
+                     let labelPoint = p2_data; // Default to second point
+                     let textAlign = 'right';
+                     let textBaseline = 'bottom';
+
+                    // Adjust alignment based on which edge the point is on
+                    if (Math.abs(labelPoint.x - halfPlotRange) < epsilon) textAlign = 'right';
+                    else if (Math.abs(labelPoint.x + halfPlotRange) < epsilon) textAlign = 'left';
+                    else textAlign = 'center'; // If on vertical edge
+
+                    if (Math.abs(labelPoint.y - halfPlotRange) < epsilon) textBaseline = 'top';
+                    else if (Math.abs(labelPoint.y + halfPlotRange) < epsilon) textBaseline = 'bottom';
+                    else textBaseline = 'middle'; // If on horizontal edge
+
+                    // If line is mostly horizontal, place near left edge
+                    if (absA < absB) { // More horizontal
+                        labelPoint = p1_data;
+                         if (Math.abs(labelPoint.x - halfPlotRange) < epsilon) textAlign = 'right';
+                         else if (Math.abs(labelPoint.x + halfPlotRange) < epsilon) textAlign = 'left';
+                         else textAlign = 'center';
+
+                        if (Math.abs(labelPoint.y - halfPlotRange) < epsilon) textBaseline = 'top';
+                        else if (Math.abs(labelPoint.y + halfPlotRange) < epsilon) textBaseline = 'bottom';
+                        else textBaseline = 'middle';
+                         // Prefer left side
+                         if(textAlign === 'right') textAlign = 'left';
+
+                    } else { // More vertical
+                         // Prefer top side
+                         if(textBaseline === 'bottom') textBaseline = 'top';
+                    }
+
+
+                    const { x: labelCanvasX, y: labelCanvasY } = dataToCanvas(labelPoint);
+                    ctx.textAlign = textAlign;
+                    ctx.textBaseline = textBaseline;
+
+                     // Adjust position slightly based on alignment
+                     const offsetX = (textAlign === 'left' ? 5 : (textAlign === 'right' ? -5 : 0));
+                     const offsetY = (textBaseline === 'top' ? 5 : (textBaseline === 'bottom' ? -5 : 0));
+                     if(textAlign === 'center' && textBaseline === 'middle') offsetY = -15; // Lift centered label
+
+                    ctx.fillText(label, labelCanvasX + offsetX, labelCanvasY + offsetY);
+                }
+            };
+
+             const drawMarginLine = (params) => {
+                ctx.setLineDash([4, 4]); // Dashed line
+                drawLine(params, 'gray');
+                ctx.setLineDash([]); // Reset dash
+            };
+
+            const drawMarginLabel = () => {
+                // Simplistic margin label placement: midway between hyperplane and one margin line
+                 const hp = currentHyperplaneParams;
+                 const mp1 = currentMargin1Params;
+
+                 if (!mp1 || !hp) return;
+
+                 ctx.font = '12px monospace';
+                 ctx.fillStyle = 'black';
+
+                 // Find a point on the midway line: ax+by+(c+c')/2=0
+                 const midC = (hp.c + mp1.c) / 2;
+                 const midLineParams = {a: hp.a, b: hp.b, c: midC};
+
+                 // Find a point on this line near an edge of the plot range
+                 const halfPlotRange = plotRange / 2;
+                 const epsilon = 1e-9;
+                 let labelPoint = null;
+                 let textAlign = 'center';
+                 let textBaseline = 'middle';
+
+                 // Try near right edge (x = halfPlotRange * 0.8)
+                 let testX = halfPlotRange * 0.8;
+                 if (Math.abs(midLineParams.b) > epsilon) {
+                     let testY = (-midLineParams.a * testX - midLineParams.c) / midLineParams.b;
+                     if (Math.abs(testY) <= halfPlotRange * 1.05) {
+                         labelPoint = { x: testX, y: testY };
+                         textAlign = 'right';
+                         textBaseline = 'middle';
+                     }
+                 }
+
+                 // If not placed, try near top edge (y = halfPlotRange * 0.8)
+                 if (!labelPoint && Math.abs(midLineParams.a) > epsilon) {
+                      let testY2 = halfPlotRange * 0.8;
+                      let testX2 = (-midLineParams.b * testY2 - midLineParams.c) / midLineParams.a;
+                      if (Math.abs(testX2) <= halfPlotRange * 1.05) {
+                         labelPoint = { x: testX2, y: testY2 };
+                         textAlign = 'center';
+                         textBaseline = 'top';
+                      }
+                 }
+
+                // If still not placed, use origin as fallback
+                 if (!labelPoint) {
+                     labelPoint = { x: 0, y: 0 };
+                     textAlign = 'center';
+                     textBaseline = 'middle';
+                 }
+
+
+                const { x: labelCanvasX, y: labelCanvasY } = dataToCanvas(labelPoint);
+                ctx.textAlign = textAlign;
+                ctx.textBaseline = textBaseline;
+
+                 // Adjust position slightly based on alignment
+                 const offsetX = (textAlign === 'left' ? 5 : (textAlign === 'right' ? -5 : 0));
+                 const offsetY = (textBaseline === 'top' ? 5 : (textBaseline === 'bottom' ? -5 : 0));
+                 if(textAlign === 'center' && textBaseline === 'middle') offsetY = -5; // Lift centered label slightly
+
+
+                ctx.fillText('Margin', labelCanvasX + offsetX, labelCanvasY + offsetY);
+            };
+
+
+            const drawSVM = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw origin axes
+                const { x: originX, y: originY } = dataToCanvas({ x: 0, y: 0 });
+                 ctx.strokeStyle = '#eee'; // Light gray axes
+                 ctx.lineWidth = 1;
+                 ctx.beginPath();
+                 ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height); // Y axis
+                 ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY); // X axis
+                 ctx.stroke();
+
+                // Draw the margin lines
+                if (currentMargin1Params) drawMarginLine(currentMargin1Params);
+                if (currentMarginMinus1Params) drawMarginLine(currentMarginMinus1Params);
+
+                // Draw the hyperplane
+                if (currentHyperplaneParams) drawLine(currentHyperplaneParams, 'black', 'Hyperplane');
+
+                 // Add Margin label
+                 drawMarginLabel();
+
+
+                // Identify support vectors dynamically based on distance to margin lines
+                // A point is a support vector if it lies on or very close to one of the margin boundaries.
+                const tolerance = 0.2; // Tolerance in data units
+                const hp = currentHyperplaneParams;
+                const mp1 = currentMargin1Params;
+                const mp_1 = currentMarginMinus1Params;
+                 const epsilon = 1e-9;
+
+                currentDataPoints.forEach(p => {
+                    let isSV = false;
+                    if (hp && mp1 && mp_1) {
+                         // The equation of margin line 1 is mp1.a * x + mp1.b * y + mp1.c = 0
+                         // Distance from point (px, py) to line A*x + B*y + C = 0 is |A*px + B*py + C| / sqrt(A^2 + B^2)
+                         const norm_w = Math.sqrt(hp.a*hp.a + hp.b*hp.b); // Use HP normal vector for consistency
+
+                         if (norm_w > epsilon) {
+                             const distToMargin1_scaled = Math.abs(mp1.a * p.x + mp1.b * p.y + mp1.c);
+                             const distToMarginMinus1_scaled = Math.abs(mp_1.a * p.x + mp_1.b * p.y + mp_1.c);
+
+                            // Check if distance to either margin line is within tolerance (in the data's coordinate system)
+                             // The 'c' values in margin params already account for the shift.
+                             // The distance is simply the value |ax+by+c'| / ||w||
+                             const distToMargin1 = distToMargin1_scaled / norm_w;
+                             const distToMarginMinus1 = distToMarginMinus1_scaled / norm_w;
+
+
+                            if (distToMargin1 < tolerance || distToMarginMinus1 < tolerance) {
+                                 isSV = true;
+                             }
+                         } else {
+                             // Handle case where HP is degenerate (a=b=0) - though presets avoid this
+                             isSV = false;
+                         }
+                    }
+                    p.isSV = isSV; // Mark point as SV for drawing
+                });
+
+
+                // Draw data points
+                currentDataPoints.forEach(p => {
+                    const color = p.label === 1 ? 'blue' : 'red'; // Example colors
+                    drawPoint(p, color, p.isSV);
+                });
+
+                 // Add Support Vector label (simplified placement)
+                 // Find an SV from each class if possible, place label near one
+                 const svPoint1 = currentDataPoints.find(p => p.isSV && p.label === 1);
+                 const svPointMinus1 = currentDataPoints.find(p => p.isSV && p.label === -1);
+                 const svPoint = svPoint1 || svPointMinus1; // Use either if found
+
+                 if (svPoint) {
+                     ctx.font = '12px monospace';
+                     ctx.fillStyle = 'black';
+                     ctx.textAlign = 'right';
+                     ctx.textBaseline = 'middle';
+                     const { x: svCanvasX, y: svCanvasY } = dataToCanvas(svPoint);
+                     ctx.fillText('Support Vector', svCanvasX - 10, svCanvasY);
+                 }
+            };
+
+            // --- Data Loading and State Management ---
+
+             // Calculates line parameters ax+by+c'=0 that passes through svCoord and is parallel to hp (ax+by+c=0)
+             // Note: hp is ax+by+c=0. Parallel line is ax+by+c_prime=0.
+             // If the line passes through (x0, y0), then a*x0 + b*y0 + c_prime = 0 => c_prime = -(a*x0 + b*y0).
+            const getParallelLineParamsThroughPoint = (hp, point) => {
+                const c_prime = -(hp.a * point.x + hp.b * point.y);
+                return { a: hp.a, b: hp.b, c: c_prime };
+            };
+
+            const calculateMarginParams = (hp, svCoordsForMargin) => {
+                 if (!svCoordsForMargin || svCoordsForMargin.length < 2) return { margin1: null, marginMinus1: null };
+
+                // Get the equations of the lines parallel to hp and passing through the two svCoordsForMargin points
+                const marginLine1 = getParallelLineParamsThroughPoint(hp, svCoordsForMargin[0]);
+                const marginLine2 = getParallelLineParamsThroughPoint(hp, svCoordsForMargin[1]);
+
+                 // Determine which line is the "positive side" margin (margin1) and which is the "negative side" (marginMinus1)
+                 // based on the sign of the original hyperplane function (ax+by+c) evaluated at the svCoordsForMargin points.
+                 // The value of the expression (ax+by+c) should be opposite for the two margin boundaries relative to the HP.
+                 const valueOnHPatSV1 = hp.a * svCoordsForMargin[0].x + hp.b * svCoordsForMargin[0].y + hp.c;
+                 const valueOnHPatSV2 = hp.a * svCoordsForMargin[1].x + hp.b * svCoordsForMargin[1].y + hp.c;
+
+                 const epsilon = 1e-9;
+
+                 // Check if the two SV points are on opposite sides of the hyperplane
+                 if (valueOnHPatSV1 * valueOnHPatSV2 < -epsilon) {
+                     // Assign margin1 to the line corresponding to the positive value
+                     if (valueOnHPatSV1 > 0) {
+                        return { margin1: marginLine1, marginMinus1: marginLine2 };
+                     } else {
+                         return { margin1: marginLine2, marginMinus1: marginLine1 };
+                     }
+                 } else {
+                     // Fallback: if SVs are on the same side or on HP, assign arbitrarily (e.g., based on the first point's sign)
+                     console.warn("svCoordinatesForMargin might be on the same side of the hyperplane. Margin assignment might be inconsistent.");
+                      if (valueOnHPatSV1 >= 0) { // Treat >= 0 as positive side
+                           return { margin1: marginLine1, marginMinus1: marginLine2 };
+                      } else {
+                           return { margin1: marginLine2, marginMinus1: marginLine1 };
+                      }
+                 }
+            };
+
+
+            const loadPreset = (index) => {
+                const preset = PRESETS[index];
+                currentPresetIndex = index;
+                currentDataPoints = JSON.parse(JSON.stringify(preset.dataPoints)); // Deep copy
+                currentHyperplaneParams = preset.hyperplaneParams;
+
+                 // Calculate margin parameters based on hyperplane and defined points on the margin boundaries from the preset
+                 const marginParams = calculateMarginParams(currentHyperplaneParams, preset.svCoordinatesForMargin);
+                 currentMargin1Params = marginParams.margin1;
+                 currentMarginMinus1Params = marginParams.marginMinus1;
+
+                infoTextDiv.textContent = preset.info;
+                drawSVM();
+            };
+
+            const randomize = () => {
+                let newIndex = currentPresetIndex;
+                // Ensure a different preset is chosen if more than one exists
+                if (PRESETS.length > 1) {
+                     while (newIndex === currentPresetIndex) {
+                        newIndex = Math.floor(Math.random() * PRESETS.length);
+                    }
+                } else {
+                    // If only one preset, just reload it
+                    newIndex = 0;
+                }
+                loadPreset(newIndex);
+                infoTextDiv.textContent = PRESETS[newIndex].info + " (Randomized)";
+            };
+
+            const reset = () => {
+                loadPreset(0);
+                infoTextDiv.textContent = PRESETS[0].info + " (Reset)";
+            };
+
+            const toggleAutoDemo = () => {
+                if (autoDemoInterval) {
+                    clearInterval(autoDemoInterval);
+                    autoDemoInterval = null;
+                    autoDemoBtn.textContent = "Start Auto-demo";
+                     infoTextDiv.textContent = PRESETS[currentPresetIndex].info + " (Auto-demo stopped)";
+                } else {
+                    randomize(); // Draw initial random preset immediately
+                    autoDemoInterval = setInterval(randomize, 3000); // Change every 3 seconds
+                    autoDemoBtn.textContent = "Stop Auto-demo";
+                    // Update info text after a small delay to allow randomize() info to show first
+                    setTimeout(() => {
+                        // Only update if autoDemoInterval is still active (user didn't click Stop quickly)
+                        if(autoDemoInterval) infoTextDiv.textContent = PRESETS[currentPresetIndex].info + " (Auto-demo running...)";
+                    }, 50);
+                }
+            };
+
+            // --- Event Listeners ---
+            randomizeBtn.addEventListener('click', randomize);
+            resetBtn.addEventListener('click', reset);
+            autoDemoBtn.addEventListener('click', toggleAutoDemo);
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawSVM(); // Redraw after resizing
+            });
+
+            // --- Initial Setup ---
+             const resizeCanvas = () => {
+                const container = canvas.parentElement;
+                // Set canvas display size
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                // Set canvas drawing buffer size (important for crisp drawing)
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            };
+
+            resizeCanvas();
+            loadPreset(0); // Load the default preset on start
+        });
+    </script>
+
+</body>
+</html>

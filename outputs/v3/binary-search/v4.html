@@ -1,0 +1,395 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            overflow: hidden; /* Ensure no scrolling */
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Make body fill viewport height */
+        }
+
+        header {
+            text-align: center;
+            padding: 1vh 0;
+            font-size: 2vh;
+            flex-shrink: 0; /* Don't allow header to shrink */
+            border-bottom: 1px solid black;
+        }
+
+        main {
+            flex-grow: 1; /* Allow main content to take available space */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Center content vertically */
+            padding: 2vh;
+            box-sizing: border-box;
+        }
+
+        .array-container {
+            display: flex;
+            margin-bottom: 3vh;
+            height: 8vh; /* Fixed height for array display */
+             max-width: 95vw; /* Prevent excessive width on very wide screens */
+             overflow-x: auto; /* Add horizontal scroll if items somehow overflow */
+             justify-content: center; /* Center items horizontally when they fit */
+             align-items: center; /* Vertically center items */
+             padding: 0 2vw; /* Add some padding */
+             box-sizing: border-box;
+        }
+
+        .array-item {
+            width: 5vw; /* Fixed width */
+            height: 100%; /* Fill container height */
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0.3vw; /* Spacing between items */
+            box-sizing: border-box;
+            font-size: 3vh;
+            transition: background-color 0.3s, border-color 0.3s, opacity 0.3s; /* Smooth transitions */
+            flex-shrink: 0; /* Prevent items from shrinking */
+        }
+
+        /* Use black borders as primary separators, colored borders for low/high */
+        .array-item.low { border-bottom-color: red; border-bottom-width: 3px; }
+        .array-item.high { border-top-color: red; border-top-width: 3px; }
+        .array-item.mid { background-color: yellow; } /* Mid highlight */
+        .array-item.found { background-color: lightgreen; } /* Found highlight */
+        .array-item.discarded { opacity: 0.3; } /* Visually deemphasize discarded elements - secondary */
+        /* .array-item.current-range { border-color: blue; } Removed as it adds clutter */
+
+
+        .controls {
+            margin-bottom: 3vh;
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center controls */
+            flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+            font-size: 2vh;
+            padding: 0 2vw; /* Add some padding */
+             box-sizing: border-box;
+        }
+
+        .controls label {
+            margin-right: 1vw;
+             margin-bottom: 1vh; /* Added margin-bottom for wrapping */
+        }
+
+        .controls input[type="number"] {
+            font-family: monospace;
+            font-size: 2vh;
+            padding: 0.5vh;
+            margin-right: 1vw;
+            width: 8vw; /* Increased width slightly */
+            border: 1px solid black;
+            box-sizing: border-box;
+            text-align: center;
+             margin-bottom: 1vh; /* Added margin-bottom for wrapping */
+        }
+
+        .controls button {
+            font-family: monospace;
+            font-size: 2vh;
+            padding: 0.5vh 1.5vw;
+            margin-right: 1vw;
+            cursor: pointer;
+            border: 1px solid black;
+            background-color: white;
+            white-space: nowrap; /* Prevent button text from wrapping */
+             margin-bottom: 1vh; /* Added margin-bottom for wrapping */
+        }
+         .controls button:last-child {
+             margin-right: 0; /* No margin on the last button in the flex line */
+         }
+
+         .controls button:hover:not(:disabled) {
+             background-color: #f0f0f0; /* Light grey hover */
+         }
+         .controls button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+         }
+
+
+        .status {
+            font-size: 2vh;
+            min-height: 6vh; /* Reserve space for status messages */
+            text-align: center;
+            padding: 0 2vw; /* Add horizontal padding */
+            box-sizing: border-box;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1vh 0;
+            font-size: 1.8vh;
+            flex-shrink: 0; /* Don't allow footer to shrink */
+            border-top: 1px solid black;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+         footer a:hover {
+             text-decoration: underline;
+         }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Binary Search Visualizer</h1>
+    </header>
+
+    <main>
+        <div id="array-container" class="array-container">
+            <!-- Array elements will be added here by JavaScript -->
+        </div>
+
+        <div class="controls">
+             <button id="randomize-button">Randomize Array</button>
+            <label for="target-input">Target Value:</label>
+            <input type="number" id="target-input" value="" min="0" max="200"> <!-- Adjusted max value -->
+            <button id="start-button">Start Search</button>
+            <button id="next-button" disabled>Next Step</button>
+            <button id="reset-button" disabled>Reset</button>
+        </div>
+
+        <div id="status" class="status">
+            Click 'Randomize Array' or enter a target value and click 'Start Search'.
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <span>|</span>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // Use let because we will reassign the array
+        let sortedArray = [];
+        const arraySize = 15; // Fixed size for visualization
+        const valueRange = { min: 1, max: 100 }; // Range for random values
+
+        const arrayContainer = document.getElementById('array-container');
+        const targetInput = document.getElementById('target-input');
+        const randomizeButton = document.getElementById('randomize-button');
+        const startButton = document.getElementById('start-button');
+        const nextButton = document.getElementById('next-button');
+        const resetButton = document.getElementById('reset-button');
+        const statusDiv = document.getElementById('status');
+
+        let low = 0;
+        let high = 0; // Initialize high, will be set by array length
+        let mid = -1;
+        let target = -1;
+        let searching = false;
+
+        // Function to generate a new sorted array and target
+        function generateArrayAndTarget() {
+             const newArray = [];
+             // Generate random numbers within the range
+             for (let i = 0; i < arraySize; i++) {
+                 newArray.push(Math.floor(Math.random() * (valueRange.max - valueRange.min + 1)) + valueRange.min);
+             }
+             // Sort the array numerically
+             newArray.sort((a, b) => a - b);
+             sortedArray = newArray;
+
+             // Choose a random target value
+             // ~80% chance to pick a value from the array (guaranteed find)
+             // ~20% chance to pick a value slightly outside the array's min/max range
+             const pickExisting = Math.random() < 0.8;
+             if (pickExisting && arraySize > 0) {
+                 const randomIndex = Math.floor(Math.random() * arraySize);
+                 target = sortedArray[randomIndex];
+             } else {
+                 // Pick a value that is likely not in the array
+                 const randomOffset = Math.floor(Math.random() * 20) + 1; // Offset by 1-20
+                 if (Math.random() < 0.5) {
+                      // Pick slightly above max value in array or global range
+                      const maxVal = sortedArray.length > 0 ? sortedArray[sortedArray.length - 1] : valueRange.max;
+                      target = maxVal + randomOffset;
+                 } else {
+                      // Pick slightly below min value in array or global range
+                       const minVal = sortedArray.length > 0 ? sortedArray[0] : valueRange.min;
+                       target = minVal - randomOffset;
+                 }
+                  // Ensure target is within a somewhat reasonable range for the input field
+                  target = Math.max(-50, target); // Lower bound safety
+                  target = Math.min(valueRange.max + 50, target); // Upper bound safety
+             }
+
+             targetInput.value = target; // Set the input field value
+             resetSearch(); // Reset state and render the new array
+        }
+
+
+        // Function to render the array visually
+        function renderArray() {
+            arrayContainer.innerHTML = ''; // Clear current display
+            if (sortedArray.length === 0) {
+                 // Optionally display a message if array is empty, though generate ensures it's not
+                 return;
+            }
+            sortedArray.forEach((value, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('array-item');
+                itemDiv.textContent = value;
+
+                // Apply state classes only when searching is active or search just finished (low > high or found)
+                if (searching || (low > high) || (!searching && mid !== -1 && sortedArray[mid] === target)) {
+
+                     // Elements outside the current [low, high] range are discarded
+                     // Note: discard check happens *before* low/high/mid highlights
+                     if (index < low || index > high) {
+                         itemDiv.classList.add('discarded');
+                     } else {
+                         // Elements within the current valid search range
+                         // Highlight low, high, mid within this range for the *current step*
+                         if (index === low && low <= high) itemDiv.classList.add('low');
+                         if (index === high && low <= high) itemDiv.classList.add('high');
+                         if (index === mid && mid >= low && mid <= high) itemDiv.classList.add('mid'); // Mid highlight only for the active mid
+
+                         // Found highlight takes precedence and persists after search stops
+                         if (!searching && index === mid && sortedArray[mid] === target) {
+                             itemDiv.classList.add('found');
+                             // Remove temporary step highlights like mid, low, high on the found element
+                             itemDiv.classList.remove('mid', 'low', 'high');
+                         }
+                     }
+                }
+
+                arrayContainer.appendChild(itemDiv);
+            });
+        }
+
+        // Function to start the search
+        function startSearch() {
+            const inputTarget = parseInt(targetInput.value, 10);
+            if (isNaN(inputTarget)) {
+                statusDiv.textContent = 'Please enter a valid number.';
+                return;
+            }
+             target = inputTarget; // Use the value from the input field
+
+            if (sortedArray.length === 0) {
+                 statusDiv.textContent = 'Array is empty. Click \'Randomize Array\' to generate one.';
+                 return;
+             }
+
+            low = 0;
+            high = sortedArray.length - 1;
+            mid = -1; // Reset mid for the new search
+            searching = true;
+
+            statusDiv.textContent = `Starting search for target: ${target}. Initial range: indices ${low} to ${high}.`;
+            startButton.disabled = true;
+            targetInput.disabled = true;
+            randomizeButton.disabled = true; // Disable randomize during search
+            nextButton.disabled = false;
+            resetButton.disabled = false;
+
+            renderArray(); // Initial render with starting range highlights
+        }
+
+        // Function to perform one step of the search
+        function nextStep() {
+            if (!searching) {
+                 // Should not happen if button is disabled, but safety check
+                 return;
+            }
+
+            // Check for termination condition BEFORE calculating mid for this step
+            if (low > high) {
+                 searching = false; // Search failed
+                 mid = -1; // Clear mid highlight
+                 renderArray(); // Render final state (all remaining non-discarded elements without mid highlight)
+                 statusDiv.textContent = `Target ${target} not found in the array. Search finished.`;
+                 nextButton.disabled = true;
+                 randomizeButton.disabled = false; // Re-enable randomize
+                 targetInput.disabled = false; // Re-enable input
+                 return;
+            }
+
+            mid = Math.floor((low + high) / 2);
+            const midValue = sortedArray[mid];
+
+            renderArray(); // Render array with current mid highlight and range
+
+            // Decide next step logic based on comparison
+            if (midValue === target) {
+                // Found the target
+                statusDiv.textContent = `Found target ${target} at index ${mid}! Search finished.`;
+                searching = false; // Stop searching
+                nextButton.disabled = true;
+                randomizeButton.disabled = false; // Re-enable randomize
+                 targetInput.disabled = false; // Re-enable input
+                 // A slight delay to show the 'mid' highlight before applying 'found'
+                 setTimeout(() => {
+                      // Re-render to apply 'found' class and remove others
+                      renderArray();
+                 }, 500);
+            } else if (midValue < target) {
+                // Target is in the right half
+                statusDiv.textContent = `Current element (${midValue} at index ${mid}) is less than target (${target}). Discarding left half. New range: indices ${mid + 1} to ${high}.`;
+                low = mid + 1; // Move low pointer
+                 // Delay rendering the *next* state to let user see the *current* mid comparison
+                 setTimeout(renderArray, 500);
+            } else { // midValue > target
+                // Target is in the left half
+                statusDiv.textContent = `Current element (${midValue} at index ${mid}) is greater than target (${target}). Discarding right half. New range: indices ${low} to ${mid - 1}.`;
+                high = mid - 1; // Move high pointer
+                 // Delay rendering the *next* state
+                 setTimeout(renderArray, 500);
+            }
+        }
+
+        // Function to reset the app state
+        function resetSearch() {
+            low = 0;
+            high = sortedArray.length - 1; // Reset high based on current array length
+            mid = -1; // Clear mid highlight
+            // target value is kept from input or last randomize call, not reset here
+            searching = false; // Ensure searching is false
+
+            targetInput.disabled = false;
+            randomizeButton.disabled = false; // Ensure randomize is enabled
+            startButton.disabled = false;
+            nextButton.disabled = true;
+            resetButton.disabled = true;
+            statusDiv.textContent = 'Click \'Randomize Array\' or enter a target value and click \'Start Search\'.';
+
+            renderArray(); // Render initial state with current array
+        }
+
+        // Event Listeners
+        randomizeButton.addEventListener('click', generateArrayAndTarget);
+        startButton.addEventListener('click', startSearch);
+        nextButton.addEventListener('click', nextStep);
+        resetButton.addEventListener('click', resetSearch);
+
+        // Initial setup: Generate an array and render it when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+             generateArrayAndTarget(); // Generate initial array and target
+             // generateArrayAndTarget calls resetSearch, which calls renderArray.
+             // This sets up the initial state.
+        });
+
+    </script>
+</body>
+</html>

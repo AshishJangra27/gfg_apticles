@@ -1,0 +1,471 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        /* Minimal Reset & Base Styles */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            color: black;
+            background-color: white;
+            display: flex;
+            flex-direction: column; /* Arrange header, main, footer vertically */
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+
+        /* Header */
+        header {
+            flex-shrink: 0; /* Prevent header from shrinking */
+            height: 10vh; /* Fixed height for header */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            font-size: 0.8em;
+        }
+
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1; /* Take up remaining space */
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls */
+            align-items: center; /* Center content horizontally */
+            justify-content: flex-start; /* Align items to the top */
+            padding: 5px; /* Small padding */
+            box-sizing: border-box;
+            position: relative; /* Needed for potential absolute positioning within */
+            width: 100%; /* Ensure main takes full width */
+        }
+
+        /* Canvas Container (Optional, but good for layout) */
+        #canvas-container {
+             width: 95%; /* Adjust based on preference */
+             max-width: 800px; /* Limit max width */
+             flex-grow: 1; /* Allow canvas to grow vertically */
+             border: 1px solid black;
+             box-sizing: border-box;
+             position: relative; /* To position result text inside if needed */
+             /* Height will be determined by flex-grow in main, but we need a minimum */
+             min-height: 300px; /* Minimum height for canvas area */
+        }
+
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Controls & Results */
+        #controls {
+            flex-shrink: 0; /* Prevent controls from shrinking */
+            /* Height will be determined by content, flex-shrink prevents taking excess space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 0;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+
+        #controls > div {
+            margin-bottom: 8px; /* Increased spacing between control rows */
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            justify-content: center;
+        }
+
+        #controls label {
+             margin-right: 5px;
+        }
+
+        #controls input[type="number"] {
+            font-family: monospace;
+            width: 50px;
+            padding: 4px;
+            box-sizing: border-box;
+            border: 1px solid black;
+        }
+
+        #controls button {
+            font-family: monospace;
+            margin-left: 10px;
+            padding: 5px 10px;
+            cursor: pointer;
+            border: 1px solid black;
+            background-color: white;
+            color: black;
+        }
+
+         #controls button:hover {
+             background-color: #f0f0f0;
+         }
+
+        #controls input[type="checkbox"] {
+             margin-left: 5px;
+        }
+
+        #result {
+            margin-top: 5px;
+            font-weight: bold;
+            min-height: 1.2em; /* Reserve space to prevent layout shift */
+        }
+
+
+        /* Footer */
+        footer {
+            flex-shrink: 0; /* Prevent footer from shrinking */
+            height: 5vh; /* Fixed height for footer */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8em;
+            border-top: 1px solid black;
+        }
+
+        footer a {
+            color: inherit; /* Inherit text color */
+            text-decoration: none; /* No underline */
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>K-Nearest Neighbors (KNN) Visualizer</h1>
+        <p>Classifies a clicked point based on its 'k' nearest neighbors among existing data.</p>
+    </header>
+
+    <main>
+        <div id="canvas-container">
+            <!-- Canvas will be sized by CSS, JS will handle drawing dimensions -->
+            <canvas id="knnCanvas"></canvas>
+        </div>
+        <div id="controls">
+            <div>
+                <label for="kValue">Value of k:</label>
+                <input type="number" id="kValue" value="3" min="1">
+                <button id="randomizeButton">Randomize Data</button>
+                <button id="resetButton">Reset</button>
+            </div>
+             <div>
+                <label for="autoDemoToggle">Auto Demo:</label>
+                <input type="checkbox" id="autoDemoToggle">
+            </div>
+            <div id="result">Click on the canvas to classify a new point.</div>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kInput = document.getElementById('kValue');
+        const resetButton = document.getElementById('resetButton');
+        const randomizeButton = document.getElementById('randomizeButton');
+        const autoDemoToggle = document.getElementById('autoDemoToggle');
+        const resultDiv = document.getElementById('result');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        let dataPoints = []; // Array of {x, y, class, color}
+        let newPoint = null; // {x, y} of the clicked point
+        const pointRadius = 5;
+        let autoDemoIntervalId = null;
+        const autoDemoIntervalTime = 2000; // milliseconds
+
+        // Define sample data points (x, y in canvas coordinates, and class/color)
+        function createSampleData(numPointsPerClass = 30) {
+             dataPoints = []; // Clear existing points
+
+             const colors = ['#E74C3C', '#3498DB', '#2ECC71', '#F1C40F']; // Red, Blue, Green, Yellow
+             const classes = ['A', 'B', 'C', 'D'].slice(0, colors.length); // Match classes to colors
+             const numClasses = classes.length;
+
+             // Create clustered data for each class
+             for (let i = 0; i < numClasses; i++) {
+                 const className = classes[i];
+                 const classColor = colors[i];
+
+                 // Simple clustering strategy: divide canvas width by number of classes
+                 const clusterX = (canvas.width / (numClasses + 1)) * (i + 1);
+                 const clusterY = canvas.height / 2;
+                 const clusterSpreadX = canvas.width / (numClasses * 5);
+                 const clusterSpreadY = canvas.height / 4;
+
+
+                 for(let j = 0; j < numPointsPerClass; j++) {
+                     // Add random offset from cluster center
+                     const x = clusterX + (Math.random() - 0.5) * clusterSpreadX * 2;
+                     const y = clusterY + (Math.random() - 0.5) * clusterSpreadY * 2;
+
+                     // Ensure points are within canvas bounds
+                     dataPoints.push({
+                         x: Math.max(pointRadius, Math.min(canvas.width - pointRadius, x)),
+                         y: Math.max(pointRadius, Math.min(canvas.height - pointRadius, y)),
+                         class: className,
+                         color: classColor
+                     });
+                 }
+             }
+        }
+
+        // Resize canvas to fill its container while maintaining crisp drawing
+        function resizeCanvas() {
+            const rect = canvasContainer.getBoundingClientRect();
+            // Only resize if the container size has significantly changed to avoid unnecessary redraws
+            // This check is minimalist and might not be perfect, but prevents loops if size fluctuates slightly.
+            // For a single-screen app with fixed vh/vw layout, resize should be rare after initial load.
+            if (canvas.width !== rect.width || canvas.height !== rect.height) {
+                 canvas.width = rect.width;
+                 canvas.height = rect.height;
+                 // Regenerate data based on new canvas size only if canvas size actually changed
+                 createSampleData();
+                 draw();
+            } else {
+                // If size didn't change, just redraw in case data/point changed
+                draw();
+            }
+        }
+
+        // Draw all elements on the canvas
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw existing data points
+            dataPoints.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2, false);
+                ctx.fillStyle = point.color;
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#000';
+                ctx.stroke();
+            });
+
+            // If a new point exists, draw it and its neighbors/lines
+            if (newPoint) {
+                // Find k nearest neighbors
+                let k = parseInt(kInput.value) || 1;
+                // Ensure k is valid
+                k = Math.max(1, Math.min(k, dataPoints.length || 1)); // k must be >= 1 and <= number of points
+                kInput.value = k; // Update input value if it was invalid
+
+                // Calculate distances
+                const distances = dataPoints.map(point => {
+                    const dist = Math.sqrt(Math.pow(point.x - newPoint.x, 2) + Math.pow(point.y - newPoint.y, 2));
+                    return { point: point, dist: dist };
+                });
+
+                // Sort by distance and get top k
+                distances.sort((a, b) => a.dist - b.dist);
+                const neighbors = distances.slice(0, k);
+
+                // Determine majority class
+                const classCounts = {};
+                neighbors.forEach(neighborInfo => {
+                    const cls = neighborInfo.point.class;
+                    classCounts[cls] = (classCounts[cls] || 0) + 1;
+                });
+
+                let predictedClass = null;
+                let maxCount = -1;
+                let predictedColor = '#888'; // Default grey if no neighbors (shouldn't happen with k>=1)
+
+                // Find class with max count
+                // Iterate over sorted keys for consistent tie-breaking (though map iteration order isn't guaranteed)
+                // A more robust tie-breaker isn't strictly required for this visualizer.
+                for (const cls in classCounts) {
+                    if (classCounts[cls] > maxCount) {
+                        maxCount = classCounts[cls];
+                        predictedClass = cls;
+                        // Find the color associated with this class
+                        const samplePoint = dataPoints.find(p => p.class === predictedClass);
+                        if (samplePoint) {
+                             predictedColor = samplePoint.color;
+                        }
+                    }
+                }
+
+                // Draw lines to k neighbors
+                ctx.strokeStyle = '#cccccc'; // Light grey lines
+                ctx.lineWidth = 1;
+                neighbors.forEach(neighborInfo => {
+                    ctx.beginPath();
+                    ctx.moveTo(newPoint.x, newPoint.y);
+                    ctx.lineTo(neighborInfo.point.x, neighborInfo.point.y);
+                    ctx.stroke();
+                });
+
+                 // Highlight neighbors with a border
+                 ctx.strokeStyle = '#888'; // Grey highlight border
+                 ctx.lineWidth = 2;
+                 neighbors.forEach(neighborInfo => {
+                     ctx.beginPath();
+                     ctx.arc(neighborInfo.point.x, neighborInfo.point.y, pointRadius + 1, 0, Math.PI * 2);
+                     ctx.stroke();
+                 });
+
+
+                // Draw the new point with predicted color
+                ctx.beginPath();
+                ctx.arc(newPoint.x, newPoint.y, pointRadius + 2, 0, Math.PI * 2, false); // Slightly larger outer ring
+                ctx.strokeStyle = '#000'; // Black ring
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(newPoint.x, newPoint.y, pointRadius, 0, Math.PI * 2, false);
+                ctx.fillStyle = predictedColor; // Fill with predicted class color
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#000';
+                ctx.stroke();
+
+
+                // Update result text
+                if (predictedClass !== null) {
+                     resultDiv.textContent = `Predicted Class: ${predictedClass} (k=${k})`;
+                } else {
+                     resultDiv.textContent = `Could not classify (k=${k}, no data points).`;
+                }
+
+            } else {
+                // If no new point, reset result text
+                 resultDiv.textContent = "Click on the canvas to classify a new point.";
+            }
+        }
+
+        // Handle canvas click
+        canvas.addEventListener('click', function(event) {
+            // Stop auto-demo if user interacts
+            if (autoDemoToggle.checked) {
+                 autoDemoToggle.checked = false;
+                 stopAutoDemo();
+            }
+
+            // Get click coordinates relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            newPoint = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+            draw(); // Redraw with the new point and classification
+        });
+
+        // Handle k value change (triggers redraw if a point is already placed)
+        kInput.addEventListener('change', function() {
+             // Input type number handles min="1", but let's re-validate on change
+             let k = parseInt(kInput.value);
+             if (isNaN(k) || k < 1) {
+                 k = 1;
+             }
+             if (k > dataPoints.length && dataPoints.length > 0) {
+                  k = dataPoints.length;
+             } else if (dataPoints.length === 0) {
+                  k = 1; // Or 0? Let's stick to 1 as min.
+             }
+             kInput.value = k;
+
+             if (newPoint) { // Only redraw classification if a point is already clicked
+                 draw();
+             } else {
+                 // Update result text to reflect k value change even without a point
+                 resultDiv.textContent = `Value of k set to ${k}. Click on the canvas to classify.`;
+             }
+        });
+
+        // Handle reset button
+        resetButton.addEventListener('click', function() {
+            newPoint = null; // Remove the new point
+            stopAutoDemo(); // Stop auto-demo on reset
+            autoDemoToggle.checked = false;
+            draw(); // Redraw without the new point
+        });
+
+        // Handle randomize button
+        randomizeButton.addEventListener('click', function() {
+            createSampleData(); // Create new random data
+            newPoint = null; // Remove the new point
+            stopAutoDemo(); // Stop auto-demo on randomize
+            autoDemoToggle.checked = false;
+            draw(); // Redraw with new data
+        });
+
+        // Auto Demo Logic
+        function startAutoDemo() {
+             if (autoDemoIntervalId === null) {
+                 autoDemoIntervalId = setInterval(() => {
+                     const x = Math.random() * canvas.width;
+                     const y = Math.random() * canvas.height;
+                     newPoint = { x, y };
+                     draw();
+                 }, autoDemoIntervalTime);
+             }
+        }
+
+        function stopAutoDemo() {
+             if (autoDemoIntervalId !== null) {
+                 clearInterval(autoDemoIntervalId);
+                 autoDemoIntervalId = null;
+             }
+        }
+
+        autoDemoToggle.addEventListener('change', function() {
+            if (this.checked) {
+                startAutoDemo();
+            } else {
+                stopAutoDemo();
+            }
+        });
+
+
+        // Initial setup
+        // We need to size the canvas initially based on its container's computed style
+        // after the DOM is ready and CSS has been applied.
+        // window.addEventListener('load', resizeCanvas); // Use load to ensure CSS is applied
+        // For a single-file app, just calling it at the end of the script is usually sufficient
+        // as the DOM elements and CSS should be parsed by then.
+
+        // Using requestAnimationFrame to ensure layout is settled after script execution
+        // before getting canvas container dimensions.
+        requestAnimationFrame(() => {
+             resizeCanvas(); // Set canvas size and draw initial data
+        });
+
+
+    </script>
+
+</body>
+</html>

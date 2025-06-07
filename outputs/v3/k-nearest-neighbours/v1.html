@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KNN Visualizer (k=3)</title>
+    <style>
+        /* --- Minimalist Styles --- */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            color: #000;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Fixed viewport height */
+            width: 100vw;  /* Fixed viewport width */
+            overflow: hidden; /* Disable scrolling */
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        header {
+            padding: 1vh 2vw;
+            text-align: center;
+            flex-shrink: 0; /* Prevent header from shrinking */
+            border-bottom: 1px solid #000;
+            box-sizing: border-box;
+        }
+
+        main {
+            flex-grow: 1; /* Main area takes remaining space */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center items horizontally */
+            justify-content: center; /* Center items vertically */
+            padding: 1vh 2vw;
+            box-sizing: border-box;
+            overflow: hidden; /* Ensure content doesn't overflow main */
+        }
+
+         .controls {
+            padding: 1vh 0; /* Padding only top/bottom within main */
+            text-align: center;
+            flex-shrink: 0;
+            width: 100%; /* Take full width of main */
+            box-sizing: border-box;
+         }
+
+        .instructions {
+            margin-bottom: 1vh;
+            min-height: 1.5em; /* Reserve space for text updates */
+        }
+
+        .controls button {
+            margin: 0 0.5vw;
+            padding: 0.5vh 1vw;
+            font-family: monospace;
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background-color: #f0f0f0;
+        }
+
+
+        canvas {
+            border: 1px solid #000;
+            flex-grow: 1; /* Canvas expands to fill remaining space in main */
+            width: 100%; /* Canvas width fits container */
+            /* Height is handled by flex-grow and container height */
+            display: block; /* Remove extra space below canvas */
+            box-sizing: border-box;
+        }
+
+        footer {
+            padding: 1vh 2vw;
+            text-align: center;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+            border-top: 1px solid #000;
+            box-sizing: border-box;
+        }
+
+        footer a {
+            color: #000;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>KNN Visualizer (k=3)</h1>
+    </header>
+
+    <main>
+         <div class="controls">
+            <div id="instructions" class="instructions">Click anywhere on the canvas to classify a new point based on its 3 nearest neighbors.</div>
+            <button id="randomizeBtn">Randomize Data</button>
+            <button id="resetBtn">Reset View</button>
+            <button id="autoDemoBtn">Start Auto Demo</button>
+         </div>
+        <canvas id="knnCanvas"></canvas>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- KNN Logic and Visualization ---
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const instructionsDiv = document.getElementById('instructions');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+
+        const K = 3; // We fix K for this simple visualization
+
+        // Sample data points (class 1: red, class 2: blue)
+        // Using relative coordinates (0-100 scale) for responsiveness
+        const originalDataPoints = [
+            { x: 20, y: 30, class: 'red' },
+            { x: 25, y: 40, class: 'red' },
+            { x: 30, y: 35, class: 'red' },
+            { x: 15, y: 50, class: 'red' },
+            { x: 22, y: 55, class: 'red' },
+
+            { x: 70, y: 60, class: 'blue' },
+            { x: 75, y: 70, class: 'blue' },
+            { x: 80, y: 65, class: 'blue' },
+            { x: 65, y: 50, class: 'blue' },
+            { x: 72, y: 55, class: 'blue' },
+
+            { x: 45, y: 45, class: 'red' }, // A point closer to the boundary
+            { x: 55, y: 55, class: 'blue' }  // A point closer to the boundary
+        ];
+
+        let dataPoints = [...originalDataPoints]; // Active data points
+        let lastClassifiedPointData = null; // Store details of the last classified point for redraw
+
+        // --- Helper Functions ---
+
+        // Scale relative coordinates (0-100) to canvas pixel coordinates
+        function scaleX(x) { return (x / 100) * canvas.width; }
+        function scaleY(y) { return (y / 100) * canvas.height; }
+        // Scale pixel coordinates back to relative (0-100)
+        function unscaleX(x) { return (x / canvas.width) * 100; }
+        function unscaleY(y) { return (y / canvas.height) * 100; }
+
+        // Calculate Euclidean distance between two points (using relative coords)
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        // Draw a single point
+        function drawPoint(point, color, size = 5, outline = null) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(scaleX(point.x), scaleY(point.y), size, 0, Math.PI * 2);
+            ctx.fill();
+            if (outline) {
+                ctx.strokeStyle = outline;
+                ctx.lineWidth = 1.5; /* Thicker outline */
+                ctx.stroke();
+            }
+        }
+
+        // Draw all initial data points
+        function drawDataPoints() {
+            dataPoints.forEach(point => {
+                drawPoint(point, point.class, 5); // Base size for training points
+            });
+        }
+
+        // --- Drawing State ---
+        function drawCanvasState() {
+             // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw initial points
+            drawDataPoints();
+
+            // Redraw last classified point and its neighbors if data exists
+            if (lastClassifiedPointData) {
+                const { newPoint, neighbors, resultClass } = lastClassifiedPointData;
+
+                // Draw lines to neighbors first
+                ctx.strokeStyle = '#ccc'; // Light gray lines
+                ctx.lineWidth = 1;
+                neighbors.forEach(neighbor => {
+                    ctx.beginPath();
+                    ctx.moveTo(scaleX(newPoint.x), scaleY(newPoint.y));
+                    ctx.lineTo(scaleX(neighbor.point.x), scaleY(neighbor.point.y));
+                    ctx.stroke();
+                });
+
+                // Highlight neighbors (draw them again with outline)
+                 neighbors.forEach(neighbor => {
+                    drawPoint(neighbor.point, neighbor.point.class, 6, '#888'); /* Subtle gray outline */
+                });
+
+                // Draw the new point with its determined class color and outline
+                drawPoint(newPoint, resultClass, 7, '#000'); /* Larger size, black outline */
+
+                 // Add text label for the result
+                ctx.fillStyle = '#000';
+                ctx.font = '12px monospace';
+                const textX = scaleX(newPoint.x) + 10;
+                const textY = scaleY(newPoint.y) - 10;
+                // Ensure text is within bounds if needed, but simple placement is fine for minimalist
+                ctx.fillText(`Class: ${resultClass}`, textX, textY);
+
+                // Update instructions text
+                 instructionsDiv.textContent = `Point classified as: ${resultClass} (based on ${K} nearest neighbors).`;
+
+            } else {
+                 // If no point classified, show default instructions
+                 instructionsDiv.textContent = 'Click anywhere on the canvas to classify a new point based on its 3 nearest neighbors.';
+            }
+        }
+
+
+        // --- KNN Algorithm Steps ---
+
+        function classifyPoint(newPoint) {
+            if (dataPoints.length === 0) {
+                 instructionsDiv.textContent = 'Add data points first (Randomize)';
+                 return;
+            }
+
+            // 1. Calculate distances to all data points
+            const distances = dataPoints.map(point => ({
+                point: point,
+                distance: distance(newPoint, point)
+            }));
+
+            // 2. Sort by distance
+            distances.sort((a, b) => a.distance - b.distance);
+
+            // 3. Get the K nearest neighbors
+            const nearestNeighbors = distances.slice(0, K);
+
+            // 4. Determine majority class
+            const classCounts = {};
+            nearestNeighbors.forEach(item => {
+                const className = item.point.class;
+                classCounts[className] = (classCounts[className] || 0) + 1;
+            });
+
+            let majorityClass = null;
+            let maxCount = 0;
+            // Find the class with the maximum count
+            for (const className in classCounts) {
+                if (classCounts[className] > maxCount) {
+                    maxCount = classCounts[className];
+                    majorityClass = className;
+                }
+            }
+
+             // Handle ties or case with less than K neighbors
+            if (!majorityClass) {
+                 // If less than K points available, or exact tie, use the class of the closest point
+                 majorityClass = nearestNeighbors[0]?.point.class || 'black'; // Default to black if somehow no neighbors found
+            } else {
+                 // Refine tie handling: If multiple classes have maxCount, pick one consistently (e.g., first encountered)
+                 const tiedClasses = Object.keys(classCounts).filter(className => classCounts[className] === maxCount);
+                 if (tiedClasses.length > 1) {
+                     // Example simple tie break: pick the class of the absolute closest neighbor among tied classes
+                     for(const neighbor of nearestNeighbors) {
+                         if(tiedClasses.includes(neighbor.point.class)) {
+                             majorityClass = neighbor.point.class;
+                             break; // Found the closest among tied classes
+                         }
+                     }
+                 }
+            }
+
+
+            // 5. Visualize the process and result
+            lastClassifiedPointData = {
+                newPoint: newPoint,
+                neighbors: nearestNeighbors,
+                resultClass: majorityClass
+            };
+            drawCanvasState();
+        }
+
+
+        // --- Data Generation Function ---
+        function generateRandomData(minPoints, maxPoints) {
+            const numPoints = Math.floor(Math.random() * (maxPoints - minPoints + 1)) + minPoints;
+            const newData = [];
+            for (let i = 0; i < numPoints; i++) {
+                newData.push({
+                    x: Math.random() * 95 + 2.5, // Random x (leave small margin)
+                    y: Math.random() * 95 + 2.5, // Random y (leave small margin)
+                    class: Math.random() < 0.5 ? 'red' : 'blue' // Random class
+                });
+            }
+            return newData;
+        }
+
+
+        // --- Event Listener and Initialization ---
+
+        // Resize canvas function
+        function resizeCanvas() {
+            // Set canvas size to match its container's computed size
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            drawCanvasState(); // Redraw state on resize
+        }
+
+        // Handle canvas click
+        canvas.addEventListener('click', function(event) {
+             // Stop auto-demo if running
+             stopAutoDemo();
+
+            // Get click position relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            // Convert pixel coordinates to relative coordinates for KNN logic
+            const newPointRelative = {
+                x: unscaleX(clickX),
+                y: unscaleY(clickY)
+            };
+
+            classifyPoint(newPointRelative);
+        });
+
+        // --- Button Event Listeners ---
+
+        randomizeBtn.addEventListener('click', function() {
+            stopAutoDemo(); // Stop auto-demo
+            dataPoints = generateRandomData(10, 25); // Generate 10-25 random points
+            lastClassifiedPointData = null; // Clear last classification
+            drawCanvasState(); // Redraw with new data
+        });
+
+        resetBtn.addEventListener('click', function() {
+            stopAutoDemo(); // Stop auto-demo
+            dataPoints = [...originalDataPoints]; // Restore original data
+            lastClassifiedPointData = null; // Clear last classification
+            drawCanvasState(); // Redraw with original data
+        });
+
+        let autoDemoInterval = null;
+        function startAutoDemo() {
+             if (autoDemoInterval) return; // Already running
+             autoDemoBtn.textContent = 'Stop Auto Demo';
+             instructionsDiv.textContent = 'Running auto-demo... Click canvas or button to stop.';
+             autoDemoInterval = setInterval(() => {
+                 const randomX = Math.random() * 95 + 2.5; // Relative coords 0-100 with margin
+                 const randomY = Math.random() * 95 + 2.5;
+                 classifyPoint({ x: randomX, y: randomY });
+             }, 1000); // Classify a new point every 1 second
+        }
+
+        function stopAutoDemo() {
+            if (autoDemoInterval) {
+                clearInterval(autoDemoInterval);
+                autoDemoInterval = null;
+                autoDemoBtn.textContent = 'Start Auto Demo';
+                 // instructions text will be updated by drawCanvasState or click handler
+            }
+        }
+
+        autoDemoBtn.addEventListener('click', function() {
+            if (autoDemoInterval) {
+                stopAutoDemo();
+            } else {
+                startAutoDemo();
+            }
+        });
+
+
+        // Initial setup
+        window.addEventListener('load', resizeCanvas); // Set size and draw on load
+        window.addEventListener('resize', resizeCanvas); // Handle potential resizes
+
+    </script>
+
+</body>
+</html>

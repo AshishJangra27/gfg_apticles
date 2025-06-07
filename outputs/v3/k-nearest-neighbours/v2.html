@@ -1,0 +1,559 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            color: black;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #header {
+            text-align: center;
+            padding: 1vh 0;
+            height: 8vh;
+            box-sizing: border-box;
+            border-bottom: 1px solid black;
+            font-weight: bold;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #main-content {
+            flex-grow: 1; /* Take up remaining space */
+            display: flex;
+            /* Height calculation might be complex due to border-box on header/footer */
+            /* Let flex-grow handle the height */
+            width: 100vw;
+        }
+
+        #controls {
+            width: 25vw; /* Control width */
+            padding: 2vh 1vw;
+            box-sizing: border-box;
+            border-right: 1px solid black;
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+            flex-shrink: 0; /* Prevent shrinking */
+            overflow-y: auto; /* Allow scrolling if controls grow tall */
+        }
+
+        #visualization {
+            width: 75vw; /* Visualization width */
+            flex-grow: 1; /* Take remaining width */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Canvas height is controlled by parent */
+        }
+
+        #knnCanvas {
+            border: 1px solid black;
+            background-color: white;
+            width: 98%; /* Adjust for padding/border within viz container */
+            height: 98%;
+            box-sizing: border-box;
+            cursor: default; /* Default cursor initially */
+        }
+
+        #footer {
+            text-align: center;
+            padding: 1vh 0;
+            height: 8vh;
+            box-sizing: border-box;
+            border-top: 1px solid black;
+            font-size: 0.9em;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #footer a {
+            color: inherit;
+            text-decoration: none;
+            margin: 0 0.5em;
+        }
+
+        #footer a:hover {
+            text-decoration: underline;
+        }
+
+        .control-group {
+            margin-bottom: 1.5vh;
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+        }
+
+        .control-group label {
+            /* display: block; */
+            margin-bottom: 0; /* Adjust margin for inline flex */
+        }
+
+         .control-group label[for="autoDemoToggle"] {
+             flex-grow: 1; /* Push checkbox to the right */
+         }
+
+
+        .control-group input[type="number"] {
+            width: 5vw; /* Fixed width for input */
+            font-family: monospace;
+            border: 1px solid black;
+            padding: 0.5vh;
+            box-sizing: border-box;
+        }
+
+        button {
+            font-family: monospace;
+            padding: 0.8vh 1vw;
+            border: 1px solid black;
+            background-color: white;
+            cursor: pointer;
+            margin-bottom: 1vh; /* Add some space below buttons */
+             align-self: flex-start; /* Align button to the start */
+        }
+
+        button:hover {
+            background-color: #f0f0f0; /* Light hover effect */
+        }
+
+        #result {
+            font-weight: bold;
+            margin-top: 2vh;
+            word-break: break-word; /* Prevent overflow on long results */
+        }
+         #result span {
+             font-weight: bold; /* Ensure span color doesn't override boldness */
+         }
+
+         ul {
+             padding-left: 2vw; /* Indent list items */
+             margin-top: 0;
+         }
+         li {
+             margin-bottom: 0.5vh;
+         }
+
+
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        K-Nearest Neighbors (KNN) Visualizer
+    </div>
+
+    <div id="main-content">
+        <div id="controls">
+            <p>Drag the <span style="color: green; font-weight: bold;">green point</span> on the right to see how KNN classifies it based on the nearest neighbors.</p>
+
+            <div class="control-group">
+                <label for="kValue">Choose K:</label>
+                <input type="number" id="kValue" value="3" min="1" step="1">
+            </div>
+
+            <p>Classes:</p>
+            <ul>
+                <li style="color: red;">Red Class</li>
+                <li style="color: blue;">Blue Class</li>
+            </ul>
+
+            <button id="randomizeBtn">Randomize Data</button>
+            <button id="resetBtn">Reset</button>
+
+            <div class="control-group">
+                 <label for="autoDemoToggle">Auto Demo:</label>
+                 <input type="checkbox" id="autoDemoToggle">
+            </div>
+
+            <div id="result">
+                Predicted Class: Drag point...
+            </div>
+        </div>
+
+        <div id="visualization">
+            <canvas id="knnCanvas"></canvas>
+        </div>
+    </div>
+
+    <div id="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kInput = document.getElementById('kValue');
+        const resultDiv = document.getElementById('result');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoToggle = document.getElementById('autoDemoToggle');
+
+        // --- Data ---
+        // Simple sample data points with classes (relative coordinates 0-1)
+        const defaultDataPoints = [
+            { x: 0.2, y: 0.3, class: 'red' },
+            { x: 0.4, y: 0.2, class: 'red' },
+            { x: 0.3, y: 0.5, class: 'red' },
+            { x: 0.5, y: 0.4, class: 'red' },
+            { x: 0.6, y: 0.7, class: 'blue' },
+            { x: 0.8, y: 0.6, class: 'blue' },
+            { x: 0.7, y: 0.8, class: 'blue' },
+            { x: 0.9, y: 0.9, class: 'blue' }
+        ];
+         const defaultUnknownPoint = { x: 0.5, y: 0.5, class: null };
+
+        let initialDataPoints = JSON.parse(JSON.stringify(defaultDataPoints));
+        let initialUnknownPoint = JSON.parse(JSON.stringify(defaultUnknownPoint));
+
+        let dataPoints = JSON.parse(JSON.stringify(initialDataPoints));
+        let unknownPoint = JSON.parse(JSON.stringify(initialUnknownPoint));
+
+        // --- State ---
+        let k = parseInt(kInput.value, 10);
+        let isDragging = false;
+        let autoDemoFrameId = null; // For requestAnimationFrame
+
+        // --- Data Management ---
+        function generateRandomData(count = 25) { // Generate around 25 points by default
+            const newData = [];
+            for (let i = 0; i < count; i++) {
+                newData.push({
+                    x: Math.random(),
+                    y: Math.random(),
+                    class: Math.random() > 0.5 ? 'red' : 'blue'
+                });
+            }
+            const newUnknown = { x: Math.random(), y: Math.random(), class: null };
+
+            // Update current and initial data
+            dataPoints = newData;
+            unknownPoint = newUnknown;
+            initialDataPoints = JSON.parse(JSON.stringify(dataPoints));
+            initialUnknownPoint = JSON.parse(JSON.stringify(unknownPoint));
+
+            // Update K max and clamp K if necessary
+            kInput.max = dataPoints.length;
+            if (k > dataPoints.length) {
+                 k = dataPoints.length;
+                 kInput.value = k;
+            }
+            if (k < 1 && dataPoints.length > 0) { // Should not happen with min="1" but for safety
+                 k = 1;
+                 kInput.value = k;
+            } else if (dataPoints.length === 0) { // Handle case with no data points
+                 k = 1; // Or 0, but 1 might be better default if points are added later
+                 kInput.value = k;
+                 kInput.max = 1; // Can't have K > 0 with 0 points, but prevent setting invalid K
+            }
+
+        }
+
+        function resetData() {
+            dataPoints = JSON.parse(JSON.stringify(initialDataPoints));
+            unknownPoint = JSON.parse(JSON.stringify(initialUnknownPoint));
+
+            // Update K max and clamp K if necessary
+            kInput.max = dataPoints.length;
+            if (k > dataPoints.length) {
+                 k = dataPoints.length;
+                 kInput.value = k;
+            }
+             if (k < 1 && dataPoints.length > 0) {
+                 k = 1;
+                 kInput.value = k;
+            } else if (dataPoints.length === 0) {
+                 k = 1;
+                 kInput.value = k;
+                 kInput.max = 1;
+            }
+        }
+
+        // --- Drawing ---
+        function draw() {
+            // Get current canvas dimensions (they adapt to parent div)
+            const canvasWidth = canvas.offsetWidth;
+            const canvasHeight = canvas.offsetHeight;
+            canvas.width = canvasWidth; // Set drawing buffer size
+            canvas.height = canvasHeight;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // Draw training points
+            dataPoints.forEach(point => {
+                const pointX = point.x * canvasWidth;
+                const pointY = point.y * canvasHeight;
+                ctx.fillStyle = point.class; // Use class name as color (e.g., 'red', 'blue')
+                ctx.beginPath();
+                ctx.arc(pointX, pointY, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'black'; // Outline
+                 ctx.lineWidth = 1;
+                 ctx.stroke();
+            });
+
+            // Draw unknown point
+            const unknownX = unknownPoint.x * canvasWidth;
+            const unknownY = unknownPoint.y * canvasHeight;
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(unknownX, unknownY, 7, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = 'white'; // Fill with white to make it stand out
+            ctx.fill();
+
+
+            // --- KNN Logic ---
+             let predictedClass = 'Undetermined'; // Default state
+             if (dataPoints.length > 0 && k >= 1) {
+                 // 1. Calculate distances (using pixel coordinates for accuracy in distance comparison)
+                 const distances = dataPoints.map(point => {
+                     const dx = (point.x * canvasWidth) - unknownX;
+                     const dy = (point.y * canvasHeight) - unknownY;
+                     return {
+                         point: point,
+                         distance: Math.sqrt(dx * dx + dy * dy)
+                     };
+                 });
+
+                 // 2. Sort by distance
+                 distances.sort((a, b) => a.distance - b.distance);
+
+                 // 3. Get K nearest neighbors (ensure K doesn't exceed available points)
+                 const kNearest = distances.slice(0, Math.min(k, dataPoints.length));
+
+                 // 4. Draw lines to K nearest neighbors
+                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)'; // Semi-transparent lines
+                 ctx.lineWidth = 1;
+                 kNearest.forEach(neighborInfo => {
+                     const neighbor = neighborInfo.point;
+                     const neighborX = neighbor.x * canvasWidth;
+                     const neighborY = neighbor.y * canvasHeight;
+                     ctx.beginPath();
+                     ctx.moveTo(unknownX, unknownY);
+                     ctx.lineTo(neighborX, neighborY);
+                     ctx.stroke();
+                 });
+
+                 // 5. Determine majority class
+                 const classCounts = {};
+                 kNearest.forEach(neighborInfo => {
+                     const className = neighborInfo.point.class;
+                     classCounts[className] = (classCounts[className] || 0) + 1;
+                 });
+
+                 let maxCount = 0;
+                 let tieClasses = []; // To handle ties
+
+                 // Find the class(es) with the maximum count
+                 for (const className in classCounts) {
+                     if (classCounts[className] > maxCount) {
+                         maxCount = classCounts[className];
+                         predictedClass = className; // Set the current prediction
+                         tieClasses = [className]; // Start a new tie list
+                     } else if (classCounts[className] === maxCount) {
+                         tieClasses.push(className); // Add to tie list
+                     }
+                 }
+
+                  // Simple tie-breaking: If multiple classes have the max count,
+                  // the first one encountered in the loop (or a predefined order) is used.
+                  // The loop naturally picks the first encountered `predictedClass = className`.
+                  // We can optionally display a tie message if needed.
+                  if (tieClasses.length > 1) {
+                       // predictedClass is already set to one of the tied classes
+                       // Optional: Add specific handling or display message for ties
+                       // For simplicity, we just report one of the tied classes.
+                  }
+
+             } else {
+                  predictedClass = 'No data / Invalid K';
+             }
+
+
+            // 6. Display result
+            resultDiv.innerHTML = `Predicted Class: <span style="color: ${predictedClass !== 'Undetermined' && predictedClass !== 'No data / Invalid K' ? predictedClass : 'black'}; font-weight: bold;">${predictedClass.toUpperCase()}</span>`;
+        }
+
+        // --- Event Handlers ---
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+
+        // Check if mouse is over the unknown point with a small tolerance
+        function isOverUnknownPoint(pos) {
+            if (!canvas.offsetWidth || !canvas.offsetHeight) return false; // Avoid division by zero
+            const unknownX = unknownPoint.x * canvas.offsetWidth;
+            const unknownY = unknownPoint.y * canvas.offsetHeight;
+            const distance = Math.sqrt(Math.pow(pos.x - unknownX, 2) + Math.pow(pos.y - unknownY, 2));
+            return distance < 10; // Radius of 10 pixels for hit detection
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            if (isOverUnknownPoint(pos)) {
+                isDragging = true;
+                canvas.style.cursor = 'grabbing';
+                stopAutoDemo(); // Stop auto-demo on drag start
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+             if (isDragging) {
+                // Update unknown point position (clamped to canvas bounds)
+                unknownPoint.x = Math.max(0, Math.min(pos.x / canvas.offsetWidth, 1));
+                unknownPoint.y = Math.max(0, Math.min(pos.y / canvas.offsetHeight, 1));
+                draw(); // Redraw on move
+            } else if (!isDragging && isOverUnknownPoint(pos)) { // Only show grab cursor if not dragging
+                 canvas.style.cursor = 'grab';
+             } else if (!isDragging) {
+                 canvas.style.cursor = 'default';
+             }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            // Set cursor back to default only if not over the point anymore (handled by mousemove)
+            // canvas.style.cursor = 'default';
+        });
+
+        // Handle mouseleave to stop dragging and reset cursor
+        canvas.addEventListener('mouseleave', () => {
+             isDragging = false;
+             canvas.style.cursor = 'default';
+        });
+
+
+        kInput.addEventListener('change', () => {
+            const newK = parseInt(kInput.value, 10);
+             // Validate K: must be number, >= 1, and <= dataPoints.length
+            if (!isNaN(newK) && newK >= 1 && newK <= dataPoints.length) {
+                k = newK;
+                draw();
+            } else {
+                // Revert to current valid K if input is invalid
+                kInput.value = k;
+            }
+        });
+
+        randomizeBtn.addEventListener('click', () => {
+            stopAutoDemo();
+            generateRandomData();
+            draw();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            stopAutoDemo();
+            resetData();
+            draw();
+        });
+
+        // --- Auto Demo ---
+        let autoDemoSpeed = 0.003; // Relative step size per frame
+        let autoDemoDirectionX = 1; // 1 or -1
+        let autoDemoDirectionY = 1; // 1 or -1
+
+        function autoDemoStep() {
+            // Move in a direction and bounce off walls
+            let newX = unknownPoint.x + autoDemoDirectionX * autoDemoSpeed;
+            let newY = unknownPoint.y + autoDemoDirectionY * autoDemoSpeed;
+
+            let bouncedX = false;
+            let bouncedY = false;
+
+            if (newX > 1) {
+                newX = 1 - (newX - 1); // Bounce back from right edge
+                autoDemoDirectionX *= -1;
+                bouncedX = true;
+            } else if (newX < 0) {
+                newX = -newX; // Bounce back from left edge
+                autoDemoDirectionX *= -1;
+                 bouncedX = true;
+            }
+
+            if (newY > 1) {
+                newY = 1 - (newY - 1); // Bounce back from bottom edge
+                autoDemoDirectionY *= -1;
+                 bouncedY = true;
+            } else if (newY < 0) {
+                newY = -newY; // Bounce back from top edge
+                autoDemoDirectionY *= -1;
+                 bouncedY = true;
+            }
+
+            // Add a little random jitter to prevent perfect linear movement
+            if (!bouncedX) newX += (Math.random() - 0.5) * autoDemoSpeed * 0.5;
+            if (!bouncedY) newY += (Math.random() - 0.5) * autoDemoSpeed * 0.5;
+
+
+             // Ensure point stays within bounds after jittering
+             unknownPoint.x = Math.max(0, Math.min(newX, 1));
+             unknownPoint.y = Math.max(0, Math.min(newY, 1));
+
+
+            draw();
+            autoDemoFrameId = requestAnimationFrame(autoDemoStep);
+        }
+
+        function startAutoDemo() {
+            if (!autoDemoFrameId) {
+                autoDemoDirectionX = Math.random() > 0.5 ? 1 : -1; // Random initial direction
+                autoDemoDirectionY = Math.random() > 0.5 ? 1 : -1;
+                autoDemoStep();
+                autoDemoToggle.checked = true; // Ensure checkbox is checked
+            }
+        }
+
+        function stopAutoDemo() {
+            if (autoDemoFrameId) {
+                cancelAnimationFrame(autoDemoFrameId);
+                autoDemoFrameId = null;
+                 autoDemoToggle.checked = false; // Ensure checkbox is unchecked
+            }
+        }
+
+        autoDemoToggle.addEventListener('change', () => {
+            if (autoDemoToggle.checked) {
+                startAutoDemo();
+            } else {
+                stopAutoDemo();
+            }
+        });
+
+
+        // Ensure canvas resizes and redraws if the window is resized
+        window.addEventListener('resize', draw);
+
+
+        // --- Initial Setup ---
+        // Set initial max K based on initial data
+        kInput.max = dataPoints.length > 0 ? dataPoints.length : 1;
+         // Clamp K if initial value is invalid
+         if (k > dataPoints.length && dataPoints.length > 0) k = dataPoints.length;
+         if (k < 1 && dataPoints.length > 0) k = 1;
+         if (dataPoints.length === 0) k = 1; // Cannot have K > 0 with 0 points, set default
+         kInput.value = k;
+
+        // Initial draw
+        draw();
+
+    </script>
+
+</body>
+</html>

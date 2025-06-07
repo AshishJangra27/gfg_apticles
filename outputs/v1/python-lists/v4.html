@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Lists Visual Learning</title>
+    <style>
+        /* --- Design Specifications --- */
+        /* 1. File Structure: Single HTML, Inline CSS/JS, No external */
+        /* 2. Layout & Viewport: Non-scrollable, fixed, vh/vw, Header/Footer */
+        /* 3. Visual Theme: White, Black, Monospace */
+        /* 4. Interactivity: Click/Hover (if needed), Reset */
+        /* 5. Footer Section: Fixed, Links */
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%; /* Ensure full viewport height */
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex; /* Use flexbox for main layout */
+            flex-direction: column; /* Stack header, main, footer */
+            justify-content: space-between; /* Distribute space */
+            align-items: center; /* Center content horizontally */
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        header {
+            width: 100%; /* Full width */
+            height: 8vh; /* Fixed height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5vh;
+            border-bottom: 1px solid black;
+            box-sizing: border-box; /* Include border in height */
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        main {
+            flex-grow: 1; /* Take available space between header and footer */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically in main */
+            align-items: center;
+            padding: 2vh 1vw; /* Add some padding top/bottom and sides */
+            box-sizing: border-box;
+            text-align: center;
+            overflow: hidden; /* Hide anything that might spill */
+        }
+
+        main p {
+            font-size: 1.8vh;
+            margin-bottom: 3vh;
+            max-width: 90vw; /* Prevent text overflow */
+            word-wrap: break-word; /* Break long words */
+        }
+
+        #list-container {
+            display: flex; /* Layout list items in a row */
+            justify-content: center;
+            align-items: center;
+            min-height: 15vh; /* Ensure visibility even when empty, allocate space */
+            margin-bottom: 3vh;
+            flex-wrap: wrap; /* Allow wrapping if many items */
+            max-width: 95vw;
+            overflow: auto; /* Add scroll if list becomes too wide/tall */
+            box-sizing: border-box;
+            padding: 1vh 0; /* Add padding for potential scrollbar */
+        }
+
+        .list-item {
+            border: 1px solid black;
+            padding: 1.5vh 1.5vw;
+            margin: 0.5vh 0.5vw;
+            font-size: 2vh;
+            cursor: default; /* Indicate interaction is hover/button based, not click */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative; /* Needed for index tooltip */
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent items from shrinking */
+        }
+
+        .list-item:hover {
+            background-color: #eee; /* Light hover effect */
+        }
+
+        .list-item .index-tooltip {
+            position: absolute;
+            bottom: 100%; /* Position above the item */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: black;
+            color: white;
+            padding: 0.5vh 0.8vw;
+            font-size: 1.5vh;
+            white-space: nowrap;
+            opacity: 0; /* Hidden by default */
+            pointer-events: none; /* Don't interfere with hover on item */
+            transition: opacity 0.2s ease-in-out;
+            z-index: 10; /* Ensure tooltip is on top */
+        }
+
+        .list-item:hover .index-tooltip {
+            opacity: 1; /* Show on hover */
+        }
+
+
+        #controls {
+            margin-top: 2vh;
+            display: flex;
+            gap: 1.5vw; /* Space between buttons */
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center;
+        }
+
+        button {
+            font-family: monospace;
+            font-size: 1.8vh;
+            padding: 1vh 1.5vw;
+            border: 1px solid black;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+
+        footer {
+            width: 100%; /* Full width */
+            height: 5vh; /* Fixed height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5vh;
+            border-top: 1px solid black;
+            box-sizing: border-box; /* Include border in height */
+            flex-shrink: 0; /* Prevent footer from shrinking */
+        }
+
+        footer span {
+            margin-right: 1vw;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+         /* Style for empty list message */
+        #list-container p {
+            font-size: 1.8vh;
+            color: #888; /* Light gray for secondary text */
+            margin: 0; /* Override default margin */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Python Lists: Dynamic, Ordered, Mutable</h1>
+    </header>
+
+    <main>
+        <p>
+            Python lists are dynamic, ordered, and mutable collections of items. <br>
+            Hover over items to see their index. Add/Remove items to see how lists change.
+        </p>
+
+        <div id="list-container">
+            <!-- List items will be rendered here by JavaScript -->
+        </div>
+
+        <div id="controls">
+            <button id="addButton">Add Item</button>
+            <button id="removeButton">Remove Last Item</button>
+            <button id="resetButton">Reset Demo</button>
+        </div>
+    </main>
+
+    <footer>
+        <span>Links:</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra-/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Interactivity ---
+
+        const listContainer = document.getElementById('list-container');
+        const addButton = document.getElementById('addButton');
+        const removeButton = document.getElementById('removeButton');
+        const resetButton = document.getElementById('resetButton');
+
+        let myList = []; // Internal representation of the Python list
+
+        // Function to render the list visually
+        function renderList() {
+            listContainer.innerHTML = ''; // Clear current list display
+            if (myList.length === 0) {
+                listContainer.innerHTML = '<p>List is currently empty.</p>';
+                return;
+            }
+
+            myList.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('list-item');
+
+                // Determine how to display the item based on type
+                let displayValue = String(item);
+                if (typeof item === 'string') {
+                    displayValue = `"${item}"`; // Add quotes for strings
+                } else if (item === null) {
+                     displayValue = 'None'; // Python's None
+                } else if (typeof item === 'boolean') {
+                     displayValue = item ? 'True' : 'False'; // Python capitalization
+                } else if (Array.isArray(item)) {
+                     displayValue = `[${item.map(i => {
+                         if (typeof i === 'string') return `"${i}"`;
+                         if (i === null) return 'None';
+                         if (typeof i === 'boolean') return i ? 'True' : 'False';
+                         return String(i);
+                     }).join(', ')}]`; // Simple array representation
+                }
+
+
+                itemDiv.innerHTML = `
+                    <span>${escapeHTML(displayValue)}</span>
+                    <span class="index-tooltip">Index: ${index}</span>
+                `;
+
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        // Helper function to prevent basic XSS in displayed values
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+
+        // Initial list state
+        function initializeList() {
+             // Example items demonstrating different types, ordered nature
+             myList = [10, "hello", 3.14, true, null, [1, "two"], { 'a': 1 }];
+             renderList();
+        }
+
+        // Event Listeners for Controls
+        addButton.addEventListener('click', () => {
+            // Add a new item - varying types to demonstrate versatility
+            const newItemTypes = ["new item", 42, false, "another string", 99.99, null, [9, 8], { 'b': 2 }];
+            const randomItem = newItemTypes[Math.floor(Math.random() * newItemTypes.length)];
+            myList.push(randomItem); // Demonstrates Dynamic (growth) and Mutable (adding)
+            renderList();
+        });
+
+        removeButton.addEventListener('click', () => {
+            if (myList.length > 0) {
+                myList.pop(); // Demonstrates Dynamic (shrinking) and Mutable (removing)
+                renderList();
+            } else {
+                // Optional: Provide feedback if trying to remove from empty list
+                // alert("List is already empty!");
+            }
+        });
+
+        resetButton.addEventListener('click', () => {
+            initializeList(); // Reset to initial state
+        });
+
+        // Initialize the list on page load
+        initializeList();
+
+    </script>
+
+</body>
+</html>
