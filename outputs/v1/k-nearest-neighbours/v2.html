@@ -1,0 +1,1214 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        /* --- Global Styles --- */
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: #000;
+            color: #0f0; /* Default neon green */
+            font-family: 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Fixed viewport height */
+            width: 100vw; /* Fixed viewport width */
+            cursor: crosshair; /* Default cursor */
+            user-select: none; /* Prevent text selection */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* --- Layout --- */
+        header {
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5vh;
+            text-transform: uppercase;
+            letter-spacing: 0.3vh;
+            text-shadow: 0 0 1vh #0ff, 0 0 2vh #0ff, 0 0 4vh #0ff; /* Neon glow */
+            border-bottom: 0.2vh solid #0ff;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex-grow: 1; /* Takes remaining vertical space */
+            display: flex;
+            width: 100%;
+            height: 87vh; /* Header 8 + Footer 5 = 13 -> 100 - 13 = 87 */
+            box-sizing: border-box;
+        }
+
+        canvas {
+            flex-grow: 1; /* Canvas takes most space */
+            background-color: #0a0a0a; /* Slightly lighter black for canvas */
+            border: 0.2vh solid #f0f; /* Neon pink border */
+            box-sizing: border-box;
+            cursor: crosshair;
+        }
+
+        .controls {
+            width: 20vw; /* Fixed width for controls */
+            padding: 1vh;
+            box-sizing: border-box;
+            border-left: 0.2vh solid #f0f;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 1vh; /* Space between control items */
+            overflow-y: auto; /* Allow vertical scrolling if controls overflow */
+            flex-shrink: 0;
+        }
+
+        footer {
+            height: 5vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5vh;
+            border-top: 0.2vh solid #0ff;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            gap: 2vw;
+        }
+
+        footer a {
+            color: #0ff; /* Cyan neon */
+            text-decoration: none;
+            text-shadow: 0 0 0.5vh #0ff;
+            transition: text-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        footer a:hover {
+            text-shadow: 0 0 1vh #0ff, 0 0 2vh #0ff;
+        }
+
+        /* --- Control Styles --- */
+        .control-group {
+            margin-bottom: 1vh;
+            padding: 0.8vh;
+            border: 0.1vh dashed #333;
+            border-radius: 0.5vh;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5vh;
+            font-size: 1.8vh;
+            color: #0ff;
+            text-shadow: 0 0 0.5vh #0ff;
+        }
+
+        .controls button, .controls input[type="range"], .controls input[type="number"], .controls input[type="checkbox"] {
+            display: block;
+            width: 100%;
+            padding: 1vh;
+            margin-bottom: 1vh;
+            font-size: 1.8vh;
+            background-color: #111;
+            color: #0f0;
+            border: 0.1vh solid #0f0;
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            outline: none;
+            text-shadow: 0 0 0.5vh #0f0;
+        }
+        .controls button:last-child, .control-group > *:last-child:not(.checkbox-container) {
+             margin-bottom: 0; /* Remove margin for last item in group */
+        }
+
+
+        .controls button:hover, .controls input[type="range"]:hover, .controls input[type="number"]:hover, .controls input[type="checkbox"]:hover + label {
+            border-color: #ff0; /* Neon yellow on hover */
+            color: #ff0;
+            text-shadow: 0 0 1vh #ff0;
+            box-shadow: 0 0 0.5vh #ff0;
+        }
+
+        .controls button:active {
+             background-color: #330;
+             box-shadow: 0 0 1vh #ff0 inset;
+        }
+
+         .controls button:disabled,
+         .controls input[type="range"]:disabled,
+         .controls input[type="number"]:disabled,
+         .controls input[type="checkbox"]:disabled + label {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #555;
+            color: #888;
+            text-shadow: none;
+            box-shadow: none;
+         }
+         .controls input[type="checkbox"]:disabled + label .custom-checkbox {
+             border-color: #555;
+             box-shadow: none;
+             background-color: #111 !important;
+         }
+         .controls input[type="checkbox"]:disabled + label .custom-checkbox::after {
+             opacity: 0 !important;
+         }
+
+
+        input[type="range"] {
+            -webkit-appearance: none; /* Override default */
+            appearance: none;
+            height: 1vh;
+            background: #222;
+            outline: none;
+            margin: 1vh 0;
+            border: none;
+            box-shadow: inset 0 0 0.5vh #0f0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 2vh;
+            height: 2vh;
+            background: #0f0;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 1vh #0f0;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 2vh;
+            height: 2vh;
+            background: #0f0;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 1vh #0f0;
+        }
+
+        .k-value-display {
+            font-size: 2vh;
+            text-align: center;
+            color: #0f0;
+            text-shadow: 0 0 0.5vh #0f0;
+            margin-top: -1vh;
+            margin-bottom: 1vh;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 1vh;
+            margin-bottom: 1vh;
+            cursor: pointer;
+        }
+        .control-group > .checkbox-container:last-child {
+             margin-bottom: 0; /* Remove margin for last checkbox in group */
+        }
+
+
+        .checkbox-container input[type="checkbox"] {
+            display: none; /* Hide actual checkbox */
+        }
+
+        .checkbox-container label {
+             display: flex; /* Use flex to align custom checkbox */
+             align-items: center;
+             cursor: pointer;
+             font-size: 1.8vh;
+             color: #0f0;
+             text-shadow: 0 0 0.5vh #0f0;
+             margin-bottom: 0; /* Override default label margin */
+             width: auto; /* Don't force full width */
+             flex-grow: 1; /* Allow label text to take space */
+        }
+
+         .custom-checkbox {
+            width: 2vh;
+            height: 2vh;
+            border: 0.1vh solid #0f0;
+            background-color: #111;
+            margin-right: 0.5vh;
+            display: inline-block;
+            position: relative;
+            flex-shrink: 0; /* Prevent shrinking */
+            box-shadow: 0 0 0.5vh #0f0;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-container input[type="checkbox"]:checked + label .custom-checkbox {
+            background-color: #0f0;
+            box-shadow: 0 0 1vh #0f0;
+        }
+
+         .checkbox-container input[type="checkbox"]:checked + label {
+             color: #ff0;
+             text-shadow: 0 0 1vh #ff0;
+         }
+
+        .custom-checkbox::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0.8vh;
+            height: 1.2vh;
+            border: solid #000;
+            border-width: 0 0.2vh 0.2vh 0;
+            transform: translate(-50%, -50%) rotate(45deg);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .checkbox-container input[type="checkbox"]:checked + label .custom-checkbox::after {
+            opacity: 1;
+        }
+
+
+        /* --- Tooltip Styles --- */
+        .tooltip {
+            position: fixed; /* Use fixed to position relative to viewport */
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 0.1vh solid #0ff;
+            color: #0ff;
+            padding: 0.8vh;
+            font-size: 1.5vh;
+            pointer-events: none; /* Ignore mouse events on tooltip */
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            text-shadow: 0 0 0.3vh #0ff;
+            max-width: 20vw;
+            white-space: normal;
+            box-sizing: border-box;
+            transform: translate(-50%, -110%); /* Initial offset */
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* --- FPS Display --- */
+        #fps-display {
+            position: absolute;
+            top: 1vh;
+            left: 1vw;
+            font-size: 1.8vh;
+            color: #ff0;
+            text-shadow: 0 0 0.5vh #ff0;
+            z-index: 1001;
+        }
+
+        /* --- Autodemo overlay --- */
+        .autodemo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3vh;
+            text-shadow: 0 0 1vh #fff;
+            z-index: 999; /* Below tooltip */
+            pointer-events: none; /* Don't block clicks */
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+         .autodemo-overlay.visible {
+             opacity: 1;
+         }
+
+    </style>
+</head>
+<body>
+    <header>KNN Visualizer</header>
+
+    <div class="main-content">
+        <canvas id="knnCanvas"></canvas>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="kInput">Number of Neighbors (k):</label>
+                <input type="range" id="kInput" min="1" max="20" value="5">
+                <div class="k-value-display">k: <span id="kValue">5</span></div>
+            </div>
+
+            <div class="control-group">
+                <label>Display Options:</label>
+                 <div class="checkbox-container">
+                    <input type="checkbox" id="toggleBoundary" checked>
+                    <label for="toggleBoundary"><span class="custom-checkbox"></span>Show Decision Boundary</label>
+                 </div>
+                 <div class="checkbox-container">
+                    <input type="checkbox" id="toggleNeighbors" checked>
+                     <label for="toggleNeighbors"><span class="custom-checkbox"></span>Show Neighbors & Distances</label>
+                 </div>
+                 <div class="checkbox-container">
+                    <input type="checkbox" id="toggleFPS">
+                     <label for="toggleFPS"><span class="custom-checkbox"></span>Show FPS</label>
+                 </div>
+            </div>
+
+            <div class="control-group">
+                <label>Actions:</label>
+                <button id="randomizeBtn">Randomize Data</button>
+                <button id="resetBtn">Reset</button>
+                <button id="autoDemoBtn">Auto-Demo</button>
+            </div>
+
+        </div>
+         <!-- Tooltip and FPS display placed outside .controls but within .main-content for absolute positioning relative to main-content -->
+         <div id="tooltip" class="tooltip"></div>
+         <div id="fps-display"></div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+     <div class="autodemo-overlay" id="autodemoOverlay">AUTO-DEMO MODE</div>
+
+    <script>
+        // --- Canvas and Context ---
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Elements ---
+        const kInput = document.getElementById('kInput');
+        const kValueDisplay = document.getElementById('kValue');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const toggleBoundary = document.getElementById('toggleBoundary');
+        const toggleNeighbors = document.getElementById('toggleNeighbors');
+        const toggleFPS = document.getElementById('toggleFPS');
+        const tooltip = document.getElementById('tooltip');
+        const fpsDisplay = document.getElementById('fps-display');
+        const autodemoOverlay = document.getElementById('autodemoOverlay');
+        const mainContent = document.querySelector('.main-content');
+
+
+        // --- State ---
+        let k = parseInt(kInput.value);
+        let points = [];
+        let queryPoint = null; // { x, y, class }
+        let draggingPointIndex = -1;
+        let draggingQuery = false;
+        let isAutoDemo = false;
+        let autoDemoAnimationId = null; // For cancelling requestAnimationFrame
+
+        // Display Options
+        let showBoundary = toggleBoundary.checked;
+        let showNeighbors = toggleNeighbors.checked;
+        let showFPS = toggleFPS.checked;
+
+        // Constants
+        const POINT_RADIUS = 5; // px
+        const QUERY_RADIUS = 7; // px
+        const CLASS_COLORS = ['#0ff', '#f0f']; // Cyan, Pink
+        const BOUNDARY_GRID_SIZE = 10; // Pixel step for boundary calculation grid (smaller for more detail)
+        const NEIGHBOR_LINE_COLOR = '#ff0'; // Yellow
+        const DRAG_THRESHOLD = 5; // pixels movement before it's considered a drag
+        let mouseDownPos = null; // To track mousedown position for click detection
+
+        // FPS
+        let lastFrameTime = 0;
+        let fps = 0;
+        const fpsUpdateTime = 500; // ms
+        let lastFPSTime = 0;
+        let frameCount = 0;
+
+        // Auto Demo State
+        let demoSteps = [];
+        let currentStepIndex = 0;
+        const stepDuration = 4000; // ms per step
+        const moveDuration = 2500; // ms for movement animation
+        let stepStartTime = 0;
+        let startQueryPos = { x: 0, y: 0 };
+
+
+        // --- Utility Functions ---
+
+        /**
+         * Calculate Euclidean distance between two points.
+         * @param {object} p1 - {x, y}
+         * @param {object} p2 - {x, y}
+         * @returns {number} Distance
+         */
+        function getDistance(p1, p2) {
+            if (!p1 || !p2) return Infinity;
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        /**
+         * Find k nearest neighbors for a query point.
+         * @param {object} query - {x, y} The query point.
+         * @param {array} data - Array of data points {x, y, class}.
+         * @param {number} k - Number of neighbors to find.
+         * @returns {array} Array of neighbor objects {point, distance}.
+         */
+        function findNeighbors(query, data, k) {
+            if (!query || !data || data.length === 0 || k <= 0) return [];
+
+            const neighbors = data.map(point => ({
+                point: point,
+                distance: getDistance(query, point)
+            }));
+
+            neighbors.sort((a, b) => a.distance - b.distance);
+
+            return neighbors.slice(0, Math.min(k, data.length));
+        }
+
+        /**
+         * Classify a query point based on its k nearest neighbors.
+         * @param {object} query - {x, y} The query point.
+         * @param {array} data - Array of data points {x, y, class}.
+         * @param {number} k - Number of neighbors to consider.
+         * @returns {number|null} Predicted class (0 or 1), or null if no data points or k=0.
+         */
+        function classifyPoint(query, data, k) {
+            if (!query || !data || data.length === 0 || k <= 0) return null;
+
+            const neighbors = findNeighbors(query, data, k);
+
+            const classCounts = {};
+            for (const neighbor of neighbors) {
+                const c = neighbor.point.class;
+                classCounts[c] = (classCounts[c] || 0) + 1;
+            }
+
+            let predictedClass = null;
+            let maxCount = -1;
+            let tie = false;
+
+             for (let i = 0; i < CLASS_COLORS.length; i++) {
+                const c = i;
+                 if (classCounts[c] !== undefined && classCounts[c] > maxCount) {
+                     maxCount = classCounts[c];
+                     predictedClass = c;
+                     tie = false; // Reset tie flag if a new maximum is found
+                 } else if (classCounts[c] !== undefined && classCounts[c] === maxCount && maxCount > 0) {
+                     tie = true; // Found a tie
+                 }
+             }
+
+            if (predictedClass === null) return null; // Should not happen if neighbors found
+
+            // Simple tie-breaking: return the class encountered first (based on CLASS_COLORS index)
+            // if (!tie) {
+                 return predictedClass;
+            // } else {
+                 // For classification purposes, we need a single class.
+                 // Could return null, random, or prioritize. Let's stick to the first max found.
+                 // return predictedClass;
+            // }
+        }
+
+         /**
+          * Get color for boundary grid point.
+          * @param {object} point - {x, y}
+          * @returns {string} Color string (rgba).
+          */
+        function getBoundaryColor(point) {
+            if (points.length === 0 || k <= 0) return 'rgba(0,0,0,0)'; // Transparent if no data or k=0
+
+            const neighbors = findNeighbors(point, points, k);
+             if (neighbors.length === 0) return 'rgba(0,0,0,0)';
+
+
+            const classCounts = {};
+            let totalCount = 0;
+             for (const neighbor of neighbors) {
+                const c = neighbor.point.class;
+                classCounts[c] = (classCounts[c] || 0) + 1;
+                totalCount++;
+            }
+
+            if (totalCount === 0) return 'rgba(0,0,0,0)';
+
+            let predictedClass = null;
+            let maxCount = -1;
+            let tie = false;
+
+             for (let i = 0; i < CLASS_COLORS.length; i++) {
+                const c = i;
+                 if (classCounts[c] !== undefined && classCounts[c] > maxCount) {
+                     maxCount = classCounts[c];
+                     predictedClass = c;
+                     tie = false; // Reset tie flag
+                 } else if (classCounts[c] !== undefined && classCounts[c] === maxCount && maxCount > 0) {
+                     tie = true; // Found a tie
+                 }
+             }
+
+            if (predictedClass === null) return 'rgba(0,0,0,0)';
+
+            const opacity = Math.max(0.1, maxCount / totalCount); // Higher opacity for stronger consensus
+
+            if (tie) {
+                 return `rgba(100,100,100, ${opacity * 0.8})`; // Greyish for boundary lines/ties
+             }
+
+            const color = CLASS_COLORS[predictedClass];
+            // Convert hex to rgb to add alpha
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+
+            return `rgba(${r},${g},${b}, ${opacity})`;
+        }
+
+
+        // --- Drawing Functions ---
+
+        function drawPoint(point, isQuery = false, isNeighbor = false) {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, isQuery ? QUERY_RADIUS : POINT_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = CLASS_COLORS[point.class];
+            ctx.shadowColor = CLASS_COLORS[point.class];
+            ctx.shadowBlur = isNeighbor ? 15 : (isQuery ? 20 : 10);
+            ctx.fill();
+            ctx.closePath();
+
+            // Optional: Add a border for clarity, especially the query point
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, isQuery ? QUERY_RADIUS + 2 : POINT_RADIUS + 1, 0, Math.PI * 2);
+            ctx.strokeStyle = isQuery ? '#fff' : '#eee'; // White/Grey border
+            ctx.lineWidth = isQuery ? 2 : 1;
+            ctx.shadowColor = 'rgba(0,0,0,0)'; // Disable shadow for stroke
+            ctx.stroke();
+            ctx.closePath();
+
+             // Reset shadow
+             ctx.shadowColor = 'rgba(0,0,0,0)';
+             ctx.shadowBlur = 0;
+        }
+
+        function drawBoundary() {
+            if (!showBoundary || points.length === 0 || k <= 0) return;
+
+            ctx.shadowColor = 'rgba(0,0,0,0)'; // No shadow for boundary grid
+
+            // Draw grid points
+            for (let x = 0; x < canvas.width; x += BOUNDARY_GRID_SIZE) {
+                for (let y = 0; y < canvas.height; y += BOUNDARY_GRID_SIZE) {
+                    const color = getBoundaryColor({ x, y });
+                    if (color && color !== 'rgba(0,0,0,0)') {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x, y, BOUNDARY_GRID_SIZE, BOUNDARY_GRID_SIZE);
+                    }
+                }
+            }
+        }
+
+
+        function drawNeighbors() {
+             if (!showNeighbors || !queryPoint || points.length === 0 || k <= 0) return;
+
+             const neighbors = findNeighbors(queryPoint, points, k);
+
+             neighbors.forEach(neighbor => {
+                 ctx.beginPath();
+                 ctx.moveTo(queryPoint.x, queryPoint.y);
+                 ctx.lineTo(neighbor.point.x, neighbor.point.y);
+                 ctx.strokeStyle = NEIGHBOR_LINE_COLOR;
+                 ctx.lineWidth = 1.5;
+                 ctx.shadowColor = NEIGHBOR_LINE_COLOR;
+                 ctx.shadowBlur = 8;
+                 ctx.stroke();
+                 ctx.closePath();
+
+                 // Draw distance text (optional)
+                 const midX = (queryPoint.x + neighbor.point.x) / 2;
+                 const midY = (queryPoint.y + neighbor.point.y) / 2;
+                 const distanceText = neighbor.distance.toFixed(1);
+
+                 ctx.shadowColor = 'rgba(0,0,0,0)'; // Disable shadow for text
+                 ctx.fillStyle = NEIGHBOR_LINE_COLOR;
+                 ctx.font = `${1.2}vh Consolas, monospace`; // Use vh for font size
+                 ctx.textAlign = 'center';
+                 ctx.textBaseline = 'middle';
+                 ctx.fillText(distanceText, midX, midY);
+             });
+
+             // Reset shadow
+             ctx.shadowColor = 'rgba(0,0,0,0)';
+             ctx.shadowBlur = 0;
+
+        }
+
+        function drawFPS(timestamp) {
+            if (!showFPS) {
+                fpsDisplay.style.visibility = 'hidden';
+                return;
+            }
+             fpsDisplay.style.visibility = 'visible';
+
+            frameCount++;
+            const elapsed = timestamp - lastFPSTime;
+            if (elapsed > fpsUpdateTime) {
+                fps = Math.round((frameCount / elapsed) * 1000);
+                fpsDisplay.textContent = `FPS: ${fps}`;
+                lastFPSTime = timestamp;
+                frameCount = 0;
+            }
+        }
+
+
+        function draw(timestamp) {
+            lastFrameTime = timestamp;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+             // Draw decision boundary (if enabled)
+             drawBoundary();
+
+            // Draw points
+            points.forEach(point => drawPoint(point));
+
+            // Draw query point and neighbors (if exists)
+            if (queryPoint) {
+                // Classify the query point for drawing color
+                queryPoint.class = classifyPoint(queryPoint, points, k);
+                // Use class 0 color as fallback if classification returns null (e.g., no points)
+                if (queryPoint.class === null) queryPoint.class = 0;
+
+                drawPoint(queryPoint, true);
+                drawNeighbors();
+
+                 // Optionally highlight k-nearest neighbors data points
+                 if(showNeighbors && points.length > 0 && k > 0) {
+                     const neighbors = findNeighbors(queryPoint, points, k);
+                     neighbors.forEach(neighbor => {
+                         drawPoint(neighbor.point, false, true); // Draw again with neighbor styling
+                     });
+                 }
+            }
+
+
+             // Draw Auto-demo overlay
+             autodemoOverlay.classList.toggle('visible', isAutoDemo);
+
+
+            // Draw FPS
+            drawFPS(timestamp);
+
+
+            // Request next frame if not in auto-demo animation loop (animateDemo handles it)
+            if (!isAutoDemo) {
+                requestAnimationFrame(draw);
+            } else {
+                 // If in auto-demo, the animateDemo function requests the next frame
+            }
+        }
+
+        // --- Event Handlers ---
+
+        function getMousePos(event) {
+             const rect = canvas.getBoundingClientRect();
+             return {
+                 x: event.clientX - rect.left,
+                 y: event.clientY - rect.top
+             };
+        }
+
+         function handleCanvasMouseDown(event) {
+              if (isAutoDemo) return;
+
+              mouseDownPos = getMousePos(event);
+              const mouseX = mouseDownPos.x;
+              const mouseY = mouseDownPos.y;
+
+               // Check if clicking near an existing point (for dragging)
+               draggingPointIndex = -1; // Reset potential point drag
+               for(let i = 0; i < points.length; i++) {
+                   const p = points[i];
+                   if (getDistance({x: mouseX, y: mouseY}, p) < POINT_RADIUS + 5) {
+                       draggingPointIndex = i;
+                       canvas.style.cursor = 'grabbing';
+                       hideTooltip(); // Hide tooltip when dragging starts
+                       return; // Found point to drag
+                   }
+               }
+
+               // Check if clicking near the query point (for dragging)
+               draggingQuery = false; // Reset potential query drag
+               if (queryPoint && getDistance({x: mouseX, y: mouseY}, queryPoint) < QUERY_RADIUS + 5) {
+                   draggingQuery = true;
+                   canvas.style.cursor = 'grabbing';
+                   hideTooltip(); // Hide tooltip when dragging starts
+                   return; // Found query to drag
+               }
+
+              // If not clicking on point or query, setup to create/move query point on mouseup if no drag
+               queryPoint = { x: mouseX, y: mouseY, class: -1 }; // Tentatively set query point
+         }
+
+         function handleCanvasMouseMove(event) {
+             const mousePos = getMousePos(event);
+             const mouseX = mousePos.x;
+             const mouseY = mousePos.y;
+
+              if (isAutoDemo) {
+                   // Still show tooltips if mouse is over points/query even in auto-demo
+                   showTooltip(mouseX, mouseY);
+                  return;
+              }
+
+             // Handle Dragging
+             if (draggingPointIndex !== -1) {
+                 points[draggingPointIndex].x = mouseX;
+                 points[draggingPointIndex].y = mouseY;
+             } else if (draggingQuery) {
+                 queryPoint.x = mouseX;
+                 queryPoint.y = mouseY;
+             } else {
+                 // Handle Hover (show tooltip)
+                 showTooltip(mouseX, mouseY);
+             }
+         }
+
+         function handleCanvasMouseUp(event) {
+             if (isAutoDemo) return;
+
+              const mouseUpPos = getMousePos(event);
+
+             // If no drag occurred (mouse moved less than threshold), and no drag was started on point/query,
+             // this is a click to set the query point.
+             if (mouseDownPos && getDistance(mouseDownPos, mouseUpPos) < DRAG_THRESHOLD && draggingPointIndex === -1 && draggingQuery === false) {
+                  // Query point was already set in mousedown, just confirm its position.
+                  // If it was unset before mousedown, it was created. If set, its position was updated.
+                  queryPoint = { x: mouseUpPos.x, y: mouseUpPos.y, class: -1 };
+             } else if (mouseDownPos && getDistance(mouseDownPos, mouseUpPos) >= DRAG_THRESHOLD && draggingPointIndex === -1 && draggingQuery === false) {
+                 // Was potentially starting a query drag but moved past threshold
+                 // The queryPoint was set in mousedown and updated in mousemove. Just end the drag.
+             }
+             // If draggingPointIndex !== -1 or draggingQuery was true from mousedown, the position was updated in mousemove. Just end the drag.
+
+
+             // End drag states
+             draggingPointIndex = -1;
+             draggingQuery = false;
+             mouseDownPos = null; // Reset mousedown position tracker
+             canvas.style.cursor = 'crosshair'; // Reset cursor
+
+             // hideTooltip(); // Hide tooltip when mouse is released (handled by mousemove usually)
+         }
+
+        function showTooltip(mouseX, mouseY) {
+            let hoveredItem = null;
+            let tooltipText = '';
+
+            // Check hover on query point
+            if (queryPoint && getDistance({x: mouseX, y: mouseY}, queryPoint) < QUERY_RADIUS + 5) {
+                 const predictedClass = classifyPoint(queryPoint, points, k);
+                 const className = predictedClass !== null ? `Class ${predictedClass + 1} (${CLASS_COLORS[predictedClass]})` : 'Unknown (No data / k=0)';
+                 tooltipText = `Query Point<br>Predicted: ${className}`;
+
+                 if (showNeighbors && points.length > 0 && k > 0) {
+                     const neighbors = findNeighbors(queryPoint, points, k);
+                     if (neighbors.length > 0) {
+                         tooltipText += `<br>k-Neighbors: ${neighbors.length}`;
+                         neighbors.forEach((neighbor, index) => {
+                              // Find the original index of the neighbor point
+                             const originalIndex = points.findIndex(p => p === neighbor.point);
+                             tooltipText += `<br>- Point ${originalIndex + 1} (Class ${neighbor.point.class + 1}) dist: ${neighbor.distance.toFixed(1)}`;
+                         });
+                     } else {
+                         tooltipText += `<br>No neighbors found (adjust k or add points)`;
+                     }
+                 }
+
+                hoveredItem = { x: mouseX, y: mouseY }; // Tooltip near mouse for query
+            } else {
+                 // Check hover on data points
+                 for(let i = 0; i < points.length; i++) {
+                     const p = points[i];
+                     if (getDistance({x: mouseX, y: mouseY}, p) < POINT_RADIUS + 5) {
+                         tooltipText = `Data Point ${i+1}<br>Class ${p.class + 1} (${CLASS_COLORS[p.class]})`;
+                         // Optionally add distance to query if query exists
+                         if (queryPoint) {
+                             const dist = getDistance(queryPoint, p);
+                             tooltipText += `<br>Distance to Query: ${dist.toFixed(1)}`;
+                         }
+                         hoveredItem = p; // Tooltip near the point
+                         break; // Only show tooltip for one point at a time
+                     }
+                 }
+            }
+
+
+            if (hoveredItem && tooltipText) {
+                tooltip.innerHTML = tooltipText;
+
+                 // Position tooltip relative to the hovered point/mouse, adjusted for canvas offset
+                 const canvasRect = canvas.getBoundingClientRect();
+                 const tooltipRect = tooltip.getBoundingClientRect();
+
+                 // Position based on item coords relative to canvas, then add canvas offset to get page coords
+                 let tooltipX = canvasRect.left + hoveredItem.x;
+                 let tooltipY = canvasRect.top + hoveredItem.y;
+
+
+                 // Adjust position to stay within viewport, offsetting slightly from mouse/point
+                 const offsetX = 15;
+                 const offsetY = 15; // Offset down
+
+                 // Default position is slightly below and right
+                 tooltipX += offsetX;
+                 tooltipY += offsetY;
+
+
+                 // Check if it goes off right edge
+                 if (tooltipX + tooltipRect.width > window.innerWidth - 10) {
+                     tooltipX = canvasRect.left + hoveredItem.x - tooltipRect.width - offsetX; // Position left of item
+                 }
+
+                 // Check if it goes off bottom edge
+                 if (tooltipY + tooltipRect.height > window.innerHeight - 10) {
+                      // Prefer positioning above if it goes below
+                      tooltipY = canvasRect.top + hoveredItem.y - tooltipRect.height - offsetY;
+                       // If it still goes off top edge, just position it at the top edge
+                       if (tooltipY < 0) tooltipY = 10;
+                 }
+
+
+                 // Ensure minimum distance from canvas top/left if positioned there
+                 if (tooltipX < canvasRect.left) tooltipX = canvasRect.left + 10;
+                 if (tooltipY < canvasRect.top) tooltipY = canvasRect.top + 10;
+
+
+                 tooltip.style.left = `${tooltipX}px`;
+                 tooltip.style.top = `${tooltipY}px`;
+                 tooltip.classList.add('visible');
+
+            } else {
+                hideTooltip();
+            }
+        }
+
+        function hideTooltip() {
+             tooltip.classList.remove('visible');
+        }
+
+
+        // --- Control Actions ---
+
+        function updateK(value) {
+            k = parseInt(value);
+            kValueDisplay.textContent = k;
+             // Ensure k is valid if data exists
+             if (points.length > 0 && k > points.length) {
+                  k = points.length;
+                  kInput.value = k;
+                  kValueDisplay.textContent = k;
+             } else if (k < 1 && points.length > 0) {
+                  k = 1;
+                  kInput.value = k;
+                  kValueDisplay.textContent = k;
+             }
+             if (points.length === 0) {
+                  // If no points, k doesn't matter for classification but keep slider state
+             }
+        }
+
+        function randomizeData() {
+            stopAutoDemo(); // Ensure autodemo is off
+
+            points = [];
+            const numPoints = 50 + Math.random() * 50; // 50 to 100 points
+
+            // Create two clusters
+            const cluster1Center = { x: canvas.width * (0.2 + Math.random()*0.2), y: canvas.height * (0.2 + Math.random()*0.2) };
+            const cluster2Center = { x: canvas.width * (0.6 + Math.random()*0.2), y: canvas.height * (0.6 + Math.random()*0.2) };
+
+            for (let i = 0; i < numPoints; i++) {
+                const classId = i % 2; // Alternate classes for simplicity
+                const center = classId === 0 ? cluster1Center : cluster2Center;
+                const deviation = 50 + Math.random() * 50; // Spread of the cluster
+
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.sqrt(Math.random()) * deviation; // Use sqrt for more uniform distribution
+
+                const x = center.x + radius * Math.cos(angle);
+                const y = center.y + radius * Math.sin(angle);
+
+                 // Ensure points are within canvas bounds
+                 points.push({
+                     x: Math.max(POINT_RADIUS, Math.min(canvas.width - POINT_RADIUS, x)),
+                     y: Math.max(POINT_RADIUS, Math.min(canvas.height - POINT_RADIUS, y)),
+                     class: classId
+                 });
+            }
+
+            // Adjust k if necessary
+             const maxK = Math.max(1, Math.floor(points.length / 2)); // Max k roughly half the points
+             if (k > maxK) {
+                 k = maxK;
+                 kInput.value = k;
+                 kValueDisplay.textContent = k;
+             } else if (k === 0 && points.length > 0) {
+                 // If somehow k is 0 and points exist, set to 1
+                  k = 1;
+                  kInput.value = k;
+                  kValueDisplay.textContent = k;
+             } else if (points.length === 0) {
+                 // If no points, k value doesn't matter for classification, but maybe reset to default
+                 k = parseInt(kInput.min); // Reset to minimum k if no points
+                 kInput.value = k;
+                 kValueDisplay.textContent = k;
+             }
+             kInput.max = points.length > 0 ? points.length : 1; // Update max slider value
+
+
+            // Reset query point on new data
+            queryPoint = null;
+        }
+
+        function resetApp() {
+            stopAutoDemo(); // Ensure autodemo is off
+            points = [];
+            queryPoint = null;
+            kInput.value = 5; // Reset slider value
+            kInput.max = 20; // Reset max slider value
+            updateK(5); // Update k variable and display
+            hideTooltip();
+        }
+
+        function startAutoDemo() {
+            if (isAutoDemo) return;
+
+            isAutoDemo = true;
+            randomizeData(); // Start with fresh data
+            // Need points for demo, if randomizeData didn't create any, try again or stop.
+            if (points.length === 0) {
+                 console.warn("Cannot start auto-demo with no data points.");
+                 stopAutoDemo();
+                 return;
+            }
+
+             // Ensure k is valid for the demo data
+             const maxK = Math.max(1, Math.floor(points.length / 2));
+             kInput.max = maxK;
+             if (k > maxK) {
+                 k = maxK;
+                 kInput.value = k;
+                 kValueDisplay.textContent = k;
+             } else if (k < 1) {
+                  k = 1;
+                 kInput.value = k;
+                 kValueDisplay.textContent = k;
+             }
+
+
+            queryPoint = { x: canvas.width / 2, y: canvas.height / 2, class: -1 }; // Start query in center
+            startQueryPos = { ...queryPoint }; // Initial start position for animation
+
+            // Store initial k and display settings
+            const initialK = k; // Use the adjusted k value
+            // No need to store toggle states, just force them during demo
+            // const initialShowBoundary = showBoundary;
+            // const initialShowNeighbors = showNeighbors;
+
+            // Ensure boundary and neighbors are visible during demo and disable controls
+            toggleBoundary.checked = true;
+            toggleNeighbors.checked = true;
+            showBoundary = true;
+            showNeighbors = true;
+
+            toggleBoundary.disabled = true;
+            toggleNeighbors.disabled = true;
+            kInput.disabled = true;
+            randomizeBtn.disabled = true;
+            resetBtn.disabled = true; // Also disable reset
+
+
+            demoSteps = [
+                 // Use percentages or fractions of canvas size for responsiveness
+                 { x: canvas.width * 0.2, y: canvas.height * 0.2, k: initialK },
+                 { x: canvas.width * 0.8, y: canvas.height * 0.2, k: initialK },
+                 { x: canvas.width * 0.8, y: canvas.height * 0.8, k: initialK },
+                 { x: canvas.width * 0.2, y: canvas.height * 0.8, k: initialK },
+                 { x: canvas.width * 0.5, y: canvas.height * 0.5, k: initialK }, // Center again
+
+                 // Change K and move
+                 { x: canvas.width * 0.3, y: canvas.height * 0.7, k: Math.max(1, Math.min(Math.floor(points.length * 0.25), parseInt(kInput.max))) }, // k=25%
+                 { x: canvas.width * 0.7, y: canvas.height * 0.3, k: Math.max(1, Math.min(Math.floor(points.length * 0.75), parseInt(kInput.max))) }, // k=75%
+                 { x: canvas.width * 0.5, y: canvas.height * 0.5, k: initialK }, // Return to initial K
+                 { x: canvas.width * 0.1, y: canvas.height * 0.9, k: Math.max(1, Math.min(Math.floor(points.length * 0.1), parseInt(kInput.max))) }, // k=10%
+                 { x: canvas.width * 0.9, y: canvas.height * 0.1, k: Math.max(1, Math.min(points.length, parseInt(kInput.max))) }, // k=max
+                 { x: canvas.width * 0.5, y: canvas.height * 0.5, k: initialK }, // Return to initial K
+            ];
+            currentStepIndex = 0;
+            stepStartTime = performance.now();
+
+
+            function animateDemo(timestamp) {
+                 if (!isAutoDemo) {
+                     autoDemoAnimationId = null;
+                     draw(timestamp); // Resume standard draw loop
+                     return;
+                 }
+
+                 const elapsed = timestamp - stepStartTime;
+                 const currentStep = demoSteps[currentStepIndex];
+                 const targetPos = { x: currentStep.x, y: currentStep.y };
+
+                 let progress = Math.min(elapsed / moveDuration, 1);
+
+                 // Update K at the beginning of a K-changing step
+                 if (elapsed >= 0 && elapsed < 50 && k !== currentStep.k) { // Small window to trigger K change
+                      updateK(currentStep.k);
+                      kInput.value = k; // Also update slider value visually
+                 }
+
+                 // Smooth movement (linear interpolation)
+                 queryPoint.x = startQueryPos.x + (targetPos.x - startQueryPos.x) * progress;
+                 queryPoint.y = startQueryPos.y + (targetPos.y - startQueryPos.y) * progress;
+
+
+                 if (elapsed < stepDuration) {
+                     // Continue animating movement or waiting within the step duration
+                     autoDemoAnimationId = requestAnimationFrame(animateDemo);
+                 } else {
+                     // Step duration complete, move to next step
+                     currentStepIndex = (currentStepIndex + 1) % demoSteps.length;
+                     stepStartTime = timestamp; // Start time for the next step
+                     startQueryPos = { ...queryPoint }; // Start position for next step is current position
+                     autoDemoAnimationId = requestAnimationFrame(animateDemo); // Continue loop
+                 }
+
+                 // Draw the current state
+                 draw(timestamp);
+            }
+
+            autoDemoAnimationId = requestAnimationFrame(animateDemo); // Start the auto-demo animation loop
+
+
+            autoDemoBtn.textContent = 'Stop Auto-Demo';
+             autoDemoBtn.style.borderColor = '#ff0';
+             autoDemoBtn.style.color = '#ff0';
+        }
+
+        function stopAutoDemo() {
+            if (!isAutoDemo) return;
+
+            isAutoDemo = false;
+            if (autoDemoAnimationId) {
+                 cancelAnimationFrame(autoDemoAnimationId);
+                 autoDemoAnimationId = null;
+            }
+
+            // Restore controls
+            toggleBoundary.disabled = false;
+            toggleNeighbors.disabled = false;
+            kInput.disabled = false;
+            randomizeBtn.disabled = false;
+            resetBtn.disabled = false;
+
+
+            autoDemoBtn.textContent = 'Auto-Demo';
+            autoDemoBtn.style.borderColor = '#0f0';
+            autoDemoBtn.style.color = '#0f0';
+
+            // Restore original display settings (use the state flags)
+             toggleBoundary.checked = showBoundary;
+             toggleNeighbors.checked = showNeighbors;
+
+            // Resume standard draw loop if needed (animateDemo cancels itself)
+            // The check in animateDemo will handle returning to the standard draw loop.
+
+        }
+
+
+        // --- Initialization ---
+
+        function resizeCanvas() {
+            const mainContentRect = mainContent.getBoundingClientRect();
+            const controlsRect = document.querySelector('.controls').getBoundingClientRect();
+
+            // Canvas width = main-content width - controls width
+            canvas.width = mainContentRect.width - controlsRect.width;
+            canvas.height = mainContentRect.height;
+
+             // Re-render everything after resize
+             // draw() is called via requestAnimationFrame already,
+             // resizing canvas clears it, so the next frame will redraw.
+             // Need to update point positions relative to new size if needed?
+             // For now, points stay at absolute pixel coordinates which is fine.
+             // Query point needs to stay roughly centered or in view if exists.
+             if (queryPoint) {
+                  // Optional: adjust query point position slightly on resize to keep it within bounds
+                  queryPoint.x = Math.max(QUERY_RADIUS, Math.min(canvas.width - QUERY_RADIUS, queryPoint.x));
+                  queryPoint.y = Math.max(QUERY_RADIUS, Math.min(canvas.height - QUERY_RADIUS, queryPoint.y));
+             }
+             // Update K max based on potential points count after resize (if randomize was run)
+             kInput.max = points.length > 0 ? points.length : 1;
+             updateK(kInput.value); // Re-validate k based on new max
+        }
+
+        function init() {
+            // Set initial canvas size
+            resizeCanvas();
+
+            // Add event listeners
+            window.addEventListener('resize', resizeCanvas);
+
+             // Using mousedown/up/move for dragging functionality
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+             canvas.addEventListener('mouseleave', hideTooltip); // Hide tooltip when mouse leaves canvas
+
+
+            kInput.addEventListener('input', (event) => updateK(event.target.value));
+            randomizeBtn.addEventListener('click', randomizeData);
+            resetBtn.addEventListener('click', resetApp);
+            autoDemoBtn.addEventListener('click', () => {
+                 if (isAutoDemo) {
+                     stopAutoDemo();
+                 } else {
+                     startAutoDemo();
+                 }
+            });
+
+            toggleBoundary.addEventListener('change', (event) => showBoundary = event.target.checked);
+            toggleNeighbors.addEventListener('change', (event) => showNeighbors = event.target.checked);
+             toggleFPS.addEventListener('change', (event) => {
+                 showFPS = event.target.checked;
+                 // draw() loop will handle visibility based on the flag
+             });
+
+
+            // Initial Data
+            randomizeData(); // Populate with some initial data
+
+            // Start the animation loop
+            requestAnimationFrame(draw);
+
+             // Initial FPS display state
+             fpsDisplay.style.visibility = showFPS ? 'visible' : 'hidden';
+        }
+
+        // --- Start the application ---
+        init();
+
+    </script>
+</body>
+</html>

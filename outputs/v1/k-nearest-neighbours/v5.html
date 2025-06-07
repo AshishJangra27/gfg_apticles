@@ -1,0 +1,775 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #0ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+            cursor: default;
+        }
+
+        :root {
+            --neon-blue: #0ff;
+            --neon-green: #0f0;
+            --neon-pink: #f0f;
+            --neon-yellow: #ff0;
+            --neon-red: #f00;
+            --glow-intensity: 0 0 5px, 0 0 10px, 0 0 15px, 0 0 20px var(--color);
+        }
+
+        .neon-text {
+            color: var(--color, var(--neon-blue));
+            text-shadow: var(--glow-intensity);
+        }
+
+        .neon-button {
+            background-color: rgba(0, 255, 255, 0.1);
+            border: 1px solid var(--color, var(--neon-blue));
+            color: var(--color, var(--neon-blue));
+            padding: 0.5vh 1vw;
+            margin: 0.5vh 0.5vw;
+            font-size: 1.8vh;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            box-shadow: var(--glow-intensity);
+        }
+
+        .neon-button:hover {
+            background-color: rgba(0, 255, 255, 0.3);
+            box-shadow: var(--glow-intensity), 0 0 30px var(--color, var(--neon-blue));
+        }
+
+        .neon-button:active {
+            background-color: rgba(0, 255, 255, 0.5);
+            box-shadow: var(--glow-intensity), 0 0 40px var(--color, var(--neon-blue));
+        }
+
+         .neon-button[data-color="blue"] { --color: var(--neon-blue); }
+         .neon-button[data-color="green"] { --color: var(--neon-green); }
+         .neon-button[data-color="pink"] { --color: var(--neon-pink); }
+         .neon-button[data-color="yellow"] { --color: var(--neon-yellow); }
+         .neon-button[data-color="red"] { --color: var(--neon-red); }
+
+
+        .neon-toggle {
+            display: inline-block;
+            margin: 0.5vh 0.5vw;
+            font-size: 1.8vh;
+            cursor: pointer;
+        }
+
+        .neon-toggle input {
+            display: none;
+        }
+
+        .neon-toggle span {
+             padding: 0.5vh 1vw;
+             border: 1px solid var(--color, var(--neon-blue));
+             color: var(--color, var(--neon-blue));
+             background-color: rgba(0, 255, 255, 0.1);
+             box-shadow: var(--glow-intensity);
+             transition: all 0.3s ease-in-out;
+             display: inline-block; /* Needed for padding/border */
+        }
+
+        .neon-toggle input:checked + span {
+            background-color: rgba(0, 255, 255, 0.4);
+            box-shadow: var(--glow-intensity), 0 0 25px var(--color, var(--neon-blue));
+        }
+
+        .neon-toggle[data-color="blue"] { --color: var(--neon-blue); }
+        .neon-toggle[data-color="green"] { --color: var(--neon-green); }
+        .neon-toggle[data-color="pink"] { --color: var(--neon-pink); }
+        .neon-toggle[data-color="yellow"] { --color: var(--neon-yellow); }
+
+
+        header {
+            flex-shrink: 0;
+            height: 8vh;
+            text-align: center;
+            padding: 1vh;
+            box-sizing: border-box;
+            border-bottom: 1px solid var(--neon-blue);
+            position: relative;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 4vh;
+            line-height: 6vh;
+        }
+
+         #fps-display {
+            position: absolute;
+            top: 1vh;
+            right: 1vw;
+            font-size: 1.8vh;
+            color: var(--neon-green);
+            text-shadow: 0 0 5px var(--neon-green);
+            z-index: 10;
+         }
+
+
+        #app-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: row;
+            width: 100vw;
+            box-sizing: border-box;
+        }
+
+        #controls {
+            flex-shrink: 0;
+            width: 18vw;
+            padding: 1vh 0.5vw;
+            box-sizing: border-box;
+            border-right: 1px solid var(--neon-blue);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-blue) transparent;
+        }
+
+        #controls::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #controls::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #controls::-webkit-scrollbar-thumb {
+            background-color: var(--neon-blue);
+            border-radius: 4px;
+            border: none;
+        }
+
+        #controls div {
+            margin-bottom: 1.5vh;
+            width: 100%;
+            text-align: center;
+        }
+         #controls label {
+             display: block;
+             font-size: 1.8vh;
+             margin-bottom: 0.5vh;
+             color: var(--color, var(--neon-blue));
+             text-shadow: var(--glow-intensity);
+             --color: var(--neon-blue);
+             text-align: left; /* Align label text left */
+             padding-left: 1vw; /* Indent labels slightly */
+         }
+
+        #controls div:first-child label {
+             padding-left: 0;
+             text-align: center;
+        }
+
+
+         #controls input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80%;
+            height: 1vh;
+            background: rgba(0, 255, 255, 0.2);
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            margin-top: 0.5vh;
+             box-shadow: 0 0 5px var(--neon-blue);
+         }
+
+         #controls input[type="range"]:hover {
+            opacity: 1;
+         }
+
+        #controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 2vh;
+            height: 2vh;
+            border-radius: 50%;
+            background: var(--neon-blue);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-blue), 0 0 15px var(--neon-blue);
+        }
+
+        #controls input[type="range"]::-moz-range-thumb {
+            width: 2vh;
+            height: 2vh;
+            border-radius: 50%;
+            background: var(--neon-blue);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-blue), 0 0 15px var(--neon-blue);
+        }
+
+         #controls #k-value {
+            font-size: 2vh;
+             color: var(--neon-yellow);
+             text-shadow: 0 0 5px var(--neon-yellow);
+             margin-left: 0.5vw;
+         }
+
+
+        canvas {
+            flex-grow: 1;
+            display: block;
+            background-color: #000;
+        }
+
+        footer {
+            flex-shrink: 0;
+            height: 5vh;
+            text-align: center;
+            padding: 0.5vh;
+            box-sizing: border-box;
+            border-top: 1px solid var(--neon-blue);
+            font-size: 1.8vh;
+            line-height: 4vh;
+        }
+
+        footer a {
+            color: var(--neon-green);
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: 0 0 5px var(--neon-green);
+            transition: text-shadow 0.3s ease-in-out;
+        }
+
+        footer a:hover {
+            text-shadow: 0 0 8px var(--neon-green), 0 0 15px var(--neon-green);
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 1.5vh;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 100;
+             text-shadow: 0 0 3px var(--neon-blue);
+             box-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        #tooltip.visible {
+            opacity: 1;
+        }
+
+         #app-container.canvas-cursor canvas {
+            cursor: crosshair;
+         }
+
+         #app-container.canvas-grabbing canvas {
+            cursor: grabbing;
+         }
+
+
+    </style>
+</head>
+<body>
+    <header id="header">
+        <h1 class="neon-text">KNN Visualizer</h1>
+        <div id="fps-display" class="neon-text" style="--color: var(--neon-green);">FPS: --</div>
+    </header>
+
+    <div id="app-container" class="canvas-cursor">
+        <div id="controls">
+            <div>
+                <button class="neon-button" data-color="red" id="reset-btn">Reset</button>
+                <button class="neon-button" data-color="green" id="randomize-btn">Randomize</button>
+            </div>
+            <div>
+                 <button class="neon-button" data-color="yellow" id="auto-demo-btn">Auto Demo</button>
+            </div>
+             <div>
+                 <label for="k-slider" class="neon-text" style="--color: var(--neon-yellow);">K Value: <span id="k-value">3</span></label>
+                 <input type="range" id="k-slider" min="1" max="15" value="3">
+            </div>
+            <div>
+                 <label class="neon-text" style="--color: var(--neon-pink);">Toggles:</label>
+                 <label class="neon-toggle" data-color="blue">
+                    <input type="checkbox" id="toggle-neighbors" checked>
+                    <span>Show Neighbors</span>
+                 </label>
+                 <label class="neon-toggle" data-color="blue">
+                    <input type="checkbox" id="toggle-prediction" checked>
+                    <span>Show Prediction</span>
+                 </label>
+                 <label class="neon-toggle" data-color="blue">
+                    <input type="checkbox" id="toggle-outlines" checked>
+                    <span>Show Outlines</span>
+                 </label>
+            </div>
+            <div style="flex-grow: 1;"></div>
+        </div>
+        <canvas id="knnCanvas"></canvas>
+    </div>
+
+    <footer id="footer">
+        <span class="neon-text" style="--color: var(--neon-blue); font-size: 1.5vh;">Built with &#x2665; by a Minimalist Developer</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <div id="tooltip" class="neon-text"></div>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('reset-btn');
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const autoDemoBtn = document.getElementById('auto-demo-btn');
+        const kSlider = document.getElementById('k-slider');
+        const kValueSpan = document.getElementById('k-value');
+        const toggleNeighbors = document.getElementById('toggle-neighbors');
+        const togglePrediction = document.getElementById('toggle-prediction');
+        const toggleOutlines = document.getElementById('toggle-outlines');
+        const fpsDisplay = document.getElementById('fps-display');
+        const tooltip = document.getElementById('tooltip');
+        const appContainer = document.getElementById('app-container');
+        const controls = document.getElementById('controls');
+        const header = document.getElementById('header');
+        const footer = document.getElementById('footer');
+
+
+        const POINT_SIZE = Math.max(1.5, Math.min(2.5, (window.innerHeight * 0.008))) ;
+        const TEST_POINT_SIZE = POINT_SIZE * 1.8;
+        const CLASS_COLORS = {
+            'A': '#0f0',
+            'B': '#f0f',
+            '?': '#0ff'
+        };
+        const NEIGHBOR_LINE_COLOR = '#ff0';
+        const NEIGHBOR_OUTLINE_COLOR = '#fff';
+        const OUTLINE_COLOR = '#333';
+        const NUM_RANDOM_POINTS = 75;
+        const AUTO_DEMO_SPEED = 2000;
+
+        let dataPoints = [];
+        let testPoint = { x: 0, y: 0, class: '?', neighbors: [], predictedClass: null, initialPositionSet: false };
+        let k = parseInt(kSlider.value);
+        let isDraggingTestPoint = false;
+        let dragOffsetX, dragOffsetY;
+        let animationFrameId = null;
+        let isAutoDemoRunning = false;
+        let autoDemoTimeoutId = null;
+        let autoDemoPoints = [];
+        let currentAutoDemoPointIndex = 0;
+
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        function distance(p1, p2) {
+            return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+        }
+
+        function resizeCanvas() {
+            const controlsWidth = controls.offsetWidth;
+            const headerHeight = header.offsetHeight;
+            const footerHeight = footer.offsetHeight;
+
+            canvas.width = window.innerWidth - controlsWidth;
+            canvas.height = window.innerHeight - headerHeight - footerHeight;
+
+             if (!testPoint.initialPositionSet) {
+                 testPoint.x = canvas.width / 2;
+                 testPoint.y = canvas.height / 2;
+                 testPoint.initialPositionSet = true;
+                 updateTestPoint(testPoint.x, testPoint.y);
+             } else {
+                  // Keep test point relative position on resize, or simply re-clamp?
+                  // Re-clamping is simpler for minimalism
+                 updateTestPoint(testPoint.x, testPoint.y); // Re-clamp and re-classify
+             }
+
+            draw();
+        }
+
+        function getMousePos(event) {
+             const rect = canvas.getBoundingClientRect();
+             return {
+                 x: event.clientX - rect.left,
+                 y: event.clientY - rect.top
+             };
+        }
+
+        function findKNearestNeighbors(point, kVal, points) {
+            if (!points || points.length === 0) {
+                return [];
+            }
+
+            const distances = points.map(p => ({
+                point: p,
+                distance: distance(point, p)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+
+            return distances.slice(0, Math.min(kVal, points.length)).map(d => d.point);
+        }
+
+        function classifyPoint(point, kVal, points) {
+            const neighbors = findKNearestNeighbors(point, kVal, points);
+            if (neighbors.length === 0) {
+                return { neighbors: [], predictedClass: null };
+            }
+
+            const classCounts = {};
+            neighbors.forEach(neighbor => {
+                classCounts[neighbor.class] = (classCounts[neighbor.class] || 0) + 1;
+            });
+
+            let predictedClass = null;
+            let maxCount = 0;
+            let tiedClasses = [];
+
+            for (const cls in classCounts) {
+                if (classCounts[cls] > maxCount) {
+                    maxCount = classCounts[cls];
+                    predictedClass = cls;
+                    tiedClasses = [cls];
+                } else if (classCounts[cls] === maxCount) {
+                    tiedClasses.push(cls);
+                }
+            }
+
+            if (tiedClasses.length > 1) {
+                // Tie-breaking: Find the class with the closest neighbor among the tied classes
+                let minOverallDistance = Infinity;
+                let bestTiedClass = null;
+
+                tiedClasses.forEach(tiedClass => {
+                     const minDistanceForTiedClass = Math.min(...neighbors
+                        .filter(n => n.class === tiedClass)
+                        .map(n => distance(point, n)));
+
+                    if (minDistanceForTiedClass < minOverallDistance) {
+                        minOverallDistance = minDistanceForTiedClass;
+                        bestTiedClass = tiedClass;
+                    }
+                });
+                predictedClass = bestTiedClass || tiedClasses[0]; // Default to the first tied class if somehow issue
+            }
+
+             return { neighbors: neighbors, predictedClass: predictedClass };
+        }
+
+        function drawPoint(p, size, color, outlineColor = null, isTestPoint = false) {
+            ctx.save();
+            ctx.beginPath();
+
+            ctx.shadowColor = color;
+            ctx.shadowBlur = isTestPoint ? 20 : 15;
+
+            if (isTestPoint) {
+                 const outerRadius = size;
+                 const innerRadius = size * 0.6; // Make inner points visible
+                 const numPoints = 8; // 8-pointed star
+
+                 ctx.moveTo(p.x + outerRadius, p.y);
+                 for (let i = 0; i < numPoints; i++) {
+                     let angle = Math.PI / numPoints * (2 * i);
+                     ctx.lineTo(p.x + outerRadius * Math.cos(angle), p.y + outerRadius * Math.sin(angle));
+                     angle = Math.PI / numPoints * (2 * i + 1);
+                     ctx.lineTo(p.x + innerRadius * Math.cos(angle), p.y + innerRadius * Math.sin(angle));
+                 }
+                  ctx.closePath();
+                  ctx.fillStyle = color;
+                  ctx.fill();
+
+            } else {
+                 ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                 ctx.fillStyle = color;
+                 ctx.fill();
+
+                 if (outlineColor && toggleOutlines.checked) {
+                     ctx.shadowBlur = 0;
+                     ctx.strokeStyle = outlineColor;
+                     ctx.lineWidth = 1;
+                     ctx.stroke();
+                 }
+            }
+
+
+            ctx.restore();
+        }
+
+        function drawNeighborLines(testP, neighbors, lineColor) {
+            ctx.save();
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.shadowColor = lineColor;
+            ctx.shadowBlur = 10;
+
+            neighbors.forEach(neighbor => {
+                ctx.beginPath();
+                ctx.moveTo(testP.x, testP.y);
+                ctx.lineTo(neighbor.x, neighbor.y);
+                ctx.stroke();
+            });
+
+            ctx.restore();
+        }
+
+        function draw() {
+            const now = performance.now();
+            frameCount++;
+            if (now - lastFrameTime >= 1000) {
+                fps = Math.round(frameCount * 1000 / (now - lastFrameTime));
+                fpsDisplay.textContent = `FPS: ${fps}`;
+                frameCount = 0;
+                lastFrameTime = now;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+            dataPoints.forEach(p => {
+                drawPoint(p, POINT_SIZE, CLASS_COLORS[p.class], OUTLINE_COLOR);
+            });
+
+            if (testPoint.initialPositionSet) {
+                 if (toggleNeighbors.checked) {
+                     drawNeighborLines(testPoint, testPoint.neighbors, NEIGHBOR_LINE_COLOR);
+                 }
+
+                 testPoint.neighbors.forEach(neighbor => {
+                     drawPoint(neighbor, POINT_SIZE, CLASS_COLORS[neighbor.class], NEIGHBOR_OUTLINE_COLOR);
+                 });
+
+                 if (togglePrediction.checked && testPoint.predictedClass) {
+                     ctx.save();
+                     const textColor = CLASS_COLORS[testPoint.predictedClass];
+                     ctx.fillStyle = textColor;
+                     ctx.shadowColor = textColor;
+                     ctx.shadowBlur = 15;
+                     ctx.font = `${2.5 * POINT_SIZE}px Arial`;
+                     ctx.textAlign = 'left';
+                     ctx.textBaseline = 'bottom';
+                     const textX = testPoint.x + TEST_POINT_SIZE + 5;
+                     const textY = testPoint.y - TEST_POINT_SIZE - 5;
+                     ctx.fillText(`Class: ${testPoint.predictedClass}`, textX, textY);
+                     ctx.restore();
+                 }
+             }
+
+            drawPoint(testPoint, TEST_POINT_SIZE, CLASS_COLORS['?'], null, true);
+
+            animationFrameId = requestAnimationFrame(draw);
+        }
+
+        function updateTestPoint(x, y) {
+             testPoint.x = Math.max(0, Math.min(canvas.width, x));
+             testPoint.y = Math.max(0, Math.min(canvas.height, y));
+
+             const result = classifyPoint(testPoint, k, dataPoints);
+             testPoint.neighbors = result.neighbors;
+             testPoint.predictedClass = result.predictedClass;
+        }
+
+        function resetApp() {
+            stopAutoDemo();
+            dataPoints = [];
+            testPoint = { x: canvas.width / 2, y: canvas.height / 2, class: '?', neighbors: [], predictedClass: null, initialPositionSet: true };
+             kSlider.value = 3;
+             k = 3;
+             kValueSpan.textContent = k;
+            updateTestPoint(testPoint.x, testPoint.y);
+        }
+
+        function randomizePoints() {
+            stopAutoDemo();
+            dataPoints = [];
+            const classes = Object.keys(CLASS_COLORS).filter(cls => cls !== '?');
+            for (let i = 0; i < NUM_RANDOM_POINTS; i++) {
+                dataPoints.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    class: classes[Math.floor(Math.random() * classes.length)]
+                });
+            }
+            updateTestPoint(testPoint.x, testPoint.y);
+        }
+
+         function startAutoDemo() {
+             if (isAutoDemoRunning) {
+                 stopAutoDemo();
+                 autoDemoBtn.textContent = "Auto Demo";
+                 autoDemoBtn.dataset.color = "yellow";
+                 return;
+             }
+
+             isAutoDemoRunning = true;
+             autoDemoBtn.textContent = "Stop Demo";
+             autoDemoBtn.dataset.color = "red";
+             appContainer.classList.remove('canvas-cursor');
+             appContainer.classList.remove('canvas-grabbing');
+             canvas.style.cursor = 'default'; // Default cursor during demo
+
+             if (dataPoints.length === 0) {
+                 randomizePoints();
+             }
+
+             autoDemoPoints = [];
+             const pathLength = 15;
+             for(let i = 0; i < pathLength; i++) {
+                 autoDemoPoints.push({
+                     x: Math.random() * canvas.width,
+                     y: Math.random() * canvas.height
+                 });
+             }
+             currentAutoDemoPointIndex = 0;
+
+             function runDemoStep() {
+                 if (!isAutoDemoRunning || autoDemoPoints.length === 0) return;
+
+                 const targetPoint = autoDemoPoints[currentAutoDemoPointIndex];
+                 updateTestPoint(targetPoint.x, targetPoint.y);
+
+                 currentAutoDemoPointIndex = (currentAutoDemoPointIndex + 1) % autoDemoPoints.length;
+
+                 autoDemoTimeoutId = setTimeout(runDemoStep, AUTO_DEMO_SPEED);
+             }
+
+             runDemoStep();
+         }
+
+         function stopAutoDemo() {
+             if (!isAutoDemoRunning) return;
+             isAutoDemoRunning = false;
+             if (autoDemoTimeoutId) {
+                 clearTimeout(autoDemoTimeoutId);
+                 autoDemoTimeoutId = null;
+             }
+             autoDemoBtn.textContent = "Auto Demo";
+             autoDemoBtn.dataset.color = "yellow";
+              appContainer.classList.add('canvas-cursor'); // Restore normal cursor
+              appContainer.classList.remove('canvas-grabbing');
+              canvas.style.cursor = ''; // Clear inline style
+         }
+
+
+        canvas.addEventListener('mousedown', (event) => {
+            if (isAutoDemoRunning) return;
+
+            const mousePos = getMousePos(event);
+             const testPointRadius = TEST_POINT_SIZE;
+             if (distance(mousePos, testPoint) < testPointRadius + 5) {
+                 isDraggingTestPoint = true;
+                 dragOffsetX = mousePos.x - testPoint.x;
+                 dragOffsetY = mousePos.y - testPoint.y;
+                 appContainer.classList.remove('canvas-cursor');
+                 appContainer.classList.add('canvas-grabbing');
+             }
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            const mousePos = getMousePos(event);
+
+            if (isDraggingTestPoint) {
+                updateTestPoint(mousePos.x - dragOffsetX, mousePos.y - dragOffsetY);
+            } else {
+                 let hoveredPoint = null;
+                 for(const p of dataPoints) {
+                     if (distance(mousePos, p) < POINT_SIZE + 5) {
+                         hoveredPoint = p;
+                         break;
+                     }
+                 }
+
+                 if (hoveredPoint) {
+                     tooltip.textContent = `Class: ${hoveredPoint.class}`;
+                      tooltip.style.left = `${event.clientX + 10}px`;
+                      tooltip.style.top = `${event.clientY + 10}px`;
+                      tooltip.classList.add('visible');
+                 } else {
+                      tooltip.classList.remove('visible');
+                 }
+            }
+        });
+
+        canvas.addEventListener('mouseup', (event) => {
+            if (isDraggingTestPoint) {
+                 isDraggingTestPoint = false;
+                 appContainer.classList.remove('canvas-grabbing');
+                 appContainer.classList.add('canvas-cursor');
+                 updateTestPoint(testPoint.x, testPoint.y);
+            }
+        });
+
+         canvas.addEventListener('mouseleave', () => {
+            if (isDraggingTestPoint) {
+                 isDraggingTestPoint = false;
+                 appContainer.classList.remove('canvas-grabbing');
+                 appContainer.classList.add('canvas-cursor');
+                 updateTestPoint(testPoint.x, testPoint.y);
+             }
+             tooltip.classList.remove('visible');
+         });
+
+        canvas.addEventListener('click', (event) => {
+             if (isAutoDemoRunning || isDraggingTestPoint) return;
+
+             const mousePos = getMousePos(event);
+             updateTestPoint(mousePos.x, mousePos.y);
+        });
+
+
+        resetBtn.addEventListener('click', resetApp);
+        randomizeBtn.addEventListener('click', randomizePoints);
+        autoDemoBtn.addEventListener('click', startAutoDemo);
+
+        kSlider.addEventListener('input', () => {
+            k = parseInt(kSlider.value);
+            kValueSpan.textContent = k;
+            if (!isAutoDemoRunning && dataPoints.length > 0) {
+                 updateTestPoint(testPoint.x, testPoint.y);
+            }
+        });
+
+        toggleNeighbors.addEventListener('change', draw);
+        togglePrediction.addEventListener('change', draw);
+        toggleOutlines.addEventListener('change', draw);
+
+
+        function init() {
+            resizeCanvas();
+            randomizePoints();
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            lastFrameTime = performance.now(); // Reset FPS timer on init
+            animationFrameId = requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('load', init);
+        window.addEventListener('resize', resizeCanvas);
+
+    </script>
+</body>
+</html>

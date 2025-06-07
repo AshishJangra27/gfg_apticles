@@ -1,0 +1,637 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GFG Interview Prep Visualizer</title>
+    <style>
+        /* --- Global Styles --- */
+        :root {
+            --neon-blue: #00ffff;
+            --neon-green: #00ff00;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --neon-red: #ff0000;
+            --neon-glow-intensity: 0 0 5px, 0 0 10px, 0 0 20px, 0 0 30px, 0 0 40px;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Crucial: No scrolling */
+            background-color: #000; /* Black background */
+            color: var(--neon-blue); /* Default text color */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* --- Header --- */
+        header {
+            width: 100vw;
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3vh;
+            font-weight: bold;
+            text-shadow: var(--neon-glow-intensity) var(--neon-blue);
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* --- Main Content Area (Canvas + Controls) --- */
+        main {
+            width: 100vw;
+            height: calc(100vh - 8vh - 6vh); /* Full height minus header and footer */
+            display: flex;
+            flex-direction: column; /* Canvas above controls */
+            align-items: center;
+            justify-content: center;
+            gap: 1vh; /* Space between canvas and controls */
+            flex-grow: 1; /* Allow growing */
+            padding: 1vh; /* Add some padding */
+        }
+
+        #visualCanvas {
+            width: 90vw; /* Responsive width */
+            height: calc(100% - 7vh); /* Fill space minus controls height (adjusting for gap/padding) */
+            border: 1px solid var(--neon-green);
+            box-shadow: 0 0 5px var(--neon-green), 0 0 15px var(--neon-green), 0 0 30px var(--neon-green);
+            cursor: crosshair; /* Custom cursor */
+            background-color: rgba(0, 10, 20, 0.1); /* Slight transparent dark blue */
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1vw; /* Space between buttons/toggles */
+            height: 6vh; /* Fixed height for controls */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        button {
+            padding: 1vh 1.5vw;
+            background-color: #000;
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            font-size: 1.8vh;
+            cursor: pointer;
+            text-shadow: 0 0 3px var(--neon-pink);
+            box-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+            transition: all 0.3s ease-in-out;
+            position: relative; /* For tooltips */
+            overflow: hidden; /* Ensure tooltips don't bleed outside during transition */
+        }
+
+        button:hover {
+            background-color: rgba(255, 0, 255, 0.2);
+            text-shadow: var(--neon-glow-intensity) var(--neon-pink);
+            box-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+        }
+
+        button:active {
+            background-color: rgba(255, 0, 255, 0.4);
+            box-shadow: 0 0 5px var(--neon-pink);
+        }
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+            font-size: 1.8vh;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 3px var(--neon-yellow);
+        }
+
+        .toggle-control input[type="checkbox"] {
+            appearance: none;
+            width: 3.5vh;
+            height: 2vh;
+            border: 1px solid var(--neon-yellow);
+            border-radius: 1vh;
+            background-color: rgba(255, 255, 0, 0.1);
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            box-shadow: 0 0 5px rgba(255, 255, 0, 0.3);
+        }
+
+        .toggle-control input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            top: 0.2vh;
+            left: 0.2vh;
+            width: 1.6vh;
+            height: 1.6vh;
+            border-radius: 50%;
+            background-color: var(--neon-yellow);
+            transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
+            box-shadow: 0 0 5px var(--neon-yellow);
+        }
+
+        .toggle-control input[type="checkbox"]:checked {
+            background-color: rgba(0, 255, 0, 0.2);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        .toggle-control input[type="checkbox"]:checked::before {
+            transform: translateX(1.5vh);
+            background-color: var(--neon-green);
+            box-shadow: 0 0 5px var(--neon-green);
+        }
+
+        .toggle-control input[type="checkbox"]:hover {
+             box-shadow: 0 0 10px var(--neon-yellow);
+        }
+         .toggle-control input[type="checkbox"]:checked:hover {
+             box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        #fpsDisplay {
+            font-size: 1.5vh;
+            color: var(--neon-red);
+            text-shadow: 0 0 3px var(--neon-red);
+            margin-left: 2vw;
+        }
+
+
+        /* --- Tooltip Styles --- */
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 120%; /* Position above the element */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: var(--neon-blue);
+            padding: 0.5vh 1vw;
+            border-radius: 0.5vh;
+            font-size: 1.5vh;
+            white-space: nowrap;
+            z-index: 10;
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 5px var(--neon-blue);
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- Footer --- */
+        footer {
+            width: 100vw;
+            height: 6vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2vw;
+            font-size: 1.8vh;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: var(--neon-green);
+            text-decoration: none;
+            text-shadow: 0 0 3px var(--neon-green);
+            transition: text-shadow 0.3s ease-in-out;
+        }
+
+        footer a:hover {
+            text-shadow: var(--neon-glow-intensity) var(--neon-green);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        GFG Interview Prep Visualizer
+    </header>
+
+    <main>
+        <canvas id="visualCanvas"></canvas>
+        <div class="controls">
+            <button id="resetBtn" data-tooltip="Reset canvas layout">Reset</button>
+            <button id="randomizeBtn" data-tooltip="Randomize element positions">Randomize</button>
+            <button id="autoDemoBtn" data-tooltip="Start/Stop auto-play demo">Auto Demo</button>
+            <div class="toggle-control">
+                <input type="checkbox" id="toggleLabels" checked data-tooltip="Toggle node labels">
+                <label for="toggleLabels">Labels</label>
+            </div>
+            <div class="toggle-control">
+                <input type="checkbox" id="toggleGlow" checked data-tooltip="Toggle glow effects">
+                <label for="toggleGlow">Glow</label>
+            </div>
+            <span id="fpsDisplay">FPS: --</span>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('visualCanvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('resetBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const toggleLabels = document.getElementById('toggleLabels');
+        const toggleGlow = document.getElementById('toggleGlow');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+
+        // --- Configuration & State ---
+        const CONFIG = {
+            nodeRadius: 0, // Dynamic size, calculated in init
+            centralNodeRadius: 0, // Dynamic size, calculated in init
+            centralNodeColor: '#00ffff', // Neon blue
+            resourceNodeColor: '#ff00ff', // Neon pink
+            connectionColor: '#00ff00', // Neon green
+            hoverColor: '#ffff00', // Neon yellow
+            dragColor: '#ff0000', // Neon red
+            glowIntensity: 20, // Base glow blur
+            connectionThickness: 2,
+            labelColor: '#ffffff', // White labels
+            fontSize: 0, // Dynamic font size, calculated in init
+            fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+        };
+
+        let nodes = [];
+        let connections = [];
+        let draggingNode = null;
+        let dragOffset = { x: 0, y: 0 };
+        let hoveredNode = null;
+
+        let isAutoDemoRunning = false;
+        let demoStep = 0;
+        let demoStartTime = 0;
+        const demoDurationPerStep = 3000; // ms
+
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        // --- Data Model (Simplified GFG Resources) ---
+        const initialNodeData = [
+            { id: 'gfg', label: 'GeeksforGeeks Prep', isCentral: true },
+            { id: 'dsa', label: 'Data Structures & Algos' },
+            { id: 'algos', label: 'Competitive Programming' },
+            { id: 'dev', label: 'Development Topics' },
+            { id: 'company', label: 'Company Specific Prep' },
+            { id: 'interview', label: 'Interview Experiences' },
+        ];
+
+        const initialConnectionData = [
+            { from: 'gfg', to: 'dsa' },
+            { from: 'gfg', to: 'algos' },
+            { from: 'gfg', to: 'dev' },
+            { from: 'dsa', to: 'algos' }, // DSA helps Algo
+            { from: 'dsa', to: 'company' }, // DSA essential for Company
+            { from: 'algos', to: 'company' }, // Algo essential for Company
+            { from: 'dev', to: 'company' }, // Dev skills for Company
+            { from: 'dsa', to: 'interview' }, // DSA appears in interviews
+            { from: 'algos', to: 'interview' }, // Algos appears in interviews
+            { from: 'dev', to: 'interview' }, // Dev appears in interviews
+            { from: 'company', to: 'interview' }, // Company prep leads to experiences
+        ];
+
+        // --- Initialization ---
+        function initializeNodesAndConnections() {
+             // Set canvas size based on current dimensions determined by CSS
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            // Update CONFIG based on new canvas size
+            CONFIG.nodeRadius = Math.min(canvas.width, canvas.height) * 0.03;
+            CONFIG.centralNodeRadius = Math.min(canvas.width, canvas.height) * 0.05;
+            CONFIG.fontSize = Math.min(canvas.width, canvas.height) * 0.025;
+
+            nodes = initialNodeData.map(data => ({
+                ...data,
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                isHovered: false,
+                isDragging: false,
+                color: data.isCentral ? CONFIG.centralNodeColor : CONFIG.resourceNodeColor,
+                radius: data.isCentral ? CONFIG.centralNodeRadius : CONFIG.nodeRadius,
+            }));
+
+            // Position central node near center initially
+            const gfgNode = nodes.find(node => node.id === 'gfg');
+            if (gfgNode) {
+                gfgNode.x = canvas.width / 2;
+                gfgNode.y = canvas.height / 2;
+                 // Ensure central node is within bounds
+                gfgNode.x = Math.max(gfgNode.radius, Math.min(canvas.width - gfgNode.radius, gfgNode.x));
+                gfgNode.y = Math.max(gfgNode.radius, Math.min(canvas.height - gfgNode.radius, gfgNode.y));
+            }
+
+            connections = initialConnectionData.map(conn => {
+                const fromNode = nodes.find(node => node.id === conn.from);
+                const toNode = nodes.find(node => node.id === conn.to);
+                 // Simple bidirectional representation for drawing purposes
+                return { from: fromNode, to: toNode };
+            }).filter(conn => conn.from && conn.to); // Filter out invalid connections
+
+            // Spread other nodes around the central one initially
+            if (gfgNode) {
+                 const nonGfgNodes = nodes.filter(node => node.id !== 'gfg');
+                 const angleStep = (Math.PI * 2) / nonGfgNodes.length;
+                 const radius = Math.min(canvas.width, canvas.height) * 0.3; // Spread radius
+
+                 nonGfgNodes.forEach((node, index) => {
+                     const angle = angleStep * index;
+                     node.x = gfgNode.x + radius * Math.cos(angle);
+                     node.y = gfgNode.y + radius * Math.sin(angle);
+
+                     // Ensure nodes are within bounds
+                     node.x = Math.max(node.radius, Math.min(canvas.width - node.radius, node.x));
+                     node.y = Math.max(node.radius, Math.min(canvas.height - node.radius, node.y));
+                 });
+            }
+        }
+
+        // Initialize on load and on resize
+        initializeNodesAndConnections();
+        window.addEventListener('resize', initializeNodesAndConnections);
+
+
+        // --- Drawing Functions ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            // Draw connections
+            connections.forEach(conn => {
+                ctx.beginPath();
+                ctx.moveTo(conn.from.x, conn.from.y);
+                ctx.lineTo(conn.to.x, conn.to.y);
+                ctx.strokeStyle = CONFIG.connectionColor;
+                ctx.lineWidth = CONFIG.connectionThickness;
+
+                if (toggleGlow.checked) {
+                    ctx.shadowBlur = CONFIG.glowIntensity / 2;
+                    ctx.shadowColor = CONFIG.connectionColor;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.stroke();
+            });
+
+            // Draw nodes
+            nodes.forEach(node => {
+                const currentNodeColor = node.isDragging ? CONFIG.dragColor : (node.isHovered ? CONFIG.hoverColor : node.color);
+
+                // Draw glow/outline first
+                if (toggleGlow.checked) {
+                     ctx.shadowBlur = node.isHovered ? CONFIG.glowIntensity * 1.5 : CONFIG.glowIntensity;
+                     ctx.shadowColor = currentNodeColor;
+                     ctx.beginPath();
+                     ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+                     ctx.strokeStyle = currentNodeColor; // Use node color for glow outline
+                     ctx.lineWidth = 3;
+                     ctx.stroke();
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+
+                // Draw solid node circle
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+                ctx.fillStyle = currentNodeColor;
+                ctx.shadowBlur = 0; // Turn off shadow for fill
+                ctx.fill();
+
+
+                // Draw label
+                if (toggleLabels.checked && node.label) {
+                    ctx.fillStyle = CONFIG.labelColor;
+                    ctx.font = `${CONFIG.fontSize}px ${CONFIG.fontFamily}`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(node.label, node.x, node.y + node.radius + CONFIG.fontSize * 0.7); // Position below node
+                }
+            });
+        }
+
+        // --- Interaction Logic ---
+
+        function getNodeAt(x, y) {
+            // Iterate in reverse order to pick the top-most node if they overlap
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const node = nodes[i];
+                const dist = Math.sqrt((x - node.x) ** 2 + (y - node.y) ** 2);
+                if (dist < node.radius) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function handleMouseDown(event) {
+             if (isAutoDemoRunning) return; // Disable interaction during demo
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const node = getNodeAt(x, y);
+            if (node) {
+                draggingNode = node;
+                // Update state for drawing
+                nodes.forEach(n => n.isDragging = false); // Ensure only one node is dragging
+                draggingNode.isDragging = true;
+                dragOffset = { x: x - node.x, y: y - node.y };
+                canvas.style.cursor = 'grabbing';
+            }
+        }
+
+        function handleMouseMove(event) {
+             if (isAutoDemoRunning) return; // Disable interaction during demo
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            if (draggingNode) {
+                draggingNode.x = x - dragOffset.x;
+                draggingNode.y = y - dragOffset.y;
+
+                // Clamp to canvas bounds
+                draggingNode.x = Math.max(draggingNode.radius, Math.min(canvas.width - draggingNode.radius, draggingNode.x));
+                draggingNode.y = Math.max(draggingNode.radius, Math.min(canvas.height - draggingNode.radius, draggingNode.y));
+
+            } else {
+                const node = getNodeAt(x, y);
+                if (hoveredNode && hoveredNode !== node) {
+                    hoveredNode.isHovered = false;
+                }
+                if (node) {
+                    node.isHovered = true;
+                    hoveredNode = node;
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    if (hoveredNode) {
+                         hoveredNode.isHovered = false;
+                         hoveredNode = null;
+                    }
+                    canvas.style.cursor = 'crosshair'; // Reset to default canvas cursor
+                }
+            }
+        }
+
+        function handleMouseUp() {
+             if (isAutoDemoRunning) return; // Disable interaction during demo
+
+            if (draggingNode) {
+                draggingNode.isDragging = false;
+                draggingNode = null;
+                 canvas.style.cursor = hoveredNode ? 'pointer' : 'crosshair'; // Reset cursor based on hover state
+            }
+        }
+
+        function handleMouseLeave() {
+             if (isAutoDemoRunning) return; // Disable interaction during demo
+
+             if (draggingNode) {
+                 draggingNode.isDragging = false;
+                 draggingNode = null;
+             }
+             if (hoveredNode) {
+                hoveredNode.isHovered = false;
+                hoveredNode = null;
+             }
+             canvas.style.cursor = 'crosshair'; // Reset to default canvas cursor
+        }
+
+
+        // --- Button & Toggle Actions ---
+        function resetLayout() {
+            isAutoDemoRunning = false; // Stop demo if running
+            initializeNodesAndConnections(); // Re-run initial positioning
+            demoStep = 0; // Reset demo state
+            autoDemoBtn.textContent = 'Auto Demo'; // Reset button text
+             nodes.forEach(node => { node.isHovered = false; node.isDragging = false; }); // Clear any active states
+             draggingNode = null;
+             hoveredNode = null;
+             canvas.style.cursor = 'crosshair';
+        }
+
+        function randomizeLayout() {
+             if (isAutoDemoRunning) return; // Disable randomization during demo
+
+            nodes.forEach(node => {
+                if (!node.isCentral) { // Don't randomize central node
+                    node.x = Math.random() * canvas.width;
+                    node.y = Math.random() * canvas.height;
+
+                    // Ensure nodes are within bounds
+                    node.x = Math.max(node.radius, Math.min(canvas.width - node.radius, node.x));
+                    node.y = Math.max(node.radius, Math.min(canvas.height - node.radius, node.y));
+                }
+            });
+        }
+
+        function toggleAutoDemo() {
+            isAutoDemoRunning = !isAutoDemoRunning;
+            autoDemoBtn.textContent = isAutoDemoRunning ? 'Stop Demo' : 'Auto Demo';
+            if (isAutoDemoRunning) {
+                resetLayout(); // Start demo from a clean state (also resets states/cursor)
+                demoStartTime = performance.now();
+                demoStep = 0;
+                // Ensure no interaction elements are active visually
+                nodes.forEach(node => { node.isHovered = false; node.isDragging = false; });
+                draggingNode = null;
+                hoveredNode = null;
+                canvas.style.cursor = 'default'; // Change cursor during demo
+            } else {
+                 nodes.forEach(node => node.isHovered = false); // Clear any demo highlights
+                 canvas.style.cursor = 'crosshair'; // Reset cursor after demo
+            }
+        }
+
+        function runAutoDemo(currentTime) {
+            if (!isAutoDemoRunning) return;
+
+            const elapsed = currentTime - demoStartTime;
+            const currentDemoStepIndex = Math.floor(elapsed / demoDurationPerStep);
+
+            // Define demo sequence (highlighting nodes)
+            // Sequence: Central -> other nodes in defined order -> repeat
+            const demoSequence = initialNodeData.map(node => node.id);
+
+            // Determine the current node index in the sequence, wrapping around
+            const sequenceLength = demoSequence.length;
+            const currentStepWrapped = currentDemoStepIndex % sequenceLength;
+            const currentNodeIdToHighlight = demoSequence[currentStepWrapped];
+
+            // Check if we moved to a new step
+            if (currentStepWrapped !== demoStep) {
+                 // Transition to next step
+                 nodes.forEach(node => node.isHovered = false); // Clear previous highlight
+                 const nodeToHighlight = nodes.find(node => node.id === currentNodeIdToHighlight);
+                 if (nodeToHighlight) {
+                    nodeToHighlight.isHovered = true; // Apply new highlight
+                 }
+                 demoStep = currentStepWrapped;
+            }
+        }
+
+
+        // --- Animation Loop ---
+        function animate(currentTime) {
+            // Calculate FPS
+            frameCount++;
+            const elapsedFps = currentTime - lastFrameTime;
+            if (elapsedFps >= 500) { // Update FPS display every 500ms
+                fps = (frameCount / elapsedFps) * 1000;
+                fpsDisplay.textContent = `FPS: ${Math.round(fps)}`;
+                frameCount = 0;
+                lastFrameTime = currentTime;
+            }
+
+            if (isAutoDemoRunning) {
+                runAutoDemo(currentTime);
+            }
+
+            draw(); // Redraw canvas
+
+            requestAnimationFrame(animate); // Loop
+        }
+
+        // --- Event Listeners ---
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseLeave);
+
+        resetBtn.addEventListener('click', resetLayout);
+        randomizeBtn.addEventListener('click', randomizeLayout);
+        autoDemoBtn.addEventListener('click', toggleAutoDemo);
+
+        // Redraw immediately when toggles change for responsiveness
+        toggleLabels.addEventListener('change', draw);
+        toggleGlow.addEventListener('change', draw);
+
+
+        // Start the animation loop
+        animate(performance.now());
+
+    </script>
+
+</body>
+</html>

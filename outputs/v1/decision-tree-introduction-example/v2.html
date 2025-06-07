@@ -1,0 +1,717 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Interview Prep Explorer - GFG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Arial', sans-serif;
+            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+        }
+
+        :root {
+            --neon-blue: #00ffff;
+            --neon-green: #39ff14;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --neon-orange: #ff8000;
+            --glow-spread: 5px;
+            --glow-intensity: 15px;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        header {
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 2.5vh;
+            font-weight: bold;
+            text-shadow: 0 0 var(--glow-spread) var(--neon-blue), 0 0 var(--glow-intensity) var(--neon-blue);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+            color: var(--neon-blue);
+        }
+
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #controls {
+            padding: 1vh 2vw;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5vw;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            display: block;
+            background-color: #000;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        footer {
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 1.5vh;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+            text-shadow: 0 0 calc(var(--glow-spread) / 2) var(--neon-green), 0 0 calc(var(--glow-intensity) / 2) var(--neon-green);
+            color: var(--neon-green);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 1vw;
+            align-items: center;
+        }
+
+        button {
+            background: none;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 0.8vh 1.2vw;
+            font-size: 1.8vh;
+            cursor: pointer;
+            text-shadow: 0 0 var(--glow-spread) var(--neon-blue);
+            box-shadow: 0 0 var(--glow-spread) var(--neon-blue);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        button:hover {
+            color: #000;
+            background-color: var(--neon-blue);
+            text-shadow: none;
+            box-shadow: 0 0 var(--glow-spread) var(--neon-blue), 0 0 var(--glow-intensity) var(--neon-blue);
+        }
+
+        button:active {
+            box-shadow: 0 0 calc(var(--glow-spread) * 1.5) var(--neon-blue), 0 0 calc(var(--glow-intensity) * 1.5) var(--neon-blue);
+        }
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            font-size: 1.8vh;
+            gap: 0.5vw;
+            color: var(--neon-pink);
+            text-shadow: 0 0 calc(var(--glow-spread)/2) var(--neon-pink);
+        }
+
+        .toggle-control input[type="checkbox"] {
+            appearance: none;
+            width: 1.5vh;
+            height: 1.5vh;
+            border: 1px solid var(--neon-pink);
+            background: none;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 0 calc(var(--glow-spread)/2) var(--neon-pink);
+            flex-shrink: 0;
+        }
+
+        .toggle-control input[type="checkbox"]:checked {
+            background-color: var(--neon-pink);
+            box-shadow: 0 0 calc(var(--glow-spread)/2) var(--neon-pink), 0 0 calc(var(--glow-intensity)/2) var(--neon-pink);
+        }
+
+        .toggle-control input[type="checkbox"]:focus {
+            outline: none;
+            box-shadow: 0 0 var(--glow-spread) var(--neon-pink);
+        }
+
+        #fps-display {
+            font-size: 1.8vh;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 calc(var(--glow-spread)/2) var(--neon-yellow);
+            flex-shrink: 0;
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 0.5vh 1vw;
+            font-size: 1.8vh;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            text-shadow: 0 0 calc(var(--glow-spread)/4) var(--neon-green);
+            box-shadow: 0 0 calc(var(--glow-spread)/4) var(--neon-green);
+            white-space: nowrap;
+        }
+
+        footer a {
+            color: var(--neon-green);
+            text-decoration: none;
+            margin: 0 1vw;
+            transition: text-shadow 0.3s ease;
+        }
+
+        footer a:hover {
+            text-shadow: 0 0 calc(var(--glow-spread)/2) var(--neon-green), 0 0 calc(var(--glow-intensity)/2) var(--neon-green);
+        }
+
+        body {
+             cursor: crosshair;
+        }
+        canvas.interactive {
+             cursor: pointer;
+        }
+        canvas.dragging {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            Interview Prep Resource Explorer
+        </header>
+
+        <div id="main-content">
+            <div id="controls">
+                <button id="resetBtn">Reset Layout</button>
+                <button id="randomizeBtn">Randomize</button>
+                <button id="autoDemoBtn">Start Auto Demo</button>
+                <div class="toggle-control">
+                    <input type="checkbox" id="toggleLinks" checked>
+                    <label for="toggleLinks">Show Links</label>
+                </div>
+                 <div class="toggle-control">
+                    <input type="checkbox" id="toggleLabels" checked>
+                    <label for="toggleLabels">Show Labels</label>
+                </div>
+                <div id="fps-display">FPS: --</div>
+            </div>
+            <canvas id="visualizerCanvas"></canvas>
+            <div id="tooltip"></div>
+        </div>
+
+        <footer>
+            Created based on GfG concept | Links:
+            <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a> |
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </footer>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('visualizerCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const fpsDisplay = document.getElementById('fps-display');
+        const resetBtn = document.getElementById('resetBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const toggleLinksCheckbox = document.getElementById('toggleLinks');
+        const toggleLabelsCheckbox = document.getElementById('toggleLabels');
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let headerHeight = document.querySelector('header').offsetHeight;
+        let controlsHeight = document.getElementById('controls').offsetHeight;
+        let footerHeight = document.querySelector('footer').offsetHeight;
+
+        function resizeCanvas() {
+             width = window.innerWidth;
+             height = window.innerHeight;
+             headerHeight = document.querySelector('header').offsetHeight;
+             controlsHeight = document.getElementById('controls').offsetHeight;
+             footerHeight = document.querySelector('footer').offsetHeight;
+
+             canvas.width = width;
+             canvas.height = height - headerHeight - controlsHeight - footerHeight;
+             canvas.style.top = headerHeight + controlsHeight + 'px';
+             canvas.style.left = '0px';
+
+             if (nodes.length > 0) {
+                 nodes.forEach(node => {
+                     node.x = (node.x / oldWidth) * canvas.width || canvas.width / 2;
+                     node.y = (node.y / oldHeight) * canvas.height || canvas.height / 2;
+                 });
+             }
+
+             oldWidth = canvas.width;
+             oldHeight = canvas.height;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        let oldWidth = canvas.width;
+        let oldHeight = canvas.height;
+        resizeCanvas();
+
+        const nodes = [];
+        const links = [];
+
+        const nodeData = [
+            { id: 'central', label: 'Interview Success', type: 'central', radius: 30, color: 'var(--neon-blue)' },
+            { id: 'dsa', label: 'DSA', type: 'topic', radius: 20, color: 'var(--neon-green)' },
+            { id: 'sysdesign', label: 'System Design', type: 'topic', radius: 20, color: 'var(--neon-pink)' },
+            { id: 'languages', label: 'Languages', type: 'topic', radius: 20, color: 'var(--neon-yellow)' },
+            { id: 'behavioral', label: 'Behavioral', type: 'topic', radius: 20, color: 'var(--neon-orange)' },
+            { id: 'resume', label: 'Resume Prep', type: 'topic', radius: 20, color: 'var(--neon-green)' },
+             { id: 'coding', label: 'Coding Problems', type: 'topic', radius: 20, color: 'var(--neon-blue)' },
+            { id: 'mock', label: 'Mock Interviews', type: 'topic', radius: 20, color: 'var(--neon-pink)' },
+        ];
+
+        const linkData = [
+            ['dsa', 'central'],
+            ['sysdesign', 'central'],
+            ['languages', 'central'],
+            ['behavioral', 'central'],
+            ['resume', 'central'],
+            ['coding', 'central'],
+            ['mock', 'central'],
+            ['dsa', 'coding'],
+            ['sysdesign', 'coding'],
+            ['dsa', 'mock'],
+            ['sysdesign', 'mock'],
+            ['behavioral', 'mock'],
+        ];
+
+        function createNodes() {
+            nodes.length = 0;
+            links.length = 0;
+
+            nodeData.forEach(data => {
+                nodes.push({
+                    id: data.id,
+                    label: data.label,
+                    type: data.type,
+                    radius: data.radius,
+                    color: data.color,
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: 0,
+                    vy: 0,
+                    isDragging: false,
+                    isHovered: false,
+                    isStudied: false
+                });
+            });
+
+            linkData.forEach(linkPair => {
+                const sourceNode = nodes.find(n => n.id === linkPair[0]);
+                const targetNode = nodes.find(n => n.id === linkPair[1]);
+                if (sourceNode && targetNode) {
+                    links.push({ source: sourceNode, target: targetNode });
+                }
+            });
+        }
+
+        const repulsionForce = 1000;
+        const attractionForce = 0.05;
+        const centralAttraction = 0.001;
+        const damping = 0.95;
+
+        function updatePhysics() {
+             const centerX = canvas.width / 2;
+             const centerY = canvas.height / 2;
+
+            nodes.forEach(node1 => {
+                if (node1.isDragging) return;
+
+                nodes.forEach(node2 => {
+                    if (node1 === node2) return;
+
+                    const dx = node2.x - node1.x;
+                    const dy = node2.y - node1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < node1.radius + node2.radius) {
+                         const overlap = (node1.radius + node2.radius) - distance;
+                         const adjustX = dx / distance * overlap * 0.5;
+                         const adjustY = dy / distance * overlap * 0.5;
+                         node1.x -= adjustX;
+                         node1.y -= adjustY;
+                         node2.x += adjustX;
+                         node2.y += adjustY;
+                         node1.vx -= dx / distance * 0.5;
+                         node1.vy -= dy / distance * 0.5;
+                         node2.vx += dx / distance * 0.5;
+                         node2.vy += dy / distance * 0.5;
+
+                    } else if (distance > 0 && distance < 200) {
+                        const force = repulsionForce / (distance * distance);
+                        node1.vx -= (dx / distance) * force;
+                        node1.vy -= (dy / distance) * force;
+                    }
+                });
+
+                 links.filter(link => link.source === node1 || link.target === node1).forEach(link => {
+                     const otherNode = link.source === node1 ? link.target : link.source;
+                     const dx = otherNode.x - node1.x;
+                     const dy = otherNode.y - node1.y;
+                     const distance = Math.sqrt(dx * dx + dy * dy);
+                     const targetDistance = node1.radius + otherNode.radius + 50;
+                     const force = (distance - targetDistance) * attractionForce;
+
+                     node1.vx += (dx / distance) * force;
+                     node1.vy += (dy / distance) * force;
+                 });
+
+                const dx_center = centerX - node1.x;
+                const dy_center = centerY - node1.y;
+                node1.vx += dx_center * centralAttraction;
+                node1.vy += dy_center * centralAttraction;
+
+                node1.vx *= damping;
+                node1.vy *= damping;
+
+                const edgeMargin = node1.radius;
+                 if (node1.x - edgeMargin < 0) { node1.vx += (0 - (node1.x - edgeMargin)) * 0.1; }
+                 if (node1.x + edgeMargin > canvas.width) { node1.vx -= ((node1.x + edgeMargin) - canvas.width) * 0.1; }
+                 if (node1.y - edgeMargin < 0) { node1.vy += (0 - (node1.y - edgeMargin)) * 0.1; }
+                 if (node1.y + edgeMargin > canvas.height) { node1.vy -= ((node1.y + edgeMargin) - canvas.height) * 0.1; }
+
+                node1.x += node1.vx;
+                node1.y += node1.vy;
+            });
+        }
+
+        function drawNode(node) {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+
+            const glowColor = node.isStudied ? 'rgba(255, 255, 0, 0.8)'
+                           : node.isHovered ? node.color
+                           : 'rgba(0, 0, 0, 0)';
+
+            ctx.shadowBlur = node.isStudied ? varToPx('--glow-intensity') * 1.5 : (node.isHovered ? varToPx('--glow-intensity') : 0);
+            ctx.shadowColor = glowColor;
+            ctx.fillStyle = node.color;
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'rgba(0,0,0,0)';
+
+            if (node.isHovered || node.isDragging) {
+                 ctx.strokeStyle = node.isDragging ? 'white' : 'rgba(255,255,255,0.5)';
+                 ctx.lineWidth = 2;
+                 ctx.stroke();
+            }
+
+            if (toggleLabelsCheckbox.checked && node.label) {
+                 ctx.fillStyle = node.isHovered ? 'white' : 'rgba(255,255,255,0.8)';
+                 ctx.font = `${node.radius * 0.7}px Arial`;
+                 ctx.textAlign = 'center';
+                 ctx.textBaseline = 'middle';
+                 ctx.fillText(node.label, node.x, node.y);
+            }
+        }
+
+         function drawLink(link) {
+             if (!toggleLinksCheckbox.checked) return;
+
+            ctx.beginPath();
+            ctx.moveTo(link.source.x, link.source.y);
+            ctx.lineTo(link.target.x, link.target.y);
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            links.forEach(drawLink);
+            nodes.forEach(drawNode);
+        }
+
+        function varToPx(variableName) {
+             const value = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+             return parseFloat(value) || 0;
+        }
+
+        let lastTime = 0;
+        let fps = 0;
+        let frameCount = 0;
+        let fpsInterval = 1000;
+
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            const elapsed = currentTime - lastTime;
+            frameCount++;
+            if (elapsed > fpsInterval) {
+                fps = Math.round(frameCount / (elapsed / 1000));
+                fpsDisplay.textContent = `FPS: ${fps}`;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+
+            updatePhysics();
+            render();
+        }
+
+        let draggingNode = null;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        function getCanvasMousePos(e) {
+             const rect = canvas.getBoundingClientRect();
+             const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+             const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+             return {
+                 x: clientX - rect.left,
+                 y: clientY - rect.top
+             };
+        }
+
+        function isMouseOverNode(node, mx, my) {
+             const dx = mx - node.x;
+             const dy = my - node.y;
+             return Math.sqrt(dx * dx + dy * dy) < node.radius;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+             const pos = getCanvasMousePos(e);
+             mouseX = pos.x;
+             mouseY = pos.y;
+
+            draggingNode = nodes.find(node => isMouseOverNode(node, mouseX, mouseY));
+
+            if (draggingNode) {
+                draggingNode.isDragging = true;
+                 canvas.classList.add('dragging');
+                 canvas.classList.remove('interactive');
+            }
+             e.preventDefault();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getCanvasMousePos(e);
+            mouseX = pos.x;
+            mouseY = pos.y;
+
+            if (draggingNode) {
+                draggingNode.x = mouseX;
+                draggingNode.y = mouseY;
+                 draggingNode.vx = 0;
+                 draggingNode.vy = 0;
+            } else {
+                 let hoveredNode = null;
+                 for(let i = 0; i < nodes.length; i++) {
+                     if (isMouseOverNode(nodes[i], mouseX, mouseY)) {
+                         hoveredNode = nodes[i];
+                         break;
+                     }
+                 }
+
+                 nodes.forEach(node => {
+                     node.isHovered = (node === hoveredNode);
+                 });
+
+                 if (hoveredNode) {
+                     tooltip.textContent = hoveredNode.label;
+                     tooltip.style.left = (e.clientX + 10) + 'px';
+                     tooltip.style.top = (e.clientY + 10) + 'px';
+                     tooltip.style.opacity = 1;
+                     canvas.classList.add('interactive');
+                 } else {
+                     tooltip.style.opacity = 0;
+                      canvas.classList.remove('interactive');
+                      canvas.classList.remove('dragging');
+                 }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (draggingNode) {
+                draggingNode.isDragging = false;
+                draggingNode = null;
+                 canvas.classList.remove('dragging');
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const pos = getCanvasMousePos(e);
+            mouseX = pos.x;
+            mouseY = pos.y;
+
+             const clickedNode = nodes.find(node => isMouseOverNode(node, mouseX, mouseY));
+
+             if (clickedNode) {
+                 clickedNode.isStudied = !clickedNode.isStudied;
+             }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                 const touch = e.touches[0];
+                 canvas.dispatchEvent(new MouseEvent('mousedown', {
+                     clientX: touch.clientX,
+                     clientY: touch.clientY,
+                     bubbles: true,
+                     cancelable: true
+                 }));
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+             if (e.touches.length === 1) {
+                 const touch = e.touches[0];
+                 canvas.dispatchEvent(new MouseEvent('mousemove', {
+                     clientX: touch.clientX,
+                     clientY: touch.clientY,
+                     bubbles: true,
+                     cancelable: true
+                 }));
+                 e.preventDefault();
+             }
+        }, { passive: false });
+
+         canvas.addEventListener('touchend', (e) => {
+             canvas.dispatchEvent(new MouseEvent('mouseup', {
+                 bubbles: true,
+                 cancelable: true
+             }));
+
+             if (!draggingNode && e.changedTouches.length > 0) {
+                  canvas.dispatchEvent(new MouseEvent('click', {
+                     clientX: e.changedTouches[0].clientX,
+                     clientY: e.changedTouches[0].clientY,
+                     bubbles: true,
+                     cancelable: true
+                 }));
+             }
+         });
+
+        function resetLayout() {
+             createNodes();
+             const central = nodes.find(n => n.type === 'central');
+             if(central) {
+                 central.x = canvas.width / 2;
+                 central.y = canvas.height / 2;
+                 central.vx = 0;
+                 central.vy = 0;
+             }
+             nodes.forEach(node => {
+                 node.isDragging = false;
+                 node.isHovered = false;
+                 node.isStudied = false;
+             });
+             draggingNode = null;
+             tooltip.style.opacity = 0;
+             canvas.classList.remove('dragging');
+             canvas.classList.remove('interactive');
+        }
+
+        function randomizeLayout() {
+             nodes.forEach(node => {
+                 node.x = Math.random() * canvas.width;
+                 node.y = Math.random() * canvas.height;
+                 node.vx = (Math.random() - 0.5) * 10;
+                 node.vy = (Math.random() - 0.5) * 10;
+             });
+             nodes.forEach(node => {
+                 node.isDragging = false;
+                 node.isHovered = false;
+                 node.isStudied = false;
+             });
+            draggingNode = null;
+             tooltip.style.opacity = 0;
+             canvas.classList.remove('dragging');
+             canvas.classList.remove('interactive');
+        }
+
+        let autoDemoInterval = null;
+        let isAutoDemoRunning = false;
+
+        function startAutoDemo() {
+             if (isAutoDemoRunning) return;
+
+             isAutoDemoRunning = true;
+             autoDemoBtn.textContent = 'Stop Auto Demo';
+
+             resetLayout();
+
+             autoDemoInterval = setInterval(() => {
+                 if (nodes.length > 0) {
+                     const randomIndex = Math.floor(Math.random() * nodes.length);
+                     const nodeToInteract = nodes[randomIndex];
+                     nodeToInteract.isStudied = !nodeToInteract.isStudied;
+                     nodeToInteract.vx += (Math.random() - 0.5) * 20;
+                     nodeToInteract.vy += (Math.random() - 0.5) * 20;
+                 }
+             }, 1500);
+        }
+
+        function stopAutoDemo() {
+            if (!isAutoDemoRunning) return;
+
+            isAutoDemoRunning = false;
+            autoDemoBtn.textContent = 'Start Auto Demo';
+            clearInterval(autoDemoInterval);
+            autoDemoInterval = null;
+             nodes.forEach(node => node.isStudied = false);
+             tooltip.style.opacity = 0;
+             canvas.classList.remove('dragging');
+             canvas.classList.remove('interactive');
+        }
+
+        autoDemoBtn.addEventListener('click', () => {
+            if (isAutoDemoRunning) {
+                stopAutoDemo();
+            } else {
+                startAutoDemo();
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            stopAutoDemo();
+            resetLayout();
+        });
+
+        randomizeBtn.addEventListener('click', () => {
+             stopAutoDemo();
+             randomizeLayout();
+        });
+
+        toggleLinksCheckbox.addEventListener('change', render);
+        toggleLabelsCheckbox.addEventListener('change', render);
+
+        createNodes();
+        animate(0);
+    </script>
+</body>
+</html>

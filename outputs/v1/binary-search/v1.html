@@ -1,0 +1,771 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer</title>
+    <style>
+        :root {
+            --neon-blue: #00ffff;
+            --neon-green: #00ff00;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --neon-red: #ff0000;
+            --neon-glow: 0 0 5px, 0 0 10px, 0 0 15px, 0 0 20px, 0 0 25px;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            color: var(--neon-blue);
+            font-family: 'Share Tech Mono', monospace; /* Futuristic monospace font */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Fallback font for Share Tech Mono */
+        @font-face {
+            font-family: 'Share Tech Mono';
+            src: url('https://fonts.gstatic.com/s/sharetechmono/v15/J7aHnp1_SkvAQ3gsnfvkBWs.woff2') format('woff2');
+            unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+        }
+
+        header {
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3vh;
+            text-shadow: var(--neon-blue) var(--neon-glow);
+            border-bottom: 2px solid var(--neon-blue);
+            box-shadow: var(--neon-blue) var(--neon-glow);
+            padding: 0 2vw;
+            flex-shrink: 0;
+        }
+
+        #main-container {
+            flex-grow: 1;
+            display: flex;
+            padding: 1vh 1vw;
+            box-sizing: border-box;
+            min-height: 0; /* Allow flex-grow to shrink */
+        }
+
+        #controls {
+            width: 20vw;
+            padding: 1vh 1vw;
+            border-right: 2px solid var(--neon-green);
+            box-shadow: var(--neon-green) var(--neon-glow);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+
+        #controls button,
+        #controls label {
+            margin-bottom: 1.5vh;
+            font-size: 1.8vh;
+            padding: 0.8vh 1vw;
+            background: none;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            text-shadow: var(--neon-pink) var(--neon-glow);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left; /* Align text left */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #controls button:hover,
+        #controls label:hover {
+            background-color: rgba(255, 0, 255, 0.1);
+            box-shadow: var(--neon-pink) var(--neon-glow), inset var(--neon-pink) var(--neon-glow);
+        }
+
+        #controls button:active {
+            background-color: rgba(255, 0, 255, 0.3);
+        }
+
+         #controls label {
+             display: flex;
+             align-items: center;
+         }
+
+        #controls input[type="checkbox"] {
+            margin-right: 0.5vw;
+            accent-color: var(--neon-pink);
+            cursor: pointer;
+        }
+
+        #fps-display {
+            margin-top: auto; /* Push to bottom */
+            font-size: 1.5vh;
+            color: var(--neon-yellow);
+            text-shadow: var(--neon-yellow) var(--neon-glow);
+        }
+
+
+        #binarySearchCanvas {
+            flex-grow: 1;
+            /* Width and height will be set by JS */
+            display: block;
+            cursor: default; /* Default canvas cursor */
+        }
+
+        footer {
+            height: 5vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8vh;
+            border-top: 2px solid var(--neon-blue);
+            box-shadow: var(--neon-blue) var(--neon-glow);
+            padding: 0 2vw;
+            flex-shrink: 0;
+        }
+
+        footer a {
+            color: var(--neon-blue);
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: var(--neon-blue) var(--neon-glow);
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--neon-pink);
+            text-shadow: var(--neon-pink) var(--neon-glow);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-yellow);
+            color: var(--neon-yellow);
+            text-shadow: var(--neon-yellow) var(--neon-glow);
+            padding: 0.5vh 0.5vw;
+            font-size: 1.5vh;
+            pointer-events: none; /* Don't block mouse events */
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Custom Cursors for Canvas Interaction */
+        .canvas-interactive {
+            cursor: pointer; /* Pointer cursor for clickable elements */
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        Binary Search Visualizer
+    </header>
+
+    <div id="main-container">
+        <div id="controls">
+            <button id="btnReset">Reset / New Data</button>
+            <button id="btnSearchRandom">Search Random Value</button>
+            <button id="btnAutoDemo">Auto Demo</button>
+            <label>
+                <input type="checkbox" id="toggleIndices" checked> Show Indices
+            </label>
+            <label>
+                <input type="checkbox" id="toggleInterval" checked> Show Search Interval
+            </label>
+             <div id="fps-display">FPS: --</div>
+        </div>
+        <canvas id="binarySearchCanvas"></canvas>
+    </div>
+
+    <footer>
+        Made by a Minimalist Dev |
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        const canvas = document.getElementById('binarySearchCanvas');
+        const ctx = canvas.getContext('2d');
+        const controls = document.getElementById('controls');
+        const mainContainer = document.getElementById('main-container');
+        const tooltip = document.getElementById('tooltip');
+        const btnReset = document.getElementById('btnReset');
+        const btnSearchRandom = document.getElementById('btnSearchRandom');
+        const btnAutoDemo = document.getElementById('btnAutoDemo');
+        const toggleIndices = document.getElementById('toggleIndices');
+        const toggleInterval = document.getElementById('toggleInterval');
+        const fpsDisplay = document.getElementById('fps-display');
+
+        let dataArray = [];
+        let arraySize = 50; // Number of elements
+        let maxValue = 200; // Max value for elements
+
+        let low = 0;
+        let high = arraySize - 1;
+        let mid = -1;
+        let targetValue = null;
+        let foundIndex = -1; // -1: not found, >=0: found at index
+        let currentState = 'IDLE'; // IDLE, SEARCHING, FOUND, NOT_FOUND
+        let stepDelay = 600; // ms for auto demo step
+
+        // Animation variables
+        let animationFrameId = null;
+        let lastFrameTime = 0;
+        let fps = 0;
+        let autoDemoTimer = null;
+        let autoDemoTarget = null;
+
+        // Element dimensions and positions (calculated based on canvas size)
+        let elementWidth = 0;
+        let elementHeight = 0; // Fixed height for all elements
+        let barSpacing = 0;
+        let arrayBaseY = 0;
+
+        // Interaction variables
+        let hoveredIndex = -1;
+        let tooltipTimeout = null;
+
+        // Colors - Fetch from CSS variables once
+        const rootStyles = getComputedStyle(document.documentElement);
+        const colorElementDefault = rootStyles.getPropertyValue('--neon-blue').trim();
+        const colorLow = rootStyles.getPropertyValue('--neon-green').trim();
+        const colorHigh = rootStyles.getPropertyValue('--neon-pink').trim();
+        const colorMid = rootStyles.getPropertyValue('--neon-yellow').trim();
+        const colorTarget = rootStyles.getPropertyValue('--neon-red').trim();
+        const colorFound = rootStyles.getPropertyValue('--neon-green').trim(); // Found uses green
+        const colorInterval = 'rgba(0, 255, 255, 0.1)'; // Semi-transparent cyan
+        const colorComparisonHighlight = 'rgba(255, 255, 0, 0.3)'; // Semi-transparent yellow
+        const neonGlowBlur = 15; // Shadow blur amount for canvas glow effects
+
+        // --- Setup Functions ---
+
+        function resizeCanvas() {
+            const mainRect = mainContainer.getBoundingClientRect();
+            const controlsRect = controls.getBoundingClientRect();
+            const paddingLeftMain = parseFloat(getComputedStyle(mainContainer).paddingLeft);
+            const paddingRightMain = parseFloat(getComputedStyle(mainContainer).paddingRight);
+            const paddingTopMain = parseFloat(getComputedStyle(mainContainer).paddingTop);
+            const paddingBottomMain = parseFloat(getComputedStyle(mainContainer).paddingBottom);
+
+            canvas.width = mainRect.width - controlsRect.width - paddingLeftMain - paddingRightMain;
+            canvas.height = mainRect.height - paddingTopMain - paddingBottomMain;
+
+            const padding = canvas.width * 0.02; // 2% padding
+            const usableWidth = canvas.width - padding * 2;
+            const totalElementSpace = usableWidth / arraySize;
+            barSpacing = totalElementSpace * 0.1; // 10% of total space per element is spacing
+            elementWidth = totalElementSpace - barSpacing;
+
+             if (elementWidth < 1) elementWidth = 1;
+             if (arraySize > 1) {
+                 // Recalculate spacing if elementWidth is tiny or 1
+                 barSpacing = (usableWidth - elementWidth * arraySize) / (arraySize - 1);
+                 if (barSpacing < 0) barSpacing = 0;
+             } else {
+                 barSpacing = 0; // Handle arraySize = 1 case
+             }
+
+
+            elementHeight = canvas.height * 0.15;
+            arrayBaseY = canvas.height * 0.55;
+
+            draw();
+        }
+
+        function generateSortedArray(size, maxVal) {
+            const arr = [];
+            for (let i = 0; i < size; i++) {
+                arr.push(Math.floor(Math.random() * maxVal) + 1);
+            }
+            arr.sort((a, b) => a - b);
+            return arr;
+        }
+
+        function reset() {
+            cancelAutoDemo();
+            dataArray = generateSortedArray(arraySize, maxValue);
+            low = 0;
+            high = dataArray.length - 1;
+            mid = -1;
+            targetValue = null;
+            foundIndex = -1;
+            currentState = 'IDLE';
+            draw();
+        }
+
+        // --- Drawing Functions ---
+
+        function draw() {
+            if (!ctx || canvas.width <= 0 || canvas.height <= 0 || dataArray.length === 0) {
+                 ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas even if no data
+                 // Optionally draw a message for empty array
+                 if (canvas.width > 0 && canvas.height > 0 && dataArray.length === 0) {
+                     ctx.fillStyle = colorElementDefault;
+                     ctx.font = 'bold 3vh Share Tech Mono';
+                     ctx.textAlign = 'center';
+                     ctx.textBaseline = 'middle';
+                     ctx.fillText('Array is empty. Reset.', canvas.width / 2, canvas.height / 2);
+                 }
+                 return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const paddingLeft = (canvas.width - (elementWidth + barSpacing) * arraySize + barSpacing) / 2;
+            // Ensure paddingLeft is non-negative and centers the array if it's smaller than canvas width
+            const effectivePaddingLeft = Math.max(0, paddingLeft);
+
+
+            // Draw search interval highlight
+            if (toggleInterval.checked && currentState === 'SEARCHING' && low <= high && low < dataArray.length && high < dataArray.length) {
+                 const intervalStartX = effectivePaddingLeft + low * (elementWidth + barSpacing);
+                 const intervalEndX = effectivePaddingLeft + high * (elementWidth + barSpacing) + elementWidth;
+                 const intervalY = arrayBaseY - elementHeight - 20;
+                 const intervalHeight = elementHeight + 40;
+
+                 ctx.fillStyle = colorInterval;
+                 ctx.fillRect(intervalStartX, intervalY, intervalEndX - intervalStartX, intervalHeight);
+
+                 ctx.strokeStyle = colorInterval.replace('0.1', '0.5');
+                 ctx.lineWidth = 2;
+                 ctx.beginPath();
+                 ctx.moveTo(intervalStartX, intervalY);
+                 ctx.lineTo(intervalStartX, intervalY + intervalHeight);
+                 ctx.moveTo(intervalEndX, intervalY);
+                 ctx.lineTo(intervalEndX, intervalY + intervalHeight);
+                 ctx.stroke();
+            }
+
+
+            // Draw array elements
+            for (let i = 0; i < dataArray.length; i++) {
+                const x = effectivePaddingLeft + i * (elementWidth + barSpacing);
+                const y = arrayBaseY - elementHeight;
+
+                let color = colorElementDefault;
+                if (currentState !== 'IDLE') {
+                    if (i === mid) color = colorMid;
+                    else if (i === low && low <= high) color = colorLow;
+                    else if (i === high && low <= high) color = colorHigh;
+
+                     if (targetValue !== null && dataArray[i] === targetValue && foundIndex === -1) {
+                         // Highlight target value if it exists in the array and is not the final found index
+                         // Check if this element is currently a pointer before overriding color
+                         const isPointer = (i === low && low <= high) || (i === high && low <= high) || i === mid;
+                         if (!isPointer) { // Don't override low/high/mid color with target color
+                            color = colorTarget;
+                         }
+                     }
+                    if (i === foundIndex && foundIndex !== -1) color = colorFound; // Found element overrides others
+
+                    // Highlight current comparison element at mid
+                    if (i === mid && (currentState === 'SEARCHING' || currentState === 'FOUND')) {
+                        ctx.fillStyle = colorComparisonHighlight;
+                        ctx.fillRect(x, y, elementWidth, elementHeight);
+                    }
+                }
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.rect(x, y, elementWidth, elementHeight);
+                ctx.fill();
+
+                const isPointer = (i === low && low <= high && low < dataArray.length) || (i === high && low <= high && high < dataArray.length) || (i === mid && mid !== -1 && mid < dataArray.length);
+                const isTargetVal = targetValue !== null && dataArray[i] === targetValue;
+                const isFound = i === foundIndex && foundIndex !== -1;
+
+                if (currentState !== 'IDLE' && (isPointer || isTargetVal || isFound)) {
+                     ctx.save();
+                     ctx.shadowBlur = neonGlowBlur;
+                     // Determine glow color based on priority: Found > Mid > Target > Low/High
+                     let glowColor = color; // Default to element color
+                     if (isFound) glowColor = colorFound;
+                     else if (i === mid) glowColor = colorMid;
+                     else if (isTargetVal) glowColor = colorTarget;
+                     else if (i === low || i === high) glowColor = color; // Use the color already assigned (low/high color)
+
+                     ctx.shadowColor = glowColor;
+                     ctx.fillStyle = color;
+                     ctx.fillRect(x, y, elementWidth, elementHeight);
+                     ctx.restore();
+                }
+
+                ctx.fillStyle = '#fff';
+                ctx.font = `${elementHeight * 0.4}px Share Tech Mono`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(dataArray[i], x + elementWidth / 2, y + elementHeight / 2);
+
+                 if (toggleIndices.checked) {
+                    ctx.fillStyle = colorElementDefault;
+                    ctx.font = `${elementHeight * 0.3}px Share Tech Mono`;
+                    ctx.fillText(i, x + elementWidth / 2, arrayBaseY + 15);
+                 }
+            }
+
+            if (currentState !== 'IDLE') {
+                const pointerY = arrayBaseY + 35;
+
+                const drawPointer = (index, label, color) => {
+                    if (index >= 0 && index < dataArray.length) {
+                        const x = effectivePaddingLeft + index * (elementWidth + barSpacing) + elementWidth / 2;
+                        ctx.fillStyle = color;
+                        ctx.font = 'bold 2vh Share Tech Mono';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'top';
+
+                        ctx.save();
+                        ctx.shadowBlur = neonGlowBlur;
+                        ctx.shadowColor = color;
+                        ctx.fillText(label, x, pointerY);
+                        ctx.restore();
+
+                         ctx.strokeStyle = color;
+                         ctx.lineWidth = 2;
+                         ctx.beginPath();
+                         ctx.moveTo(x, pointerY - 5);
+                         ctx.lineTo(x, arrayBaseY + elementHeight + 5);
+                         ctx.stroke();
+                    }
+                };
+
+                if (low <= high && low < dataArray.length && high < dataArray.length) {
+                    drawPointer(low, 'low', colorLow);
+                    drawPointer(high, 'high', colorHigh);
+                }
+                if (mid !== -1 && mid < dataArray.length) {
+                     drawPointer(mid, 'mid', colorMid);
+                }
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 3vh Share Tech Mono';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            const stateTextY = arrayBaseY - elementHeight - 40;
+
+            ctx.save();
+            ctx.shadowBlur = neonGlowBlur;
+
+            if (currentState === 'IDLE') {
+                ctx.fillStyle = colorElementDefault;
+                ctx.shadowColor = colorElementDefault;
+                ctx.fillText('Click an element to search', canvas.width / 2, stateTextY);
+            } else if (currentState === 'SEARCHING') {
+                 ctx.fillStyle = colorMid;
+                 ctx.shadowColor = colorMid;
+                 const targetDisplayText = targetValue !== null ? targetValue : '?';
+                ctx.fillText(`Searching for ${targetDisplayText}...`, canvas.width / 2, stateTextY);
+            } else if (currentState === 'FOUND') {
+                 ctx.fillStyle = colorFound;
+                 ctx.shadowColor = colorFound;
+                ctx.fillText(`Found ${targetValue} at index ${foundIndex}!`, canvas.width / 2, stateTextY);
+            } else if (currentState === 'NOT_FOUND') {
+                ctx.fillStyle = colorTarget;
+                 ctx.shadowColor = colorTarget;
+                ctx.fillText(`Value ${targetValue} not found.`, canvas.width / 2, stateTextY);
+            }
+            ctx.restore();
+
+
+            if (targetValue !== null && (currentState === 'SEARCHING' || currentState === 'FOUND' || currentState === 'NOT_FOUND')) {
+                ctx.fillStyle = colorTarget;
+                 ctx.font = 'bold 2.5vh Share Tech Mono';
+                 ctx.textAlign = 'left';
+                 ctx.textBaseline = 'top';
+
+                 ctx.save();
+                 ctx.shadowBlur = neonGlowBlur;
+                 ctx.shadowColor = colorTarget;
+                 ctx.fillText(`Target: ${targetValue}`, effectivePaddingLeft, arrayBaseY + elementHeight + 50);
+                 ctx.restore();
+            }
+        }
+
+        // --- Binary Search Logic ---
+
+        function performSearchStep() {
+            if (currentState !== 'SEARCHING') {
+                cancelAutoDemo();
+                return;
+            }
+
+            if (low > high || low >= dataArray.length || high < 0) {
+                 currentState = 'NOT_FOUND';
+                 mid = -1;
+                 draw();
+                 cancelAutoDemo();
+                 return;
+            }
+
+            mid = Math.floor((low + high) / 2);
+            const midValue = dataArray[mid];
+
+            draw();
+
+            setTimeout(() => {
+                if (midValue === targetValue) {
+                    foundIndex = mid;
+                    currentState = 'FOUND';
+                    cancelAutoDemo();
+                } else if (midValue < targetValue) {
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
+
+                 if (currentState === 'SEARCHING' && (low > high || low >= dataArray.length || high < 0)) {
+                    currentState = 'NOT_FOUND';
+                    mid = -1;
+                 }
+
+                draw();
+
+                if (autoDemoTimer !== null && currentState === 'SEARCHING') {
+                     autoDemoTimer = setTimeout(performSearchStep, stepDelay);
+                } else if (autoDemoTimer !== null && (currentState === 'FOUND' || currentState === 'NOT_FOUND')) {
+                     cancelAutoDemo();
+                }
+
+            }, stepDelay / 2);
+
+        }
+
+        function startSearch(value) {
+             if (currentState === 'SEARCHING' || autoDemoTimer !== null) return; // Prevent starting if already searching
+
+             cancelAutoDemo();
+             // Do NOT generate new data here. Search on the current array.
+             low = 0;
+             high = dataArray.length - 1;
+             mid = -1;
+             targetValue = value;
+             foundIndex = -1;
+             currentState = 'SEARCHING';
+             draw();
+
+             if (dataArray.length > 0) { // Only start search if array is not empty
+                setTimeout(performSearchStep, stepDelay / 2);
+             } else {
+                currentState = 'NOT_FOUND'; // Cannot search empty array
+                targetValue = null;
+                draw();
+             }
+        }
+
+        function startAutoDemo() {
+            if (autoDemoTimer !== null) { // If auto demo is running, stop it
+                cancelAutoDemo();
+                return;
+            }
+            // If not running, start it
+            reset(); // Reset data and state for a fresh start with new data
+            if (dataArray.length === 0) {
+                currentState = 'NOT_FOUND';
+                targetValue = null;
+                draw();
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * dataArray.length);
+            autoDemoTarget = dataArray[randomIndex];
+            targetValue = autoDemoTarget;
+            low = 0;
+            high = dataArray.length - 1;
+             foundIndex = -1;
+             mid = -1;
+            currentState = 'SEARCHING';
+            draw();
+            autoDemoTimer = setTimeout(performSearchStep, stepDelay);
+        }
+
+        function cancelAutoDemo() {
+            clearTimeout(autoDemoTimer);
+            autoDemoTimer = null;
+            autoDemoTarget = null;
+             if (currentState === 'SEARCHING') {
+                 currentState = 'IDLE';
+                 mid = -1;
+                 draw();
+             }
+        }
+
+
+        // --- Interaction Handlers ---
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const paddingLeft = (canvas.width - (elementWidth + barSpacing) * arraySize + barSpacing) / 2;
+            const effectivePaddingLeft = Math.max(0, paddingLeft);
+            const elementTopY = arrayBaseY - elementHeight;
+            const elementBottomY = arrayBaseY;
+
+            let currentHoveredIndex = -1;
+             if (dataArray.length > 0) {
+                for (let i = 0; i < dataArray.length; i++) {
+                    const elementX = effectivePaddingLeft + i * (elementWidth + barSpacing);
+
+                    // Check if mouse is within the element bar bounds
+                    if (x >= elementX && x <= elementX + elementWidth && y >= elementTopY && y <= elementBottomY) {
+                        currentHoveredIndex = i;
+                        break;
+                    }
+                }
+             }
+
+
+            if (currentHoveredIndex !== hoveredIndex) {
+                hoveredIndex = currentHoveredIndex;
+                if (hoveredIndex !== -1) {
+                    const value = dataArray[hoveredIndex];
+                    tooltip.innerHTML = `Index: ${hoveredIndex}<br>Value: ${value}`;
+
+                    const elementX = effectivePaddingLeft + hoveredIndex * (elementWidth + barSpacing);
+                    const elementY = arrayBaseY - elementHeight;
+                     // Position tooltip to the right and slightly below the element
+                     let tipX = rect.left + elementX + elementWidth + 10;
+                     let tipY = rect.top + elementY + elementHeight + 10;
+
+                     // Prevent tooltip going off screen to the right
+                     const tooltipWidth = tooltip.offsetWidth;
+                     if (tipX + tooltipWidth > window.innerWidth) {
+                         tipX = event.clientX - tooltipWidth - 10; // Position to the left of cursor
+                     }
+
+                     // Prevent tooltip going off screen to the bottom
+                     const tooltipHeight = tooltip.offsetHeight;
+                     if (tipY + tooltipHeight > window.innerHeight) {
+                         tipY = event.clientY - tooltipHeight - 10; // Position above cursor
+                     }
+
+
+                     tooltip.style.left = `${tipX}px`;
+                     tooltip.style.top = `${tipY}px`;
+
+                    tooltip.classList.add('visible');
+                    clearTimeout(tooltipTimeout);
+                } else {
+                    tooltipTimeout = setTimeout(() => {
+                         tooltip.classList.remove('visible');
+                    }, 100);
+                }
+
+                if (hoveredIndex !== -1 && currentState !== 'SEARCHING' && autoDemoTimer === null) {
+                     canvas.classList.add('canvas-interactive');
+                } else {
+                     canvas.classList.remove('canvas-interactive');
+                }
+            } else if (hoveredIndex !== -1) {
+                 // Update tooltip position if still hovering the same element
+                 const elementX = effectivePaddingLeft + hoveredIndex * (elementWidth + barSpacing);
+                 const elementY = arrayBaseY - elementHeight;
+                 let tipX = rect.left + elementX + elementWidth + 10;
+                 let tipY = rect.top + elementY + elementHeight + 10;
+
+                  const tooltipWidth = tooltip.offsetWidth;
+                  if (tipX + tooltipWidth > window.innerWidth) {
+                      tipX = event.clientX - tooltipWidth - 10;
+                  }
+
+                  const tooltipHeight = tooltip.offsetHeight;
+                  if (tipY + tooltipHeight > window.innerHeight) {
+                      tipY = event.clientY - tooltipHeight - 10;
+                  }
+
+                 tooltip.style.left = `${tipX}px`;
+                 tooltip.style.top = `${tipY}px`;
+            }
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            hoveredIndex = -1;
+            tooltipTimeout = setTimeout(() => {
+                 tooltip.classList.remove('visible');
+            }, 100);
+             canvas.classList.remove('canvas-interactive');
+        });
+
+
+        canvas.addEventListener('click', (event) => {
+             if (currentState === 'SEARCHING' || autoDemoTimer !== null || dataArray.length === 0) {
+                 return;
+             }
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const paddingLeft = (canvas.width - (elementWidth + barSpacing) * arraySize + barSpacing) / 2;
+             const effectivePaddingLeft = Math.max(0, paddingLeft);
+             const elementTopY = arrayBaseY - elementHeight;
+             const elementBottomY = arrayBaseY;
+
+            for (let i = 0; i < dataArray.length; i++) {
+                const elementX = effectivePaddingLeft + i * (elementWidth + barSpacing);
+
+                if (x >= elementX && x <= elementX + elementWidth && y >= elementTopY && y <= elementBottomY) {
+                    const clickedValue = dataArray[i];
+                    startSearch(clickedValue);
+                    break;
+                }
+            }
+        });
+
+        btnReset.addEventListener('click', reset);
+        btnSearchRandom.addEventListener('click', () => {
+             if (currentState === 'SEARCHING' || autoDemoTimer !== null || dataArray.length === 0) {
+                 return;
+             }
+             const randomValue = dataArray[Math.floor(Math.random() * dataArray.length)];
+             startSearch(randomValue);
+        });
+        btnAutoDemo.addEventListener('click', startAutoDemo); // startAutoDemo handles toggling internally
+        toggleIndices.addEventListener('change', draw);
+        toggleInterval.addEventListener('change', draw);
+
+
+        // --- Animation Loop and FPS ---
+
+        function animate(currentTime) {
+            animationFrameId = requestAnimationFrame(animate);
+
+            const elapsed = currentTime - lastFrameTime;
+            if (elapsed >= 100) { // Update FPS roughly every 100ms
+                 fps = Math.round(1000 / elapsed);
+                 fpsDisplay.textContent = `FPS: ${fps}`;
+                 lastFrameTime = currentTime;
+            }
+        }
+
+        // --- Initial Setup ---
+
+        window.addEventListener('resize', resizeCanvas);
+
+        reset();
+        resizeCanvas();
+        animate(0);
+
+
+    </script>
+</body>
+</html>

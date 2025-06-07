@@ -1,0 +1,786 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            background-color: black;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--neon-blue);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        :root {
+            --neon-blue: #00FFFF;
+            --neon-green: #39ff14; /* Using the requested green */
+            --neon-pink: #FF00FF;
+            --neon-purple: #8A2BE2;
+            --neon-red: #FF0000;
+            --neon-yellow: #FFFF00;
+            --text-light: #f0f0f0; /* Using requested light text color */
+            --glow-intensity: 5px;
+        }
+
+        #app-container {
+            display: grid;
+            grid-template-rows: auto auto 1fr auto;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            grid-row: 1;
+            text-align: center;
+            padding: 1vh 0;
+            border-bottom: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            text-shadow: 0 0 calc(var(--glow-intensity) * 1) var(--neon-blue), 0 0 calc(var(--glow-intensity) * 2) var(--neon-blue);
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        #controls {
+            grid-row: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 1vh 1vw;
+            gap: 1vw;
+            border-bottom: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            text-shadow: 0 0 calc(var(--glow-intensity) * 0.6) var(--neon-green);
+            flex-shrink: 0;
+            font-size: 0.9em; /* Slightly smaller font for controls */
+        }
+        
+        #controls > * {
+             flex-shrink: 0; /* Prevent items from shrinking */
+        }
+
+        #canvas-container {
+            grid-row: 3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1vw;
+        }
+
+        #knn-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border: 2px solid var(--neon-pink);
+            box-shadow: 0 0 calc(var(--glow-intensity) * 2) var(--neon-pink), 0 0 calc(var(--glow-intensity) * 4) var(--neon-pink), 0 0 calc(var(--glow-intensity) * 6) var(--neon-pink);
+            cursor: crosshair;
+            transition: box-shadow 0.3s ease;
+            touch-action: none; /* Disable default touch actions like pan/zoom */
+        }
+
+         #knn-canvas.dragging {
+             cursor: grabbing !important;
+             box-shadow: 0 0 calc(var(--glow-intensity) * 3) var(--neon-yellow), 0 0 calc(var(--glow-intensity) * 6) var(--neon-yellow), 0 0 calc(var(--glow-intensity) * 9) var(--neon-yellow);
+         }
+
+
+        footer {
+            grid-row: 4;
+            text-align: center;
+            padding: 1vh 0;
+            border-top: 1px solid var(--neon-purple);
+            color: var(--neon-purple);
+            text-shadow: 0 0 calc(var(--glow-intensity) * 1) var(--neon-purple);
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        footer a {
+            color: var(--neon-purple);
+            text-decoration: none;
+            margin: 0 1vw;
+            transition: text-shadow 0.3s ease;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+            text-shadow: 0 0 calc(var(--glow-intensity) * 2) var(--neon-purple);
+        }
+
+        button {
+            background: none;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 0.5vh 1vw;
+            text-shadow: 0 0 calc(var(--glow-intensity) * 0.6) var(--neon-green);
+            box-shadow: 0 0 calc(var(--glow-intensity) * 1) var(--neon-green);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            background-color: var(--neon-green);
+            color: black;
+            text-shadow: none;
+            box-shadow: 0 0 calc(var(--glow-intensity) * 2) var(--neon-green), 0 0 calc(var(--glow-intensity) * 4) var(--neon-green);
+        }
+
+        button:active {
+            background-color: var(--neon-green);
+            color: black;
+            box-shadow: 0 0 calc(var(--glow-intensity) * 1) var(--neon-green);
+            transform: translateY(1px);
+        }
+
+        #k-value {
+            font-weight: bold;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 calc(var(--glow-intensity) * 0.6) var(--neon-yellow);
+        }
+
+        label {
+            margin-left: 1vw;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            color: var(--neon-green); /* Labels should match control color */
+        }
+        
+        label:first-of-type {
+            margin-left: 0; /* Remove left margin for the first label */
+        }
+
+        label input[type="checkbox"] {
+            margin-right: 0.5vw;
+            cursor: pointer;
+            /* Basic styling - can be enhanced with custom checkbox later if needed */
+        }
+
+        #fps-display {
+            margin-left: auto;
+            padding-right: 0; /* Remove padding right */
+            font-size: 0.9em;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 calc(var(--glow-intensity) * 0.6) var(--neon-yellow);
+        }
+
+
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <header>
+            <h1>K-Nearest Neighbors (KNN) Visualizer</h1>
+        </header>
+
+        <div id="controls">
+            <button id="reset-btn">Reset</button>
+            <button id="randomize-btn">Randomize</button>
+            <button id="auto-demo-btn">Auto Demo</button>
+
+            <label>K: <span id="k-value">3</span></label>
+            <button id="k-dec">-</button>
+            <button id="k-inc">+</button>
+
+            <label><input type="checkbox" id="toggle-points" checked> Data Points</label>
+            <label><input type="checkbox" id="toggle-query" checked> Query Point</label>
+            <label><input type="checkbox" id="toggle-neighbors" checked> Neighbors</label>
+
+            <span id="fps-display">FPS: --</span>
+        </div>
+
+        <div id="canvas-container">
+             <canvas id="knn-canvas"></canvas>
+        </div>
+
+        <footer>
+            <span>&copy; 2023 Minimalist Dev</span>
+            <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+        </footer>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('knn-canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        let dataPoints = [];
+        let queryPoint = null;
+        let k = 3;
+        let classes = ['blue', 'pink'];
+        let classColors = {
+            'blue': 'var(--neon-blue)',
+            'pink': 'var(--neon-pink)'
+        };
+         const systemColors = { // Colors for UI elements not tied to data classes
+             'yellow': 'var(--neon-yellow)',
+             'green': 'var(--neon-green)',
+             'red': 'var(--neon-red)',
+             'purple': 'var(--neon-purple)'
+         };
+        let nextClassIndex = 0;
+
+        const settings = {
+            showDataPoints: true,
+            showQueryPoint: true,
+            showNeighbors: true
+        };
+
+        let isDraggingQuery = false;
+        let dragOffsetX, dragOffsetY;
+        let hoverPoint = null;
+
+        let lastFrameTime = performance.now();
+        let fps = 0;
+        const fpsDisplay = document.getElementById('fps-display');
+
+        let autoDemoInterval = null;
+        let autoDemoStep = 0;
+        let autoDemoAnimatingMove = false; // Flag to prevent premature step increment
+        const autoDemoSteps = [
+            { action: 'reset' },
+            { action: 'randomize', count: 30 },
+            { action: 'wait', duration: 1000 },
+            { action: 'addQuery', pos: { x: 0.3, y: 0.3 } },
+            { action: 'wait', duration: 1000 },
+            { action: 'classify' },
+            { action: 'wait', duration: 2000 },
+            { action: 'moveQuery', pos: { x: 0.7, y: 0.7 } },
+            { action: 'wait', duration: 1000 },
+             { action: 'classify' },
+            { action: 'wait', duration: 2000 },
+            { action: 'moveQuery', pos: { x: 0.5, y: 0.1 } },
+            { action: 'wait', duration: 1000 },
+             { action: 'classify' },
+            { action: 'wait', duration: 2000 },
+             { action: 'moveQuery', pos: { x: 0.1, y: 0.9 } },
+             { action: 'wait', duration: 1000 },
+             { action: 'classify' },
+             { action: 'wait', duration: 2000 },
+            { action: 'end' }
+        ];
+
+
+        function varToPixel(variableName) {
+            const style = getComputedStyle(document.documentElement);
+            const value = style.getPropertyValue(variableName);
+            return parseFloat(value) || 0;
+        }
+
+        function getColorValue(cssVariable) {
+             if (cssVariable.startsWith('var(')) {
+                 const varName = cssVariable.substring(4, cssVariable.length - 1);
+                 const style = getComputedStyle(document.documentElement);
+                 return style.getPropertyValue(varName).trim();
+             }
+             return cssVariable;
+        }
+
+
+        function drawPoint(point, color, size = 5, shape = 'circle') {
+            const actualColor = getColorValue(color);
+            ctx.fillStyle = actualColor;
+            ctx.strokeStyle = actualColor;
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            if (shape === 'circle') {
+                 ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                 ctx.fill();
+            } else if (shape === 'star') {
+                let outerRadius = size * 2;
+                let innerRadius = size;
+                let numPoints = 5;
+                 for (let i = 0; i < numPoints; i++) {
+                     let outerAngle = Math.PI / 2 + i * (Math.PI * 2 / numPoints);
+                     ctx.lineTo(point.x + outerRadius * Math.cos(outerAngle), point.y + outerRadius * Math.sin(outerAngle));
+                     let innerAngle = Math.PI / 2 + (i + 0.5) * (Math.PI * 2 / numPoints);
+                     ctx.lineTo(point.x + innerRadius * Math.cos(innerAngle), point.y + innerRadius * Math.sin(innerAngle));
+                 }
+                 ctx.closePath();
+                 ctx.fill();
+            } else if (shape === 'square') {
+                 let halfSize = size;
+                 ctx.fillRect(point.x - halfSize, point.y - halfSize, size * 2, size * 2);
+            }
+
+            // Add a glow effect
+            ctx.shadowColor = actualColor;
+            ctx.shadowBlur = varToPixel('--glow-intensity') * 2;
+            // For circles/squares, drawing the stroke creates the glow outline.
+            // For stars, the fill is enough, but stroking adds definition/glow outline.
+            if (shape !== 'star') {
+                 ctx.stroke();
+            } else {
+                 // Stroke star outline for glow
+                 ctx.strokeStyle = actualColor;
+                 ctx.lineWidth = 2; // Slightly thicker stroke for star outline glow
+                 ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+         function drawLine(p1, p2, color) {
+             const actualColor = getColorValue(color);
+             ctx.strokeStyle = actualColor;
+             ctx.lineWidth = 1;
+             ctx.beginPath();
+             ctx.moveTo(p1.x, p1.y);
+             ctx.lineTo(p2.x, p2.y);
+             ctx.shadowColor = actualColor;
+             ctx.shadowBlur = varToPixel('--glow-intensity') * 1.5;
+             ctx.stroke();
+             ctx.shadowBlur = 0;
+         }
+
+         function drawTooltip(x, y, text, color) {
+             const actualColor = getColorValue(color);
+             ctx.font = '12px Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+             ctx.fillStyle = actualColor;
+             ctx.textBaseline = 'bottom';
+             ctx.textAlign = 'center';
+
+             const textMetrics = ctx.measureText(text);
+             const rectPadding = 5;
+             const rectX = x - textMetrics.width / 2 - rectPadding;
+             const rectY = y - 15 - rectPadding - 5;
+             const rectWidth = textMetrics.width + rectPadding * 2;
+             const rectHeight = 12 + rectPadding * 2;
+
+             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+             ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+             ctx.fillStyle = actualColor;
+             ctx.fillText(text, x, y - 15);
+         }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (settings.showDataPoints) {
+                dataPoints.forEach(point => {
+                    drawPoint(point, point.color);
+                });
+            }
+
+            if (settings.showQueryPoint && queryPoint) {
+                 drawPoint(queryPoint, systemColors.yellow, 8, 'star');
+
+                 if (settings.showNeighbors && dataPoints.length > 0 && k > 0) {
+                     const neighbors = findNeighbors(queryPoint, dataPoints, k);
+                     neighbors.forEach(neighbor => {
+                         drawLine(queryPoint, neighbor.point, systemColors.green);
+                     });
+
+                     const classification = classify(neighbors);
+                     if (classification) {
+                         drawTooltip(queryPoint.x, queryPoint.y, `Class: ${classification}`, classColors[classification] || systemColors.textLight);
+                     }
+                 } else if (settings.showNeighbors && k <= 0) {
+                      drawTooltip(queryPoint.x, queryPoint.y, `K must be > 0`, systemColors.red);
+                 }
+            }
+
+            if (hoverPoint && settings.showDataPoints && !isDraggingQuery) { // Only show tooltip if not dragging
+                const pointClass = hoverPoint.class;
+                drawTooltip(hoverPoint.x, hoverPoint.y, `Class: ${pointClass}`, classColors[pointClass] || systemColors.textLight);
+            }
+        }
+
+
+        function distance(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function findNeighbors(query, points, k) {
+            if (!query || !points || points.length === 0 || k <= 0) return [];
+
+            const distances = points.map(point => ({
+                point: point,
+                dist: distance(query, point)
+            }));
+
+            distances.sort((a, b) => a.dist - b.dist);
+
+            return distances.slice(0, Math.min(k, points.length));
+        }
+
+        function classify(neighbors) {
+            if (!neighbors || neighbors.length === 0) return null;
+
+            const classCounts = {};
+            neighbors.forEach(neighbor => {
+                const cls = neighbor.point.class;
+                classCounts[cls] = (classCounts[cls] || 0) + 1;
+            });
+
+            let majorityClass = null;
+            let maxCount = 0;
+            let tiedClasses = [];
+
+            for (const cls in classCounts) {
+                if (classCounts[cls] > maxCount) {
+                    maxCount = classCounts[cls];
+                    majorityClass = cls;
+                    tiedClasses = [cls]; // Start a new tie list
+                } else if (classCounts[cls] === maxCount) {
+                     tiedClasses.push(cls); // Add to tie list
+                }
+            }
+
+            // Simple tie-breaking: if there's a tie, pick the first class encountered in the tiedClasses array
+            if (tiedClasses.length > 1) {
+                return tiedClasses[0];
+            }
+
+            return majorityClass;
+        }
+
+        function getMouseOrTouchPos(event) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+
+            if (event.touches) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+         function isPointClicked(point, mousePos, hitRadius = 10) {
+             if (!point) return false;
+             return distance(point, mousePos) <= hitRadius;
+         }
+
+
+        function handlePointerDown(event) {
+            const pos = getMouseOrTouchPos(event);
+
+            if (queryPoint && settings.showQueryPoint && isPointClicked(queryPoint, pos, 15)) {
+                 isDraggingQuery = true;
+                 canvas.classList.add('dragging');
+                 dragOffsetX = pos.x - queryPoint.x;
+                 dragOffsetY = pos.y - queryPoint.y;
+                 stopAutoDemo();
+                 event.preventDefault(); // Prevent default touch behavior
+            } else if (!isDraggingQuery) { // Only add point if not starting a drag
+                 const newPoint = {
+                     x: pos.x,
+                     y: pos.y,
+                     class: classes[nextClassIndex],
+                     color: classColors[classes[nextClassIndex]]
+                 };
+                 dataPoints.push(newPoint);
+                 nextClassIndex = (nextClassIndex + 1) % classes.length;
+                 stopAutoDemo();
+                 draw(); // Draw immediately after adding a point
+            }
+        }
+
+        function handlePointerMove(event) {
+            const pos = getMouseOrTouchPos(event);
+
+            if (isDraggingQuery && queryPoint) {
+                queryPoint.x = pos.x - dragOffsetX;
+                queryPoint.y = pos.y - dragOffsetY;
+
+                queryPoint.x = Math.max(0, Math.min(canvas.width, queryPoint.x));
+                queryPoint.y = Math.max(0, Math.min(canvas.height, queryPoint.y));
+
+                // No need to call draw() here, gameLoop handles it
+                // draw();
+                 event.preventDefault(); // Prevent default touch behavior while dragging
+            }
+
+            // Handle hover for tooltips and cursor
+            let currentHoverPoint = null;
+            let hoveringDraggable = false;
+            if (!isDraggingQuery) { // Don't check hover if currently dragging
+                 if (settings.showDataPoints) {
+                      for (const point of dataPoints) {
+                           if (isPointClicked(point, pos, 10)) {
+                                currentHoverPoint = point;
+                                break;
+                           }
+                      }
+                 }
+                 if (queryPoint && settings.showQueryPoint && isPointClicked(queryPoint, pos, 15)) {
+                      hoveringDraggable = true;
+                 }
+            }
+
+
+            if (currentHoverPoint !== hoverPoint || hoveringDraggable !== (canvas.style.cursor === 'grab')) {
+                 hoverPoint = currentHoverPoint;
+                 if (isDraggingQuery) {
+                     canvas.style.cursor = 'grabbing';
+                 } else if (hoveringDraggable) {
+                     canvas.style.cursor = 'grab';
+                 } else {
+                     canvas.style.cursor = 'crosshair';
+                 }
+                 // No need to call draw() here, gameLoop handles it
+                 // draw();
+            }
+        }
+
+        function handlePointerUp() {
+            if (isDraggingQuery) {
+                isDraggingQuery = false;
+                 canvas.classList.remove('dragging');
+                 canvas.style.cursor = 'crosshair'; // Reset cursor
+                draw(); // Redraw one last time to show final state/classification
+            }
+             // No need to reset cursor here, mousemove or gameLoop handles it
+        }
+
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('mouseup', handlePointerUp);
+
+        canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+        canvas.addEventListener('touchend', handlePointerUp);
+        canvas.addEventListener('touchcancel', handlePointerUp); // Treat cancel like up
+
+        canvas.addEventListener('dragstart', (event) => {
+             event.preventDefault();
+         });
+
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            resetCanvas();
+            stopAutoDemo();
+            draw();
+        });
+
+        document.getElementById('randomize-btn').addEventListener('click', () => {
+            randomizeCanvas(50);
+            stopAutoDemo();
+            draw();
+        });
+
+        document.getElementById('auto-demo-btn').addEventListener('click', () => {
+             if (autoDemoInterval || autoDemoAnimatingMove) {
+                 stopAutoDemo();
+             } else {
+                 startAutoDemo();
+             }
+        });
+
+        document.getElementById('k-dec').addEventListener('click', () => {
+            k = Math.max(1, k - 1);
+            document.getElementById('k-value').textContent = k;
+            stopAutoDemo();
+            draw();
+        });
+
+        document.getElementById('k-inc').addEventListener('click', () => {
+            k = k + 1;
+            document.getElementById('k-value').textContent = k;
+            stopAutoDemo();
+            draw();
+        });
+
+        document.getElementById('toggle-points').addEventListener('change', (e) => {
+            settings.showDataPoints = e.target.checked;
+            draw();
+        });
+        document.getElementById('toggle-query').addEventListener('change', (e) => {
+            settings.showQueryPoint = e.target.checked;
+            draw();
+        });
+        document.getElementById('toggle-neighbors').addEventListener('change', (e) => {
+            settings.showNeighbors = e.target.checked;
+            draw();
+        });
+
+
+        function resetCanvas() {
+            dataPoints = [];
+            queryPoint = null;
+            nextClassIndex = 0;
+            hoverPoint = null;
+            isDraggingQuery = false;
+            canvas.classList.remove('dragging');
+            canvas.style.cursor = 'crosshair';
+        }
+
+        function randomizeCanvas(numPoints) {
+             resetCanvas();
+
+             for (let i = 0; i < numPoints; i++) {
+                 const randomX = Math.random() * canvas.width;
+                 const randomY = Math.random() * canvas.height;
+                 const randomClass = classes[Math.floor(Math.random() * classes.length)];
+                 dataPoints.push({
+                     x: randomX,
+                     y: randomY,
+                     class: randomClass,
+                     color: classColors[randomClass]
+                 });
+             }
+
+             const randomQueryX = Math.random() * canvas.width;
+             const randomQueryY = Math.random() * canvas.height;
+             queryPoint = { x: randomQueryX, y: randomQueryY };
+        }
+
+         function startAutoDemo() {
+             stopAutoDemo();
+             autoDemoStep = 0;
+             document.getElementById('auto-demo-btn').textContent = 'Stop Demo';
+             runAutoDemoStep();
+         }
+
+         function stopAutoDemo() {
+             clearInterval(autoDemoInterval);
+             autoDemoInterval = null;
+             autoDemoAnimatingMove = false; // Ensure animation flag is reset
+             document.getElementById('auto-demo-btn').textContent = 'Auto Demo';
+             draw();
+         }
+
+         function runAutoDemoStep() {
+              if (autoDemoStep >= autoDemoSteps.length) {
+                 stopAutoDemo();
+                 return;
+             }
+
+             const step = autoDemoSteps[autoDemoStep];
+
+             switch (step.action) {
+                 case 'reset':
+                     resetCanvas();
+                     autoDemoInterval = setTimeout(runAutoDemoStep, 500);
+                     autoDemoStep++;
+                     break;
+                 case 'randomize':
+                     randomizeCanvas(step.count);
+                     autoDemoInterval = setTimeout(runAutoDemoStep, 1000);
+                      autoDemoStep++;
+                     break;
+                 case 'addQuery':
+                      queryPoint = { x: step.pos.x * canvas.width, y: step.pos.y * canvas.height };
+                      autoDemoInterval = setTimeout(runAutoDemoStep, 500);
+                      autoDemoStep++;
+                      break;
+                  case 'moveQuery':
+                       autoDemoAnimatingMove = true;
+                       let startPos = { ...queryPoint };
+                       let endPos = { x: step.pos.x * canvas.width, y: step.pos.y * canvas.height };
+                       let duration = 1500; // Animation duration
+                       let startTime = performance.now();
+
+                       function animateMove(currentTime) {
+                           if (!autoDemoAnimatingMove) return; // Stop if demo was cancelled during animation
+                           let elapsed = currentTime - startTime;
+                           let progress = Math.min(elapsed / duration, 1);
+
+                           queryPoint.x = startPos.x + (endPos.x - startPos.x) * progress;
+                           queryPoint.y = startPos.y + (endPos.y - startPos.y) * progress;
+
+                           if (progress < 1) {
+                               requestAnimationFrame(animateMove);
+                           } else {
+                                autoDemoAnimatingMove = false;
+                               autoDemoInterval = setTimeout(runAutoDemoStep, 500);
+                           }
+                       }
+                       requestAnimationFrame(animateMove);
+                       autoDemoStep++; // Increment step immediately after starting animation
+                       break;
+                 case 'classify':
+                      // Classification happens automatically on draw
+                      autoDemoInterval = setTimeout(runAutoDemoStep, 500);
+                       autoDemoStep++;
+                      break;
+                 case 'wait':
+                      autoDemoInterval = setTimeout(runAutoDemoStep, step.duration);
+                       autoDemoStep++;
+                      break;
+                 case 'end':
+                     stopAutoDemo();
+                      break;
+             }
+         }
+
+
+        function resizeCanvas() {
+             const rect = canvasContainer.getBoundingClientRect();
+             const oldWidth = canvas.width;
+             const oldHeight = canvas.height;
+             canvas.width = rect.width;
+             canvas.height = rect.height;
+
+             // Adjust point positions based on new size
+             if (oldWidth && oldHeight) {
+                  const widthRatio = canvas.width / oldWidth;
+                  const heightRatio = canvas.height / oldHeight;
+                  dataPoints.forEach(p => {
+                       p.x *= widthRatio;
+                       p.y *= heightRatio;
+                  });
+                  if (queryPoint) {
+                       queryPoint.x *= widthRatio;
+                       queryPoint.y *= heightRatio;
+                  }
+             }
+             draw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function gameLoop(currentTime) {
+             const deltaTime = currentTime - lastFrameTime;
+             lastFrameTime = currentTime;
+
+             if (deltaTime > 0) {
+                 fps = Math.round(1000 / deltaTime);
+             }
+             fpsDisplay.textContent = `FPS: ${fps}`;
+
+             // Redraw every frame as needed for animations, glow updates, hover effects, etc.
+             draw();
+
+             requestAnimationFrame(gameLoop);
+        }
+
+
+        resizeCanvas();
+
+         // Add initial random points and a query point after resize
+         randomizeCanvas(30);
+         if (!queryPoint) {
+              queryPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+         }
+
+        requestAnimationFrame(gameLoop);
+
+
+    </script>
+</body>
+</html>

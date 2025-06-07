@@ -1,0 +1,1031 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Visualizer (Neon Edition)</title>
+    <style>
+        /*
+         * CSS: Minimalist Neon Theme & Fixed Layout
+         * Using vh/vw for static, non-scrollable viewport fit.
+         */
+        :root {
+            --neon-blue: #00ffff;
+            --neon-green: #39ff14; /* Adjusted green */
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --glow-intensity: 5px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Essential for non-scrolling */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            color: #f0f0f0; /* General text color */
+            display: flex;
+            flex-direction: column; /* Stack header, main, footer */
+        }
+
+        #app-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column; /* Ensure flex properties apply correctly */
+            overflow: hidden; /* Prevent overflow within container */
+        }
+
+        header {
+            height: 8vh; /* Allocate height using vh */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3vh; /* Font size relative to viewport height */
+            text-transform: uppercase;
+            letter-spacing: 0.5vh;
+            color: var(--neon-blue);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-blue),
+                         0 0 calc(var(--glow-intensity) * 2) var(--neon-blue);
+            border-bottom: 1px solid var(--neon-blue);
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        main {
+            flex-grow: 1; /* Take remaining height */
+            display: flex;
+            flex-direction: row; /* Controls and Canvas side-by-side */
+            overflow: hidden; /* Prevent main content overflow */
+        }
+
+        #controls-panel {
+            width: 25vw; /* Allocate width using vw */
+            padding: 2vh 1vw; /* Padding relative to vh/vw */
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            border-right: 1px solid var(--neon-pink);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Space between control elements */
+            flex-shrink: 0; /* Prevent shrinking */
+            overflow: hidden; /* Should not scroll */
+            position: relative; /* For potential absolute children like FPS */
+        }
+
+        #controls-panel h2 {
+             font-size: 2.5vh;
+             color: var(--neon-pink);
+             text-shadow: 0 0 var(--glow-intensity) var(--neon-pink);
+             margin-bottom: 1vh;
+             text-align: center;
+        }
+
+        button {
+            padding: 1.2vh 0.8vw;
+            font-size: 1.8vh;
+            background-color: transparent;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-green);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-green);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            width: 100%; /* Make buttons fill container width */
+            text-transform: uppercase;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: rgba(57, 255, 20, 0.2); /* Semi-transparent neon green */
+            box-shadow: 0 0 calc(var(--glow-intensity) * 1.5) var(--neon-green),
+                        0 0 calc(var(--glow-intensity) * 2.5) var(--neon-green);
+        }
+         button:active:not(:disabled) {
+            box-shadow: 0 0 calc(var(--glow-intensity) * 0.5) var(--neon-green);
+            transform: translateY(1px);
+         }
+
+         button:disabled {
+             border-color: rgba(57, 255, 20, 0.5);
+             color: rgba(57, 255, 20, 0.5);
+             text-shadow: none;
+             box-shadow: none;
+             cursor: not-allowed;
+         }
+
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            gap: 0.8vw; /* Increased gap */
+            cursor: pointer; /* Indicate the whole row is interactive */
+        }
+
+         .toggle-control label {
+             flex-grow: 1; /* Allow label to take space */
+             cursor: pointer;
+             text-align: left;
+             padding: 0;
+             color: var(--neon-blue);
+             font-size: 1.8vh;
+         }
+         .toggle-control:hover label {
+              text-decoration: underline;
+         }
+
+
+        .toggle-control input[type="checkbox"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 2.5vh; /* Larger checkbox */
+            height: 2.5vh;
+            border: 1px solid var(--neon-blue);
+            background-color: transparent;
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            outline: none; /* Remove default focus outline */
+        }
+
+        .toggle-control input[type="checkbox"]:checked {
+            background-color: var(--neon-blue);
+            box-shadow: 0 0 calc(var(--glow-intensity) * 1.5) var(--neon-blue),
+                        0 0 calc(var(--glow-intensity) * 2.5) var(--neon-blue);
+        }
+
+         .toggle-control input[type="checkbox"]:checked::after {
+             content: '';
+             position: absolute;
+             top: 50%;
+             left: 50%;
+             width: 1vh; /* Larger checkmark */
+             height: 1vh;
+             background: #000; /* Inner checkmark color */
+             transform: translate(-50%, -50%);
+             box-shadow: 0 0 calc(var(--glow-intensity) * 0.5) var(--neon-blue);
+         }
+
+         /* Optional: Focus style for accessibility */
+        .toggle-control input[type="checkbox"]:focus {
+             box-shadow: 0 0 calc(var(--glow-intensity) * 2) var(--neon-yellow);
+        }
+
+
+        #fps-display {
+            position: absolute; /* Position absolutely within controls panel */
+            bottom: 2vh;
+            left: 1vw;
+            font-size: 1.5vh;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-yellow);
+        }
+
+
+        #canvas-container {
+            flex-grow: 1; /* Take remaining width in the main flex row */
+            position: relative; /* For absolute positioning of tooltip */
+            overflow: hidden; /* Canvas content shouldn't cause container overflow */
+            background-color: rgba(0, 0, 0, 0.2); /* Subtle background */
+        }
+
+        #dfs-canvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%; /* Canvas size controlled by container */
+            height: 100%; /* Canvas size controlled by container */
+            cursor: crosshair; /* Default canvas cursor */
+        }
+
+        #dfs-canvas.dragging {
+             cursor: grabbing; /* Cursor when dragging a node */
+        }
+
+
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-pink);
+            padding: 1vh 1vw;
+            font-size: 1.8vh;
+            pointer-events: none; /* Allow interaction with elements behind tooltip */
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap; /* Prevent text wrapping */
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-pink);
+        }
+
+        #tooltip.visible {
+            opacity: 1;
+        }
+
+
+        footer {
+            height: 5vh; /* Allocate height using vh */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2vw; /* Space between links */
+            font-size: 1.8vh;
+            border-top: 1px solid var(--neon-blue);
+            flex-shrink: 0; /* Prevent shrinking */
+             color: #f0f0f0; /* Footer text color */
+        }
+
+        footer a {
+            color: var(--neon-green);
+            text-decoration: none;
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-green);
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-yellow);
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <header>
+            <h1>Depth First Search Visualizer</h1>
+        </header>
+        <main>
+            <div id="controls-panel">
+                <h2>Controls</h2>
+                <button id="btn-randomize">Randomize Graph</button>
+                <button id="btn-reset">Reset</button>
+                <button id="btn-auto-demo">Start Auto Demo</button>
+
+                <div class="toggle-control" id="toggle-labels-container">
+                     <input type="checkbox" id="toggle-labels" checked>
+                     <label for="toggle-labels">Show Labels</label>
+                </div>
+                 <div class="toggle-control" id="toggle-state-container">
+                     <input type="checkbox" id="toggle-state" checked>
+                     <label for="toggle-state">Show Node State Color</label>
+                </div>
+                <div id="fps-display">FPS: --</div>
+            </div>
+            <div id="canvas-container">
+                <canvas id="dfs-canvas"></canvas>
+                <div id="tooltip"></div>
+            </div>
+        </main>
+        <footer>
+            <span>Created by a Minimalist Dev</span>
+            <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+        </footer>
+    </div>
+
+    <script>
+        /*
+         * JavaScript: Graph Generation, DFS Algorithm & Visualization, Interactivity
+         * Entirely inline, no external libraries.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('dfs-canvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('canvas-container');
+            const tooltip = document.getElementById('tooltip');
+            const btnRandomize = document.getElementById('btn-randomize');
+            const btnReset = document.getElementById('btn-reset');
+            const btnAutoDemo = document.getElementById('btn-auto-demo');
+            const toggleLabelsInput = document.getElementById('toggle-labels');
+            const toggleStateInput = document.getElementById('toggle-state');
+             const toggleLabelsContainer = document.getElementById('toggle-labels-container');
+             const toggleStateContainer = document.getElementById('toggle-state-container');
+            const fpsDisplay = document.getElementById('fps-display');
+
+            // --- Configuration ---
+            const CONFIG = {
+                nodeRadiusVh: 2.5, // Node size relative to viewport height
+                edgeThicknessVh: 0.3,
+                nodeColors: {
+                    default: 'var(--neon-blue)',
+                    hover: 'var(--neon-yellow)',
+                    visiting: 'var(--neon-pink)',
+                    visited: 'var(--neon-green)',
+                    glow: 'var(--glow-intensity)'
+                },
+                edgeColors: {
+                    default: 'rgba(0, 255, 255, 0.3)', // Semi-transparent neon blue
+                    path: 'var(--neon-pink)',
+                    glow: 'var(--glow-intensity)'
+                },
+                animationDelay: 200, // ms per DFS step
+                initialNumNodes: 15,
+                initialNumEdges: 20
+            };
+
+            let nodeRadiusPx;
+            let edgeThicknessPx;
+
+            // --- State Variables ---
+            let nodes = [];
+            let edges = [];
+            let adjacencyList = new Map(); // Use Map for adjacency list
+            let animationState = 'idle'; // 'idle', 'generating', 'running', 'paused', 'finished'
+            let dfsSteps = []; // Sequence of visualization steps
+            let currentStepIndex = 0;
+            let lastAnimationTime = 0;
+
+            let draggingNodeId = null;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+
+            let hoveredElement = null; // { type: 'node' | 'edge', id: ..., from: ..., to: ... }
+            let lastFrameTime = performance.now();
+            let fps = 0;
+
+            // --- Canvas Setup ---
+            function resizeCanvas() {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+
+                // Update pixel values based on new vh
+                nodeRadiusPx = (CONFIG.nodeRadiusVh / 100) * window.innerHeight;
+                edgeThicknessPx = (CONFIG.edgeThicknessVh / 100) * window.innerHeight;
+
+                drawGraph(); // Redraw on resize
+            }
+
+            // --- Graph Operations ---
+            function createNode(x, y) {
+                const id = nodes.length;
+                const node = { id, x, y, state: 'default' };
+                nodes.push(node);
+                adjacencyList.set(id, []);
+                return node;
+            }
+
+            function addEdge(fromId, toId) {
+                 // Prevent self-loops and duplicate edges (considering undirected)
+                 if (fromId === toId) return false;
+
+                 // Check if edge already exists in either direction
+                 const existingEdge = adjacencyList.get(fromId).find(edgeInfo => edgeInfo.to === toId);
+                 if (existingEdge) return false;
+
+                 // Add edge in both directions for undirected graph
+                 const edge1 = { from: fromId, to: toId, state: 'default' };
+                 // const edge2 = { from: toId, to: fromId, state: 'default' }; // We only store one edge object per undirected pair
+
+                 edges.push(edge1); // Store edge object references
+
+                 adjacencyList.get(fromId).push({ to: toId, edgeRef: edge1 }); // Store references in adj list
+                 adjacencyList.get(toId).push({ to: fromId, edgeRef: edge1 }); // Both nodes reference the same edge object
+
+                 return true;
+             }
+
+            function generateRandomGraph(numNodes = CONFIG.initialNumNodes, numEdges = CONFIG.initialNumEdges) {
+                resetGraph(); // Start fresh
+
+                const width = canvas.width;
+                const height = canvas.height;
+                const minDistance = nodeRadiusPx * 3; // Prevent initial overlaps
+
+                // Create nodes with some spacing
+                for (let i = 0; i < numNodes; i++) {
+                    let newNode;
+                    let attempts = 0;
+                    do {
+                        const x = Math.random() * (width - minDistance * 2) + minDistance;
+                        const y = Math.random() * (height - minDistance * 2) + minDistance;
+                        newNode = createNode(x, y);
+                        attempts++;
+                        // Check distance against nodes already successfully placed
+                    } while (attempts < 100 && nodes.slice(0, i).some(node =>
+                        Math.hypot(node.x - newNode.x, node.y - newNode.y) < minDistance
+                    ));
+                    if (attempts >= 100) {
+                         // console.warn(`Failed to place node ${newNode.id} without overlap after 100 attempts.`);
+                         nodes.pop(); // Remove the node if placement failed
+                         adjacencyList.delete(newNode.id);
+                    }
+                }
+
+                // Add random edges
+                const currentNodes = nodes.length;
+                 if (currentNodes < 2) return;
+
+                let edgesAdded = 0;
+                let attempts = 0;
+                const maxEdges = currentNodes * (currentNodes - 1) / 2; // Max edges in undirected simple graph
+                const targetEdges = Math.min(numEdges, maxEdges);
+
+                while (edgesAdded < targetEdges && attempts < targetEdges * 5) {
+                    const u = Math.floor(Math.random() * currentNodes);
+                    const v = Math.floor(Math.random() * currentNodes);
+                    if (addEdge(u, v)) {
+                        edgesAdded++;
+                    }
+                    attempts++;
+                }
+
+                 // Simple connectivity improvement: ensure no isolated nodes (unless only 1 node)
+                 if (currentNodes > 1) {
+                     nodes.forEach(node => {
+                         if (adjacencyList.get(node.id).length === 0) {
+                             let connected = false;
+                             let connAttempts = 0;
+                             while (!connected && connAttempts < 10) {
+                                 const randomNeighborId = Math.floor(Math.random() * currentNodes);
+                                 if (randomNeighborId !== node.id) {
+                                     if (addEdge(node.id, randomNeighborId)) {
+                                         connected = true;
+                                     }
+                                 }
+                                 connAttempts++;
+                             }
+                             // If still isolated after attempts, it's a small graph or unlucky.
+                         }
+                     });
+                 }
+
+
+                resetState(); // Reset visualization state
+                drawGraph();
+                btnAutoDemo.disabled = nodes.length === 0;
+            }
+
+            function resetGraph() {
+                nodes = [];
+                edges = [];
+                adjacencyList.clear();
+                resetState();
+                drawGraph();
+                btnAutoDemo.disabled = nodes.length === 0;
+            }
+
+            function resetState() {
+                animationState = 'idle';
+                dfsSteps = [];
+                currentStepIndex = 0;
+                lastAnimationTime = 0;
+
+                nodes.forEach(node => node.state = 'default');
+                edges.forEach(edge => edge.state = 'default');
+
+                // Reset button/display states
+                btnAutoDemo.textContent = 'Start Auto Demo';
+                btnAutoDemo.disabled = nodes.length === 0; // Disable if no nodes
+                tooltip.classList.remove('visible'); // Hide tooltip
+                hoveredElement = null; // Reset hovered state
+            }
+
+
+            // --- Drawing Functions ---
+            function drawNode(node) {
+                const radius = nodeRadiusPx;
+                const color = toggleStateInput.checked ? (CONFIG.nodeColors[node.state] || CONFIG.nodeColors.default) : CONFIG.nodeColors.default;
+                const glowColor = CONFIG.nodeColors.glow;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+
+                // Apply glow effect
+                ctx.shadowColor = color;
+                ctx.shadowBlur = parseFloat(glowColor);
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Draw border on hover
+                if (hoveredElement && hoveredElement.type === 'node' && hoveredElement.id === node.id) {
+                    ctx.strokeStyle = CONFIG.nodeColors.hover;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                ctx.restore(); // Restore canvas state before shadow
+
+                // Draw label
+                if (toggleLabelsInput.checked) {
+                    ctx.fillStyle = '#000'; // Black text for contrast
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    // Adjust font size based on node radius
+                    const fontSize = radius * 0.8; // 80% of radius
+                    ctx.font = `${fontSize}px Arial`;
+                     // Add a slight text shadow for readability on neon background
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 2; // Minimal blur
+                    ctx.fillText(node.id, node.x, node.y);
+                    ctx.shadowBlur = 0; // Remove text shadow
+                }
+            }
+
+            function drawEdge(edge) {
+                const u = nodes[edge.from];
+                const v = nodes[edge.to];
+                 if (!u || !v) return; // Should not happen with correct data
+
+                const color = CONFIG.edgeColors[edge.state] || CONFIG.edgeColors.default;
+                 const glowColor = CONFIG.edgeColors.glow;
+                const thickness = edgeThicknessPx;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(u.x, u.y);
+                ctx.lineTo(v.x, v.y);
+
+                // Apply glow effect for path edges
+                if (edge.state === 'path') {
+                    ctx.shadowColor = CONFIG.edgeColors.path;
+                    ctx.shadowBlur = parseFloat(glowColor);
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                }
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = thickness;
+                ctx.stroke();
+
+                 // Draw highlight on hover
+                if (hoveredElement && hoveredElement.type === 'edge') {
+                    // Check if the hovered edge matches this edge (undirected)
+                    const isHovered = (hoveredElement.from === edge.from && hoveredElement.to === edge.to) ||
+                                      (hoveredElement.from === edge.to && hoveredElement.to === edge.from);
+
+                    if (isHovered) {
+                         ctx.save(); // Save before drawing highlight
+                         ctx.beginPath();
+                         ctx.moveTo(u.x, u.y);
+                         ctx.lineTo(v.x, v.y);
+                         ctx.strokeStyle = CONFIG.nodeColors.hover; // Use a hover color
+                         ctx.lineWidth = thickness * 1.5; // Thicker highlight
+                         ctx.stroke();
+                         ctx.restore(); // Restore after drawing highlight
+                    }
+                }
+
+                ctx.restore(); // Restore canvas state after shadow (if applied)
+            }
+
+            function drawGraph() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw edges first
+                edges.forEach(drawEdge);
+
+                // Draw nodes second (on top of edges)
+                nodes.forEach(drawNode);
+            }
+
+            // --- DFS Algorithm & Visualization ---
+            function generateDFSSteps(startNodeId = 0) {
+                 if (nodes.length === 0) return [];
+
+                animationState = 'generating'; // Indicate steps are being generated
+                const steps = [];
+                const visited = new Set();
+                 // Use an object stack to keep track of current node and its neighbor index
+                 const stack = [{ nodeId: startNodeId, neighborIndex: 0 }];
+
+                // Ensure start node exists, default to 0 if possible
+                 const startNode = nodes.find(n => n.id === startNodeId);
+                 if (!startNode && nodes.length > 0) {
+                     startNodeId = nodes[0].id;
+                     stack[0].nodeId = startNodeId;
+                 } else if (!startNode && nodes.length === 0) {
+                      animationState = 'idle';
+                      return []; // Cannot generate steps if no nodes
+                 }
+
+                // Initial step: Visit start node
+                visited.add(startNodeId);
+                steps.push({ type: 'visit', nodeId: startNodeId });
+
+                while (stack.length > 0) {
+                    const currentStackItem = stack[stack.length - 1];
+                    const currentNode = nodes[currentStackItem.nodeId];
+                    const neighborsInfo = adjacencyList.get(currentNode.id) || [];
+
+                    // Find the next unvisited neighbor
+                    let nextNeighbor = null;
+                    let nextEdgeRef = null;
+
+                    for (let i = currentStackItem.neighborIndex; i < neighborsInfo.length; i++) {
+                         const neighborNode = nodes[neighborsInfo[i].to];
+                         const edge = neighborsInfo[i].edgeRef;
+                         if (!visited.has(neighborNode.id)) {
+                              nextNeighbor = neighborNode;
+                              nextEdgeRef = edge;
+                              currentStackItem.neighborIndex = i + 1; // Store next index
+                              break; // Found next neighbor
+                         }
+                    }
+
+                    if (nextNeighbor) {
+                        // Explore the edge and visit the neighbor
+                        steps.push({ type: 'explore', edgeRef: nextEdgeRef });
+                        visited.add(nextNeighbor.id);
+                        steps.push({ type: 'visit', nodeId: nextNeighbor.id });
+                        stack.push({ nodeId: nextNeighbor.id, neighborIndex: 0 }); // Push neighbor onto stack
+                    } else {
+                        // No unvisited neighbors, backtrack
+                         const finishedNodeId = stack.pop().nodeId; // Pop the current node
+                         steps.push({ type: 'finish_visit', nodeId: finishedNodeId });
+
+                         // If we backtracked from a non-root node and the stack is not empty
+                         if (stack.length > 0) {
+                             const parentNodeId = stack[stack.length - 1].nodeId;
+                              // Find the edge connecting finishedNodeId back to parentNodeId
+                              const edgeToParent = adjacencyList.get(finishedNodeId).find(
+                                 edgeInfo => edgeInfo.to === parentNodeId
+                             );
+                             if (edgeToParent) {
+                                  steps.push({ type: 'backtrack_edge', edgeRef: edgeToParent.edgeRef });
+                             }
+                         }
+                    }
+                }
+
+                 // Ensure all nodes are visited if the graph has multiple components
+                 // Simple DFS only explores the component reachable from startNodeId.
+                 // To visualize the whole graph, you might need to start DFS from
+                 // an unvisited node if `visited.size < nodes.length` after the loop.
+                 // For this visualizer, we'll stick to the component of the starting node.
+
+                 animationState = 'idle'; // Generation finished
+                return steps;
+            }
+
+            function applyStep(step) {
+                 if (!step) {
+                     animationState = 'finished';
+                     btnAutoDemo.textContent = 'Demo Finished';
+                     btnAutoDemo.disabled = false;
+                     return;
+                 }
+
+                // Reset relevant states before applying the new one for clarity
+                 nodes.forEach(node => {
+                     if (node.state !== 'visited') node.state = 'default';
+                 });
+                 edges.forEach(edge => {
+                     // Keep 'path' state if it was set by a previous step in the current path
+                     // Reset others to default
+                     if (edge.state !== 'path') edge.state = 'default';
+                 });
+
+                switch (step.type) {
+                    case 'visit':
+                        const visitingNode = nodes[step.nodeId];
+                        if (visitingNode) {
+                            visitingNode.state = 'visiting';
+                        }
+                        break;
+                     case 'explore':
+                         // Find the edge reference in the current edge list
+                        const edgeToExplore = edges.find(e => e === step.edgeRef); // Use reference equality
+                        if (edgeToExplore) {
+                             edgeToExplore.state = 'path';
+                        }
+                        // The node it leads to will be marked 'visiting' in the *next* 'visit' step
+                        break;
+                    case 'backtrack_edge':
+                         // The edge should already be 'path' from the 'explore' step
+                         // We keep it 'path' to show the return path
+                         // The node we are backtracking *from* was marked 'visited' in the 'finish_visit' step
+                        break;
+                    case 'finish_visit':
+                         const visitedNode = nodes[step.nodeId];
+                         if (visitedNode) {
+                             visitedNode.state = 'visited'; // Mark node as fully visited
+                             // Remove 'path' state from edges connected to this node
+                             // UNLESS the other end is still 'visiting' (part of the stack)
+                             // This requires careful state management. A simpler approach: 'path' edges stay until reset.
+                             // Let's simplify: 'path' edges are the edges in the DFS tree currently being traversed or just traversed.
+                             // For backtracking visualization, the edge remains 'path'. Only resets on new DFS or full state reset.
+                         }
+                         break;
+                }
+
+                 drawGraph(); // Redraw after applying the step
+            }
+
+            function runAnimation(currentTime) {
+                // Handle animation steps if running
+                if (animationState === 'running') {
+                    if (currentTime - lastAnimationTime > CONFIG.animationDelay) {
+                        if (currentStepIndex < dfsSteps.length) {
+                            applyStep(dfsSteps[currentStepIndex]);
+                            currentStepIndex++;
+                            lastAnimationTime = currentTime;
+                        } else {
+                            animationState = 'finished';
+                            btnAutoDemo.textContent = 'Demo Finished';
+                            btnAutoDemo.disabled = false;
+                             // Reset remaining 'visiting' states if any (shouldn't be, but safety)
+                             nodes.forEach(node => {
+                                 if (node.state === 'visiting') node.state = 'visited';
+                             });
+                              drawGraph();
+                        }
+                    }
+                }
+            }
+
+            function animate(currentTime) {
+                requestAnimationFrame(animate);
+
+                const deltaTime = currentTime - lastFrameTime;
+                lastFrameTime = currentTime;
+                fps = 1000 / deltaTime;
+                 // Update FPS display less often to avoid performance impact
+                 // RequestAnimationFrame runs typically at display refresh rate (e.g., 60Hz)
+                 // Updating FPS string every frame might be slightly costly.
+                 // Update every 10th frame or so.
+                 if (Math.floor(currentTime / 100) !== Math.floor((currentTime - deltaTime) / 100)) { // Update approximately every 100ms
+                    fpsDisplay.textContent = `FPS: ${Math.round(fps)}`;
+                 }
+
+                runAnimation(currentTime);
+                 // Draw is called within applyStep during animation
+                 // Draw is called on mousemove/mouseup for dragging/hover
+                 // Draw is called on resize
+                 // No need for a constant drawGraph call here unless idle and interactive
+                 // If idle, interaction handles redraw. If running, animation handles redraw.
+            }
+
+            // --- Interactivity ---
+            function getElementAtPosition(x, y) {
+                 // Check nodes first (drawn on top)
+                 const nodeRadiusCheck = nodeRadiusPx + 5; // Give a little buffer for clicking nodes
+                for (let i = nodes.length - 1; i >= 0; i--) {
+                    const node = nodes[i];
+                    const distance = Math.hypot(node.x - x, node.y - y);
+                    if (distance < nodeRadiusCheck) {
+                        return { type: 'node', id: node.id, x: node.x, y: node.y };
+                    }
+                }
+
+                // Check edges (more complex)
+                // A simple distance check to the line segment
+                 const edgeThreshold = edgeThicknessPx * 5; // Increased tolerance
+                for (const edge of edges) {
+                     const u = nodes[edge.from];
+                     const v = nodes[edge.to];
+                     if (!u || !v) continue;
+
+                     const dx = v.x - u.x;
+                     const dy = v.y - u.y;
+                     const lenSq = dx * dx + dy * dy;
+
+                     // Handle zero length case (shouldn't happen with addEdge logic, but safe)
+                     if (lenSq === 0) continue;
+
+                     // Project point onto the line segment
+                     const t = ((x - u.x) * dx + (y - u.y) * dy) / lenSq;
+
+                     let closestX, closestY;
+
+                     if (t < 0) {
+                         closestX = u.x;
+                         closestY = u.y;
+                     } else if (t > 1) {
+                         closestX = v.x;
+                         closestY = v.y;
+                     } else {
+                         closestX = u.x + t * dx;
+                         closestY = u.y + t * dy;
+                     }
+
+                     const distance = Math.hypot(x - closestX, y - closestY);
+
+                     if (distance < edgeThreshold) {
+                          // Return a canonical identifier for the edge (from, to) pair
+                         return {
+                            type: 'edge',
+                            from: Math.min(edge.from, edge.to), // Canonical representation
+                            to: Math.max(edge.from, edge.to)
+                         };
+                     }
+                }
+
+                return null; // Nothing hovered
+            }
+
+            function showTooltip(element, mouseX, mouseY) {
+                let text = '';
+                if (element.type === 'node') {
+                    const node = nodes[element.id];
+                    text = `Node ID: ${node.id}<br>State: ${node.state}`;
+                } else if (element.type === 'edge') {
+                    text = `Edge: ${element.from} - ${element.to}`;
+                }
+
+                tooltip.innerHTML = text;
+                 // Position tooltip relative to the canvas container
+                 const containerRect = container.getBoundingClientRect();
+                 const tooltipX = mouseX + 10 - containerRect.left;
+                 const tooltipY = mouseY + 10 - containerRect.top;
+
+                 // Clamp tooltip position to stay within canvas container
+                 const tooltipWidth = tooltip.offsetWidth;
+                 const tooltipHeight = tooltip.offsetHeight;
+
+                 const finalX = Math.min(tooltipX, container.clientWidth - tooltipWidth - 5);
+                 const finalY = Math.min(tooltipY, container.clientHeight - tooltipHeight - 5);
+
+
+                tooltip.style.left = `${Math.max(5, finalX)}px`; // Ensure minimum offset from left
+                tooltip.style.top = `${Math.max(5, finalY)}px`;   // Ensure minimum offset from top
+
+                tooltip.classList.add('visible');
+            }
+
+            function hideTooltip() {
+                tooltip.classList.remove('visible');
+            }
+
+
+            // --- Event Handlers ---
+            canvas.addEventListener('mousedown', (e) => {
+                 // Disable dragging during animation
+                 if (animationState === 'running' || animationState === 'paused') return;
+
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const clickedElement = getElementAtPosition(x, y);
+
+                if (clickedElement && clickedElement.type === 'node') {
+                    draggingNodeId = clickedElement.id;
+                    dragOffsetX = x - nodes[draggingNodeId].x;
+                    dragOffsetY = y - nodes[draggingNodeId].y;
+                    canvas.classList.add('dragging'); // Change cursor
+                    hideTooltip(); // Hide tooltip while dragging
+                } else {
+                     draggingNodeId = null; // Ensure drag state is reset
+                     canvas.classList.remove('dragging');
+                }
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                 // Handle dragging first, as it requires continuous updates
+                if (draggingNodeId !== null) {
+                    const node = nodes[draggingNodeId];
+                    // Clamp node position within canvas bounds
+                    const minX = nodeRadiusPx;
+                    const maxX = canvas.width - nodeRadiusPx;
+                    const minY = nodeRadiusPx;
+                    const maxY = canvas.height - nodeRadiusPx;
+
+                    node.x = Math.max(minX, Math.min(maxX, x - dragOffsetX));
+                    node.y = Math.max(minY, Math.min(maxY, y - dragOffsetY));
+                    drawGraph(); // Redraw constantly while dragging
+                     // Tooltip remains hidden while dragging
+                } else {
+                    // Only update hover/tooltip if not dragging
+                    const currentHovered = getElementAtPosition(x, y);
+                    // Check if the hovered element has changed
+                    const hasHoverChanged = !hoveredElement || !currentHovered ||
+                                            hoveredElement.type !== currentHovered.type ||
+                                            (hoveredElement.type === 'node' && hoveredElement.id !== currentHovered.id) ||
+                                            (hoveredElement.type === 'edge' && (hoveredElement.from !== currentHovered.from || hoveredElement.to !== currentHovered.to));
+
+                    if (hasHoverChanged) {
+                         hoveredElement = currentHovered;
+                         if (hoveredElement) {
+                              showTooltip(hoveredElement, e.clientX, e.clientY); // Use clientXY for tooltip position
+                         } else {
+                              hideTooltip();
+                         }
+                         drawGraph(); // Redraw to show/hide hover effect
+                    } else if (hoveredElement) {
+                        // Update tooltip position even if element is the same
+                        showTooltip(hoveredElement, e.clientX, e.clientY);
+                    }
+                }
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                if (draggingNodeId !== null) {
+                    draggingNodeId = null;
+                    canvas.classList.remove('dragging');
+                    drawGraph(); // Final redraw after drag ends
+                     // Check if mouse is still over an element after release to show tooltip
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const elementUnderMouse = getElementAtPosition(x, y);
+                    if (elementUnderMouse) {
+                         hoveredElement = elementUnderMouse;
+                         showTooltip(hoveredElement, e.clientX, e.clientY);
+                         drawGraph(); // Redraw to show hover state if needed
+                    }
+                }
+            });
+
+             // Prevent context menu on right-click drag (optional, enhances feel)
+             canvas.addEventListener('contextmenu', (e) => {
+                 if (draggingNodeId !== null) {
+                     e.preventDefault();
+                 }
+             });
+
+             // Use containers for toggle event listeners for larger click area
+             toggleLabelsContainer.addEventListener('click', () => {
+                 toggleLabelsInput.checked = !toggleLabelsInput.checked;
+                 toggleLabelsInput.dispatchEvent(new Event('change')); // Manually trigger change event
+             });
+              toggleStateContainer.addEventListener('click', () => {
+                 toggleStateInput.checked = !toggleStateInput.checked;
+                 toggleStateInput.dispatchEvent(new Event('change')); // Manually trigger change event
+              });
+
+
+            // Button Handlers
+            btnRandomize.addEventListener('click', () => {
+                 // Stop any running animation before randomizing
+                 animationState = 'idle';
+                generateRandomGraph();
+            });
+
+            btnReset.addEventListener('click', () => {
+                 // Stop any running animation
+                 animationState = 'idle';
+                 resetGraph(); // Also calls resetState
+            });
+
+            btnAutoDemo.addEventListener('click', () => {
+                 if (nodes.length === 0) return; // Cannot run demo without nodes
+
+                if (animationState === 'idle' || animationState === 'finished') {
+                    // Start demo
+                     resetState(); // Reset states before starting DFS
+                    btnAutoDemo.textContent = 'Generating Steps...'; // Indicate generation
+                    btnAutoDemo.disabled = true; // Disable during generation
+                    // Generate steps asynchronously to avoid blocking UI if graph is large
+                    setTimeout(() => {
+                        dfsSteps = generateDFSSteps(0); // Generate steps, starting from node 0
+                         btnAutoDemo.disabled = false; // Re-enable button
+
+                        if (dfsSteps.length > 0) {
+                             animationState = 'running';
+                             currentStepIndex = 0;
+                             lastAnimationTime = performance.now();
+                             btnAutoDemo.textContent = 'Pause Demo'; // Button becomes pause
+                        } else {
+                             btnAutoDemo.textContent = 'Could not generate steps';
+                        }
+                         drawGraph(); // Redraw with initial states if steps generated
+                    }, 50); // Small delay to allow UI update
+
+                } else if (animationState === 'running') {
+                     // Pause demo
+                    animationState = 'paused';
+                    btnAutoDemo.textContent = 'Resume Demo';
+                } else if (animationState === 'paused') {
+                     // Resume demo
+                     animationState = 'running';
+                     lastAnimationTime = performance.now(); // Reset timer on resume
+                     btnAutoDemo.textContent = 'Pause Demo';
+                }
+            });
+
+
+            // Toggle handlers
+            toggleLabelsInput.addEventListener('change', (e) => {
+                 // CONFIG.showLabels is not used anymore, directly use checkbox state
+                 drawGraph(); // Redraw immediately
+            });
+
+            toggleStateInput.addEventListener('change', (e) => {
+                 // CONFIG.showStateColors is not used anymore, directly use checkbox state
+                 drawGraph(); // Redraw immediately
+            });
+
+
+            // --- Initialization ---
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); // Initial canvas size setup and pixel value calculation
+            generateRandomGraph(); // Start with a random graph
+            animate(performance.now()); // Start the animation loop (handles FPS and demo playback)
+        });
+    </script>
+</body>
+</html>

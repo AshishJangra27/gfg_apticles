@@ -1,0 +1,810 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GfG Interview Prep Navigator (Visual)</title>
+    <style>
+        /* --- Global Reset & Layout --- */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: #000;
+            color: #f0f0f0; /* Default light grey text */
+            font-family: 'Arial', sans-serif;
+            height: 100vh; /* Full viewport height */
+            width: 100vw; /* Full viewport width */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* --- Header --- */
+        header {
+            width: 100%;
+            height: 8vh; /* Fixed height */
+            text-align: center;
+            padding: 0.5vh;
+            font-size: 3vh;
+            color: #00ffff; /* Neon cyan */
+            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff, 0 0 20px #00ffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- Main Container (Controls + Canvas) --- */
+        #main-container {
+            flex-grow: 1; /* Takes up remaining vertical space */
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: stretch;
+            padding: 0 1vw; /* Add some horizontal padding */
+        }
+
+        /* --- Controls Sidebar --- */
+        #controls {
+            width: 18vw; /* Fixed width */
+            padding: 1vh;
+            margin-right: 1vw;
+            border: 1px solid #39ff14; /* Neon green border */
+            box-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14; /* Neon green glow */
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1.5vh; /* Spacing between control groups */
+            background-color: rgba(0, 20, 0, 0.1); /* Semi-transparent dark green */
+             overflow-y: auto; /* Allow scrolling if controls exceed height */
+        }
+
+        /* Controls - Grouping */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+             border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+             padding-bottom: 1.5vh;
+        }
+        .control-group:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .control-group label {
+             color: #00ffff; /* Neon cyan for labels */
+             font-size: 1.8vh;
+             margin-bottom: 0.5vh;
+             text-shadow: 0 0 3px #00ffff;
+        }
+
+
+        /* Controls - Buttons */
+        button {
+            padding: 1vh 0.5vw;
+            font-size: 1.8vh;
+            background-color: transparent;
+            border: 1px solid #ff00ff; /* Neon magenta */
+            color: #ff00ff;
+            text-shadow: 0 0 3px #ff00ff;
+            box-shadow: 0 0 5px #ff00ff;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, text-shadow 0.2s ease;
+             text-transform: uppercase;
+        }
+
+        button:hover {
+            background-color: #ff00ff;
+            color: #000;
+            text-shadow: none;
+            box-shadow: 0 0 10px #ff00ff, 0 0 15px #ff00ff;
+        }
+
+        button:active {
+            background-color: #fff;
+            color: #ff00ff;
+            box-shadow: 0 0 5px #ff00ff;
+        }
+
+        /* Controls - Toggle Switches (Custom Style) */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            color: #f0f0f0; /* Light grey text */
+            font-size: 1.8vh;
+            padding: 0.5vh 0;
+             text-shadow: 0 0 2px rgba(240,240,240,0.5);
+        }
+
+        .toggle-container input {
+            display: none; /* Hide default checkbox */
+        }
+
+        .toggle-slider {
+            width: 4vw; /* Adjust width based on vh/vw needs */
+            min-width: 40px; /* Minimum width */
+            height: 2.5vh;
+            min-height: 20px; /* Minimum height */
+            background-color: #333; /* Off state color */
+            transition: 0.4s;
+            border-radius: 2.5vh; /* Pill shape */
+            position: relative;
+            border: 1px solid #39ff14; /* Neon border */
+            box-shadow: 0 0 5px #39ff14;
+             flex-shrink: 0; /* Prevent slider from shrinking */
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: calc(2.5vh - 4px); /* Slightly smaller than container height */
+            width: calc(2.5vh - 4px);
+            min-height: 16px;
+            min-width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #bbb; /* Knob color */
+            transition: 0.4s;
+            border-radius: 50%; /* Circle shape */
+            box-shadow: 0 0 3px #fff;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #39ff14; /* On state color (neon green) */
+            box-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(calc(4vw - 2.5vh + 4px)); /* Slide knob: slider width - slider height + border*2 */
+            min-transform: translateX(calc(40px - 20px));
+            background-color: #fff; /* Highlight knob */
+            box-shadow: 0 0 5px #fff;
+        }
+
+        /* --- Canvas Area --- */
+        #canvas-container {
+            flex-grow: 1; /* Takes up remaining horizontal space */
+            position: relative; /* Needed for absolute positioning of FPS */
+            border: 1px solid #ff00ff; /* Neon magenta border */
+            box-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff; /* Neon magenta glow */
+            background-color: rgba(20, 0, 20, 0.1); /* Semi-transparent dark magenta */
+        }
+
+        #interactive-canvas {
+             display: block; /* Remove extra space below canvas */
+             width: 100%;
+             height: 100%;
+             cursor: crosshair; /* Default canvas cursor */
+        }
+
+         /* Custom Cursors (simulated via JS and changing canvas style) */
+         .cursor-pointer { cursor: pointer !important; }
+         .cursor-grab { cursor: grab !important; }
+         .cursor-grabbing { cursor: grabbing !important; }
+         .cursor-crosshair { cursor: crosshair !important; }
+
+
+        /* --- FPS Display --- */
+        #fps-display {
+            position: absolute;
+            top: 1vh;
+            right: 1vw;
+            font-size: 1.5vh;
+            color: #ffff00; /* Neon yellow */
+            text-shadow: 0 0 3px #ffff00;
+            z-index: 10; /* Ensure it's above canvas */
+        }
+
+        /* --- Tooltip Styles --- */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::before,
+        [data-tooltip]::after {
+            --scale: 0;
+            position: absolute;
+            top: -0.5vh;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100%) scale(var(--scale));
+            transition: transform 0.2s cubic-bezier(0.5, 0, 0.5, 1.5);
+            z-index: 100; /* High z-index */
+            pointer-events: none; /* Allow clicking through tooltip */
+        }
+
+        [data-tooltip]::before {
+            content: attr(data-tooltip);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 0.5vh 1vw;
+            border-radius: 0.5vh;
+            font-size: 1.5vh;
+            white-space: nowrap;
+            border: 1px solid #00ffff; /* Neon cyan border */
+            box-shadow: 0 0 5px #00ffff;
+        }
+
+        [data-tooltip]::after {
+            content: '';
+            border: 0.5vh solid transparent;
+            border-top-color: #00ffff; /* Neon cyan pointer */
+            transform-origin: top;
+        }
+
+        [data-tooltip]:hover::before,
+        [data-tooltip]:hover::after {
+            --scale: 1;
+        }
+
+        /* Tooltip adjustment for toggles inside flex */
+         .toggle-container[data-tooltip]::before,
+         .toggle-container[data-tooltip]::after {
+             left: 0; /* Align to the left edge of the container */
+             transform: translateX(0%) translateY(-100%) scale(var(--scale)); /* Adjust transform */
+         }
+         .toggle-container[data-tooltip]::after {
+             left: 1vw; /* Small offset for pointer */
+              transform: translateX(0%) translateY(-100%) scale(var(--scale));
+              transform-origin: top left;
+         }
+
+
+        /* --- Footer --- */
+        footer {
+            width: 100%;
+            height: 5vh; /* Fixed height */
+            text-align: center;
+            padding: 0.5vh;
+            font-size: 2vh;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid #ff00ff; /* Neon magenta border */
+            box-shadow: 0 0 5px #ff00ff; /* Neon magenta glow */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2vw;
+        }
+
+        footer a {
+            color: #ffff00; /* Neon yellow */
+            text-decoration: none;
+            text-shadow: 0 0 3px #ffff00;
+            transition: color 0.2s ease, text-shadow 0.2s ease;
+        }
+
+        footer a:hover {
+            color: #fff;
+            text-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        GfG Interview Prep Visual Navigator
+    </header>
+
+    <div id="main-container">
+        <div id="controls">
+             <div class="control-group">
+                 <label>Actions:</label>
+                <button id="reset-btn" data-tooltip="Reset the visualization to the initial state">Reset</button>
+                <button id="randomize-btn" data-tooltip="Generate a new random visualization">Randomize</button>
+                <button id="auto-demo-btn" data-tooltip="Start/Stop an automatic demonstration">Auto Demo</button>
+             </div>
+
+             <div class="control-group">
+                 <label>Toggles:</label>
+                 <div class="toggle-container" data-tooltip="Show or hide connections between nodes">
+                     <span>Show Connections</span>
+                     <label class="toggle">
+                         <input type="checkbox" id="toggle-connections" checked>
+                         <span class="toggle-slider"></span>
+                     </label>
+                 </div>
+                  <div class="toggle-container" data-tooltip="Show or hide text labels on nodes">
+                     <span>Show Labels</span>
+                     <label class="toggle">
+                         <input type="checkbox" id="toggle-labels" checked>
+                         <span class="toggle-slider"></span>
+                     </label>
+                 </div>
+             </div>
+        </div>
+
+        <div id="canvas-container">
+             <canvas id="interactive-canvas"></canvas>
+              <!-- FPS display is positioned absolutely over the canvas -->
+             <div id="fps-display">FPS: --</div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Canvas Setup ---
+        const canvas = document.getElementById('interactive-canvas');
+        const ctx = canvas.getContext('2d');
+        const fpsDisplay = document.getElementById('fps-display');
+        const autoDemoBtn = document.getElementById('auto-demo-btn');
+
+        let nodes = [];
+        let connections = [];
+        const nodeRadius = 15; // Base radius in pixels
+        const minNodes = 10;
+        const maxNodes = 25;
+
+        // --- Interaction State ---
+        let selectedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+        let hoverNode = null;
+
+        // --- Animation & Time ---
+        let lastTime = 0;
+        let fps = 0;
+        const fpsInterval = 1000 / 60; // Target 60 FPS
+        let then = performance.now();
+
+        // --- Toggle States ---
+        const toggles = {
+            showConnections: true,
+            showLabels: true,
+            autoDemo: false
+        };
+
+        // --- Auto Demo State ---
+        let demoState = {
+            step: 0,
+            timer: 0,
+            delay: 500, // ms per step
+            currentNodeIndex: -1,
+            path: [] // Sequence of node indices for demo path
+        };
+        let demoActive = false; // Separate flag for easy check
+
+        // --- Helper Functions ---
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+        }
+
+        function isPointInCircle(px, py, circle) {
+            // Add a small buffer for easier clicking
+            const buffer = 5;
+            return distance({ x: px, y: py }, circle) < circle.r + buffer;
+        }
+
+        function getRandomColor() {
+             const colors = ['#00ffff', '#39ff14', '#ff00ff', '#ffff00', '#0077ff', '#ff0077']; // Neon colors
+             return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            // Redraw after resize
+            if (nodes.length > 0) {
+                // Re-position nodes if they are out of bounds after resize
+                for(const node of nodes) {
+                    node.x = Math.max(node.r, Math.min(canvas.width - node.r, node.x));
+                    node.y = Math.max(node.r, Math.min(canvas.height - node.r, node.y));
+                }
+                render(); // Trigger redraw
+            } else {
+                 // If no nodes, just clear
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // --- Initialization ---
+        function init(mode = 'default') {
+            nodes = [];
+            connections = [];
+            selectedNode = null;
+            hoverNode = null;
+
+            // Stop demo if active
+            if (demoActive) {
+                 stopAutoDemo();
+            }
+
+            const numNodes = Math.floor(Math.random() * (maxNodes - minNodes + 1)) + minNodes;
+
+            if (mode === 'random') {
+                 // Create random nodes
+                for (let i = 0; i < numNodes; i++) {
+                    nodes.push({
+                        id: i,
+                        x: Math.random() * (canvas.width - nodeRadius * 2) + nodeRadius,
+                        y: Math.random() * (canvas.height - nodeRadius * 2) + nodeRadius,
+                        r: nodeRadius,
+                        color: getRandomColor(),
+                        label: `Node ${i + 1}`,
+                        isHovered: false,
+                        isDragging: false
+                    });
+                }
+
+                // Create random connections (sparse graph)
+                const maxConnectionsPerNode = 3;
+                for (let i = 0; i < numNodes; i++) {
+                    const connectedTo = new Set();
+                    // Ensure minimum connections? No, brief asks for sparse.
+                    const numConnections = Math.floor(Math.random() * (maxConnectionsPerNode + 1));
+                    while (connectedTo.size < Math.min(numNodes - 1, numConnections)) {
+                        const targetIndex = Math.floor(Math.random() * numNodes);
+                        // Avoid self-loops and duplicate connections
+                        if (targetIndex !== i && !connectedTo.has(targetIndex)) {
+                             // Ensure connection doesn't already exist in reverse
+                             const existingConn = connections.find(c => (c.from === i && c.to === targetIndex) || (c.from === targetIndex && c.to === i));
+                             if (!existingConn) {
+                                connections.push({ from: i, to: targetIndex });
+                                connectedTo.add(targetIndex);
+                             }
+                        }
+                    }
+                }
+            } else { // Default simple pattern (e.g., grid)
+                 const aspectRatio = canvas.width / canvas.height;
+                 const estimatedCols = Math.ceil(Math.sqrt(numNodes * aspectRatio));
+                 const cols = Math.max(1, estimatedCols);
+                 const rows = Math.max(1, Math.ceil(numNodes / cols));
+
+                 const paddingX = canvas.width / (cols + 1);
+                 const paddingY = canvas.height / (rows + 1);
+
+                 for(let i = 0; i < numNodes; i++){
+                     const row = Math.floor(i / cols);
+                     const col = i % cols;
+                     nodes.push({
+                         id: i,
+                         x: (col + 1) * paddingX,
+                         y: (row + 1) * paddingY,
+                         r: nodeRadius,
+                         color: getRandomColor(),
+                         label: `Node ${i + 1}`,
+                         isHovered: false,
+                         isDragging: false
+                     });
+
+                     // Connect to right and bottom neighbors if they exist
+                     if (col < cols - 1 && i + 1 < numNodes && Math.floor((i+1)/cols) === row) { // Ensure next node is in the same row
+                         connections.push({ from: i, to: i + 1 });
+                     }
+                     if (row < rows - 1 && i + cols < numNodes) { // Ensure next node is in bounds
+                          connections.push({ from: i, to: i + cols });
+                     }
+                 }
+            }
+
+            // Setup demo path based on new nodes
+            setupDemoPath();
+        }
+
+        function setupDemoPath() {
+             demoState.path = [];
+             if (nodes.length > 0) {
+                 // Create a simple path traversing nodes sequentially by id
+                 for(let i=0; i < nodes.length; i++) {
+                     demoState.path.push(i);
+                 }
+                 // Can add more complex path finding later if needed, but simple traversal works for demo
+             }
+            demoState.step = 0;
+            demoState.timer = 0;
+            demoState.currentNodeIndex = demoState.path.length > 0 ? demoState.path[0] : -1;
+        }
+
+
+        // --- Drawing Functions ---
+        function drawConnection(conn, isHighlighted = false) {
+            const nodeA = nodes.find(n => n.id === conn.from);
+            const nodeB = nodes.find(n => n.id === conn.to);
+            if (!nodeA || !nodeB) return;
+
+            ctx.beginPath();
+            ctx.moveTo(nodeA.x, nodeA.y);
+            ctx.lineTo(nodeB.x, nodeB.y);
+            ctx.strokeStyle = isHighlighted ? '#fff' : '#39ff14'; // White or Neon Green
+            ctx.lineWidth = isHighlighted ? 3 : 1;
+            ctx.shadowBlur = isHighlighted ? 10 : 0;
+            ctx.shadowColor = isHighlighted ? '#fff' : 'transparent';
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow
+        }
+
+        function drawNode(node, isHighlighted = false) {
+            const radius = isHighlighted ? node.r * 1.2 : node.r; // Slightly larger if highlighted
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = node.color;
+            ctx.shadowBlur = isHighlighted ? 15 : 5; // More glow if highlighted
+            ctx.shadowColor = node.color;
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Draw border
+            ctx.strokeStyle = '#fff'; // White border
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw label
+            if (toggles.showLabels && node.label) {
+                ctx.fillStyle = '#fff'; // White text
+                ctx.font = `${Math.max(10, radius * 0.8)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.label, node.x, node.y + radius + 15); // Position label slightly below node
+            }
+        }
+
+        // --- Update & Render Loop ---
+        function update(deltaTime) {
+            // Handle node dragging
+            if (selectedNode) {
+                 // Ensure node stays within bounds
+                selectedNode.x = Math.max(selectedNode.r, Math.min(canvas.width - selectedNode.r, mouse.x + dragOffset.x));
+                selectedNode.y = Math.max(selectedNode.r, Math.min(canvas.height - selectedNode.r, mouse.y + dragOffset.y));
+                 selectedNode.isDragging = true;
+            } else {
+                 // Handle hover state only when not dragging
+                let foundHoverNode = null;
+                for (let i = nodes.length - 1; i >= 0; i--) { // Iterate backward to find top node
+                    const node = nodes[i];
+                    if (isPointInCircle(mouse.x, mouse.y, node)) {
+                        foundHoverNode = node;
+                        break; // Only one node can be hovered at a time
+                    }
+                }
+
+                // Update isHovered flag
+                if (hoverNode && hoverNode !== foundHoverNode) {
+                     hoverNode.isHovered = false;
+                     hoverNode = null;
+                }
+                if (foundHoverNode) {
+                     hoverNode = foundHoverNode;
+                     hoverNode.isHovered = true;
+                }
+            }
+
+
+            // Update canvas cursor based on state
+             if(selectedNode) {
+                 canvas.className = 'cursor-grabbing';
+             } else if (hoverNode) {
+                 canvas.className = 'cursor-pointer';
+             } else {
+                 canvas.className = 'cursor-crosshair';
+             }
+
+
+            // Handle auto demo
+            if (demoActive && nodes.length > 0) {
+                 demoState.timer += deltaTime;
+                 if (demoState.timer >= demoState.delay) {
+                    demoState.timer = 0;
+                    demoState.step++;
+
+                    // Advance demo step
+                    if (demoState.path.length > 0) {
+                        const nextNodeIndexInPath = demoState.step % demoState.path.length;
+                        const nextNodeId = demoState.path[nextNodeIndexInPath];
+                        const nextNode = nodes.find(n => n.id === nextNodeId);
+
+                        // Simulate hover/selection effect
+                        if(hoverNode) hoverNode.isHovered = false; // Clear previous demo hover
+                        hoverNode = nextNode || null; // Set new demo hover
+                         if(hoverNode) hoverNode.isHovered = true;
+
+                         demoState.currentNodeIndex = nextNodeId;
+
+                    } else {
+                         // If no nodes, stop demo
+                        stopAutoDemo();
+                    }
+                 }
+            } else if (demoActive && nodes.length === 0) {
+                 // No nodes left while demo is active
+                 stopAutoDemo();
+            }
+        }
+
+        function render(currentTime) {
+            requestAnimationFrame(render);
+
+            // Calculate deltaTime for frame-independent animation and FPS
+            const now = performance.now();
+            const deltaTime = now - then;
+            then = now;
+
+            // Update physics/state (before drawing)
+             update(deltaTime);
+
+
+            // FPS calculation (update less frequently)
+            lastTime += deltaTime;
+            if (lastTime >= 100) { // Update FPS every 100ms
+                 fps = (1000 / deltaTime).toFixed(0);
+                 fpsDisplay.textContent = `FPS: ${fps}`;
+                 lastTime = 0;
+            }
+
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            // Draw connections
+            if (toggles.showConnections) {
+                for (const conn of connections) {
+                     const nodeA = nodes.find(n => n.id === conn.from);
+                     const nodeB = nodes.find(n => n.id === conn.to);
+                     if (!nodeA || !nodeB) continue;
+
+                     // Highlight if either node is selected, hovered, or is the current demo node
+                     const isHighlighted = (selectedNode && (selectedNode.id === conn.from || selectedNode.id === conn.to)) ||
+                                           (hoverNode && (hoverNode.id === conn.from || hoverNode.id === conn.to));
+
+                    drawConnection(conn, isHighlighted);
+                }
+            }
+
+            // Draw nodes
+            for (const node of nodes) {
+                 // Highlight if node is selected, hovered, or is the current demo node
+                 const isHighlighted = node === selectedNode || node === hoverNode || (demoActive && node.id === demoState.currentNodeIndex);
+                 drawNode(node, isHighlighted);
+            }
+        }
+
+        // --- Event Handlers ---
+        const mouse = { x: 0, y: 0 };
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+
+            // Check if a node is clicked
+            selectedNode = null; // Clear any previous selection attempt
+            for (let i = nodes.length - 1; i >= 0; i--) { // Iterate backward to select top node
+                const node = nodes[i];
+                if (isPointInCircle(mouse.x, mouse.y, node)) {
+                    selectedNode = node;
+                    dragOffset.x = node.x - mouse.x;
+                    dragOffset.y = node.y - mouse.y;
+                     // Bring clicked node to front for drawing
+                    nodes.splice(i, 1);
+                    nodes.push(node);
+
+                     // If a node is selected, stop demo
+                     if (demoActive) {
+                         stopAutoDemo();
+                     }
+                    break; // Stop checking after finding the first node
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+
+            // Hover logic is handled in the update loop for consistency with dragging/demo
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (selectedNode) {
+                selectedNode.isDragging = false;
+                selectedNode = null; // Deselect node
+            }
+        });
+
+         canvas.addEventListener('mouseleave', (e) => {
+             // Clear hover state when mouse leaves canvas
+             if(hoverNode) hoverNode.isHovered = false;
+             hoverNode = null;
+             // Reset cursor
+             canvas.className = 'cursor-crosshair';
+         });
+
+
+        // Prevent default drag behavior on canvas content (important for drag selection)
+        canvas.addEventListener('dragstart', (e) => {
+             e.preventDefault();
+        });
+
+
+        // --- Control Button Handlers ---
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            init('default');
+        });
+
+        document.getElementById('randomize-btn').addEventListener('click', () => {
+            init('random');
+        });
+
+        document.getElementById('auto-demo-btn').addEventListener('click', () => {
+             if (demoActive) {
+                stopAutoDemo();
+             } else {
+                startAutoDemo();
+             }
+        });
+
+        function startAutoDemo() {
+            if (nodes.length === 0) {
+                 console.warn("Cannot start demo, no nodes available.");
+                 return;
+            }
+            demoActive = true;
+            toggles.autoDemo = true; // Redundant but keeps toggle state conceptually
+            autoDemoBtn.textContent = 'Stop Demo';
+
+            // Ensure initial state is set
+            setupDemoPath(); // Regenerate path based on current nodes state
+             if (nodes.length > 0 && demoState.path.length > 0) {
+                if(hoverNode) hoverNode.isHovered = false; // Clear current hover
+                demoState.currentNodeIndex = demoState.path[0];
+                // Find the node object by ID after potentially reordering
+                const initialDemoNode = nodes.find(n => n.id === demoState.currentNodeIndex);
+                hoverNode = initialDemoNode || null; // Start with first node highlighted
+                if(hoverNode) hoverNode.isHovered = true;
+             } else {
+                  // If path is empty despite nodes existing (shouldn't happen with current setup)
+                 stopAutoDemo();
+             }
+        }
+
+        function stopAutoDemo() {
+             demoActive = false;
+             toggles.autoDemo = false;
+             autoDemoBtn.textContent = 'Auto Demo';
+             demoState.timer = 0;
+             demoState.step = 0;
+             demoState.currentNodeIndex = -1; // Indicate no node is highlighted by demo
+             if(hoverNode) hoverNode.isHovered = false; // Clear demo hover
+             hoverNode = null; // Ensure hover state is cleared
+        }
+
+
+        // --- Toggle Handlers ---
+        document.getElementById('toggle-connections').addEventListener('change', (e) => {
+            toggles.showConnections = e.target.checked;
+        });
+
+         document.getElementById('toggle-labels').addEventListener('change', (e) => {
+            toggles.showLabels = e.target.checked;
+        });
+
+
+        // --- Initialization Calls ---
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Initial canvas size setup
+        init('default'); // Initial visualization
+        render(); // Start the animation loop
+
+    </script>
+
+</body>
+</html>

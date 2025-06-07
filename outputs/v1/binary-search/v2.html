@@ -1,0 +1,779 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer</title>
+    <style>
+        /* --- Global Styles --- */
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: black;
+            color: #0f0; /* Default neon green text */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure it fills the viewport height */
+            width: 100vw; /* Ensure it fills the viewport width */
+            cursor: default;
+            user-select: none; /* Prevent text selection */
+        }
+
+        /* --- Layout --- */
+        header {
+            height: 8vh; /* Fixed height for header */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3vh;
+            text-transform: uppercase;
+            letter-spacing: 0.5vw;
+            text-shadow: 0 0 1vh #0ff; /* Neon glow */
+            border-bottom: 1px solid #0ff;
+            box-shadow: 0 0 1vh #0ff;
+        }
+
+        main {
+            flex-grow: 1; /* Main area takes remaining space */
+            display: flex;
+            padding: 1vh;
+            box-sizing: border-box;
+        }
+
+        #visualizer-area {
+            flex-grow: 1; /* Canvas area takes most space */
+            position: relative; /* For tooltip positioning */
+            display: flex; /* Use flex to center canvas */
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block; /* Remove default margin */
+            border: 1px solid #f0f; /* Neon border */
+            box-shadow: 0 0 1vh #f0f; /* Neon glow */
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            cursor: crosshair; /* Indicate clickable area */
+            max-width: 100%; /* Ensure canvas doesn't overflow parent */
+            max-height: 100%;
+        }
+
+        #control-panel {
+            width: 20vw; /* Fixed width for controls */
+            min-width: 200px; /* Prevent becoming too small */
+            padding: 1vh;
+            box-sizing: border-box;
+            border-left: 1px solid #0f0; /* Neon border */
+            box-shadow: 0 0 1vh #0f0; /* Neon glow */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Spacing between controls */
+            font-size: 1.8vh;
+            overflow-y: auto; /* Allow scrolling controls if too many, though goal is non-scrollable overall */
+            max-height: calc(100vh - 8vh - 5vh - 2vh); /* Max height based on viewport minus other elements + padding */
+        }
+
+        footer {
+            height: 5vh; /* Fixed height for footer */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8vh;
+            border-top: 1px solid #ff0; /* Neon border */
+            box-shadow: 0 0 1vh #ff0; /* Neon glow */
+        }
+
+        footer a {
+            color: #ff0; /* Neon yellow */
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: 0 0 0.5vh #ff0;
+            transition: text-shadow 0.3s ease;
+        }
+
+        footer a:hover {
+            text-shadow: 0 0 1.5vh #ff0, 0 0 2vh #ff0;
+            color: #fff; /* Brighter on hover */
+        }
+
+        /* --- UI Elements --- */
+        button {
+            background: none;
+            border: 1px solid #0ff;
+            color: #0ff;
+            padding: 1vh 1.5vw;
+            font-size: 1.8vh;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-shadow: 0 0 0.5vh #0ff;
+            box-shadow: 0 0 0.5vh #0ff;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            color: #fff;
+            background-color: rgba(0, 255, 255, 0.2);
+            text-shadow: 0 0 1.5vh #0ff, 0 0 2vh #0ff;
+            box-shadow: 0 0 1.5vh #0ff, 0 0 2vh #0ff;
+        }
+
+        button:active {
+             box-shadow: 0 0 0.5vh #0ff;
+        }
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            gap: 1vw;
+            margin-bottom: 1vh;
+        }
+
+        .toggle-control label {
+            cursor: pointer;
+        }
+
+        #fps-display {
+            position: absolute;
+            top: 1vh;
+            left: 1vw;
+            font-size: 1.8vh;
+            color: #f0f; /* Neon pink */
+            text-shadow: 0 0 0.5vh #f0f;
+            z-index: 10; /* Ensure it's above canvas */
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 0.5vh 1vw;
+            font-size: 1.5vh;
+            pointer-events: none; /* Allow interactions with elements behind tooltip */
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 20; /* Ensure it's above everything */
+            text-shadow: 0 0 0.5vh #0f0;
+            box-shadow: 0 0 0.5vh #0f0;
+        }
+
+        #tooltip.visible {
+            opacity: 1;
+        }
+
+         /* Custom checkbox style (optional but fits theme) */
+        input[type="checkbox"] {
+            appearance: none;
+            width: 2vh;
+            height: 2vh;
+            border: 1px solid #f0f;
+            background-color: transparent;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 0 0.5vh #f0f;
+            transition: all 0.3s ease;
+            flex-shrink: 0; /* Prevent checkbox from shrinking */
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: #f0f;
+            box-shadow: 0 0 1vh #f0f;
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: black; /* Checkmark color */
+            font-size: 1.5vh;
+            font-weight: bold;
+            text-shadow: none; /* Remove glow from checkmark itself */
+        }
+
+         #status-display, #target-display {
+             font-size: 1.6vh;
+             text-shadow: 0 0 0.5vh;
+         }
+         #status-display { color: #0ff; }
+         #target-display { color: #ff0; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        Binary Search Visualizer
+    </header>
+
+    <main>
+        <div id="visualizer-area">
+            <canvas id="binarySearchCanvas"></canvas>
+            <div id="fps-display">FPS: --</div>
+            <div id="tooltip"></div>
+        </div>
+
+        <div id="control-panel">
+            <button id="randomizeBtn">Randomize Data</button>
+            <button id="resetBtn">Reset Search</button>
+            <button id="autoDemoBtn">Auto Demo</button>
+
+            <div class="toggle-control">
+                <input type="checkbox" id="showMidToggle" checked>
+                <label for="showMidToggle">Show Mid Indicator</label>
+            </div>
+            <div class="toggle-control">
+                <input type="checkbox" id="showRangeToggle" checked>
+                <label for="showRangeToggle">Highlight Search Range</label>
+            </div>
+            <div class="toggle-control">
+                 <input type="checkbox" id="animateStepsToggle" checked>
+                <label for="animateStepsToggle">Animate Steps</label>
+            </div>
+
+            <div id="status-display" style="margin-top: auto;">
+                Status: Ready
+            </div>
+             <div id="target-display">
+                Target: Not Set
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Built with ❤️ |
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('binarySearchCanvas');
+        const ctx = canvas.getContext('2d');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const fpsDisplay = document.getElementById('fps-display');
+        const tooltip = document.getElementById('tooltip');
+        const showMidToggle = document.getElementById('showMidToggle');
+        const showRangeToggle = document.getElementById('showRangeToggle');
+        const animateStepsToggle = document.getElementById('animateStepsToggle');
+        const statusDisplay = document.getElementById('status-display');
+        const targetDisplay = document.getElementById('target-display');
+
+        // --- Configuration ---
+        const ARRAY_SIZE = 30; // Number of elements in the array
+        const BAR_GAP_PERCENT = 5; // Percentage of bar width for gap
+        const NEON_BLUE = '#0ff';
+        const NEON_GREEN = '#0f0';
+        const NEON_PINK = '#f0f';
+        const NEON_YELLOW = '#ff0';
+        const COLOR_DEFAULT = NEON_BLUE;
+        const COLOR_LOW_HIGH = NEON_GREEN; // Color for low/high indicators
+        const COLOR_MID = NEON_YELLOW; // Color for mid indicator
+        const COLOR_SEARCHED_RANGE = 'rgba(0, 255, 255, 0.2)'; // Faded blue for range background
+        const COLOR_TARGET_FOUND = NEON_PINK; // Color for found bar
+        const COLOR_TARGET_NOT_FOUND = 'red'; // Color for "Not Found" state
+        const ANIMATION_DELAY_MS = 600; // Delay between steps in auto demo/animation
+
+        // --- State Variables ---
+        let data = [];
+        let low = 0;
+        let high = ARRAY_SIZE - 1;
+        let mid = -1;
+        let target = null;
+        let foundIndex = -1;
+        let searchSteps = []; // Store the sequence of (low, high, mid) during search if animating
+        let currentStepIndex = 0;
+        let searchState = 'ready'; // 'ready', 'searching', 'found', 'not found'
+        let autoDemoInterval = null;
+        let autoDemoRunning = false;
+        let lastFrameTime = performance.now();
+        let fps = 0;
+        let hoveredIndex = -1; // For tooltip
+
+        // --- Initialization ---
+        function initialize() {
+            generateRandomSortedArray();
+            resetSearch();
+            resizeCanvas();
+            requestAnimationFrame(gameLoop); // Start the animation loop
+        }
+
+        function generateRandomSortedArray() {
+            data = Array.from({ length: ARRAY_SIZE }, () => Math.floor(Math.random() * 100) + 1);
+            data.sort((a, b) => a - b);
+        }
+
+        function resetSearch() {
+            low = 0;
+            high = data.length - 1;
+            mid = -1;
+            target = null;
+            foundIndex = -1;
+            searchSteps = [];
+            currentStepIndex = 0;
+            searchState = 'ready';
+            stopAutoDemo(); // Stop any running demo
+            updateStatus();
+            updateTargetDisplay();
+             // Ensure canvas is resized and redrawn immediately upon reset
+            resizeCanvas(); // This also calls draw()
+        }
+
+        // --- Canvas Drawing ---
+        function resizeCanvas() {
+            const area = document.getElementById('visualizer-area');
+             // Set canvas size based on parent area, maintaining potential aspect ratio if needed,
+             // but for simplicity, just fill the parent div.
+            canvas.width = area.clientWidth;
+            canvas.height = area.clientHeight;
+            // Redraw after resize
+            draw();
+        }
+
+        function draw() {
+            if (!ctx) return;
+
+            // Clear canvas
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (data.length === 0) return; // Nothing to draw if array is empty
+
+            const totalBarWidthPercentage = 100 - (BAR_GAP_PERCENT * ARRAY_SIZE);
+            const barWidthPercentage = totalBarWidthPercentage / ARRAY_SIZE;
+            const barWidthPx = (canvas.width / 100) * barWidthPercentage;
+            const barGapPx = (canvas.width / 100) * BAR_GAP_PERCENT;
+
+            const maxVal = Math.max(...data);
+            // Adjust baseLine and available drawing height to account for text labels below and above bars
+            const bottomPadding = 40; // Space for index and low/high labels
+            const topPadding = 30; // Space for value and mid label
+            const baseLine = canvas.height - bottomPadding;
+            const availableHeight = canvas.height - bottomPadding - topPadding;
+
+
+            data.forEach((value, index) => {
+                const barHeight = (value / maxVal) * availableHeight; // Scale height
+                const x = index * (barWidthPx + barGapPx) + barGapPx / 2;
+                const y = baseLine - barHeight;
+
+                // Determine bar color and glow
+                let color = COLOR_DEFAULT;
+                let glowColor = NEON_BLUE;
+
+                // Highlighting based on search state
+                if (searchState === 'searching' || searchState === 'found' || searchState === 'not found') {
+                    const currentLow = searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].low : low;
+                    const currentHigh = searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].high : high;
+                    const currentMid = searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].mid : mid;
+
+                    if (showRangeToggle.checked && index >= currentLow && index <= currentHigh) {
+                         color = COLOR_SEARCHED_RANGE; // Background color for search range
+                    } else if (index < currentLow || index > currentHigh) {
+                         color = 'rgba(128, 128, 128, 0.3)'; // Dim elements outside current range
+                    }
+
+                    if (foundIndex === index) {
+                        color = COLOR_TARGET_FOUND;
+                        glowColor = NEON_PINK;
+                    } else if (index === currentMid && showMidToggle.checked) {
+                         glowColor = NEON_YELLOW; // Mid has glow
+                     } else if (index === currentLow && showRangeToggle.checked && currentLow <= currentHigh) {
+                         glowColor = NEON_GREEN; // Low has glow
+                     } else if (index === currentHigh && showRangeToggle.checked && currentLow <= currentHigh) {
+                         glowColor = NEON_GREEN; // High has glow
+                     } else {
+                         glowColor = NEON_BLUE; // Default glow
+                     }
+                } else {
+                     glowColor = NEON_BLUE;
+                }
+
+
+                // Draw bar with glow
+                ctx.fillStyle = color;
+                ctx.shadowColor = glowColor;
+                ctx.shadowBlur = 15; // Increased blur for stronger glow
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.fillRect(x, y, barWidthPx, barHeight);
+                ctx.shadowBlur = 0; // Reset shadow for text/other elements
+
+                // Draw value text above bar
+                ctx.fillStyle = '#fff'; // White text
+                ctx.font = `${Math.min(barWidthPx * 0.6, 14)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(value, x + barWidthPx / 2, y - 5);
+
+                // Draw index text below baseLine
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Faded white
+                ctx.font = `${Math.min(barWidthPx * 0.5, 10)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                 ctx.fillText(index, x + barWidthPx / 2, baseLine + 5);
+
+            });
+
+            // Draw low/high/mid indicators (lines/pointers)
+             if (searchState === 'searching' || searchState === 'found' || searchState === 'not found') {
+                 // Use current step's low/high/mid for animated display
+                 const currentLow = searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].low : low;
+                 const currentHigh = searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].high : high;
+                 const currentMid = searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].mid : mid;
+
+
+                 // Draw low pointer/line
+                 if (currentLow <= currentHigh && showRangeToggle.checked) { // Only draw if range is valid and toggle is on
+                     const lowX = currentLow * (barWidthPx + barGapPx) + barGapPx / 2 + barWidthPx / 2;
+                     ctx.strokeStyle = NEON_GREEN;
+                     ctx.shadowColor = NEON_GREEN;
+                     ctx.shadowBlur = 10;
+                     ctx.lineWidth = 2;
+                     ctx.beginPath();
+                     ctx.moveTo(lowX, baseLine + 20);
+                     ctx.lineTo(lowX, baseLine + 30);
+                     ctx.stroke();
+                     ctx.fillStyle = NEON_GREEN;
+                     ctx.textAlign = 'center';
+                     ctx.textBaseline = 'top';
+                     ctx.fillText('low', lowX, baseLine + 30);
+                 }
+
+
+                 // Draw high pointer/line
+                 if (currentLow <= currentHigh && showRangeToggle.checked) { // Only draw if range is valid and toggle is on
+                      const highX = currentHigh * (barWidthPx + barGapPx) + barGapPx / 2 + barWidthPx / 2;
+                      ctx.strokeStyle = NEON_GREEN;
+                     ctx.shadowColor = NEON_GREEN;
+                     ctx.shadowBlur = 10;
+                     ctx.lineWidth = 2;
+                     ctx.beginPath();
+                     ctx.moveTo(highX, baseLine + 20);
+                     ctx.lineTo(highX, baseLine + 30);
+                     ctx.stroke();
+                      ctx.fillStyle = NEON_GREEN;
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'top';
+                      ctx.fillText('high', highX, baseLine + 30);
+                 }
+
+
+                 // Draw mid pointer/line
+                 if (currentMid !== -1 && currentMid >= currentLow && currentMid <= currentHigh && showMidToggle.checked) {
+                      const midX = currentMid * (barWidthPx + barGapPx) + barGapPx / 2 + barWidthPx / 2;
+                      const midBarHeight = (data[currentMid] / maxVal) * availableHeight;
+                      const midBarY = baseLine - midBarHeight;
+
+                      ctx.strokeStyle = NEON_YELLOW;
+                     ctx.shadowColor = NEON_YELLOW;
+                     ctx.shadowBlur = 10;
+                      ctx.lineWidth = 3;
+                     ctx.beginPath();
+                     ctx.moveTo(midX, topPadding - 10); // Start above value text
+                     ctx.lineTo(midX, midBarY - 5); // End slightly above the bar
+                      ctx.stroke();
+                      ctx.fillStyle = NEON_YELLOW;
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'bottom';
+                      ctx.fillText('mid', midX, topPadding - 10);
+                 }
+                 ctx.shadowBlur = 0; // Reset shadow
+             }
+
+
+             // Draw target line if set
+             if (target !== null && maxVal > 0) { // Ensure maxVal is not zero
+                 const targetY = baseLine - (target / maxVal) * availableHeight;
+                 // Clamp targetY to be within the drawing area
+                 const clampedTargetY = Math.max(topPadding, Math.min(baseLine, targetY));
+
+                 ctx.strokeStyle = NEON_PINK;
+                 ctx.shadowColor = NEON_PINK;
+                 ctx.shadowBlur = 10;
+                 ctx.lineWidth = 2;
+                 ctx.setLineDash([5, 5]); // Dashed line
+                 ctx.beginPath();
+                 ctx.moveTo(0, clampedTargetY);
+                 ctx.lineTo(canvas.width, clampedTargetY);
+                 ctx.stroke();
+                 ctx.setLineDash([]); // Reset line dash
+
+                 ctx.fillStyle = NEON_PINK;
+                 ctx.font = '2vh Arial'; // Use vh for better responsiveness
+                 ctx.textAlign = 'right';
+                 ctx.textBaseline = 'bottom';
+                 // Position text slightly above and to the right of the line end
+                 ctx.fillText(`Target: ${target}`, canvas.width - 10, clampedTargetY - 5);
+                 ctx.shadowBlur = 0;
+             }
+        }
+
+        // --- Binary Search Logic ---
+        function performBinarySearchStep() {
+             if (searchState !== 'searching') {
+                 stopAutoDemo(); // Should not happen if called correctly, but safety check
+                 return;
+             }
+
+            if (low > high) {
+                searchState = 'not found';
+                foundIndex = -1;
+                updateStatus();
+                stopAutoDemo();
+                return;
+            }
+
+            const currentMid = Math.floor((low + high) / 2);
+            mid = currentMid; // Update state for drawing
+
+            const midValue = data[currentMid];
+
+             searchSteps.push({ low, high, mid: currentMid, value: midValue }); // Store step
+
+            if (midValue === target) {
+                searchState = 'found';
+                foundIndex = currentMid;
+                updateStatus();
+                stopAutoDemo();
+            } else if (midValue < target) {
+                low = currentMid + 1;
+                // searchState remains 'searching'
+                 updateStatus();
+            } else { // midValue > target
+                high = currentMid - 1;
+                 // searchState remains 'searching'
+                 updateStatus();
+            }
+
+             // If animating, schedule the next step via autoDemoInterval
+             // If not animating, the loop in startSearch or auto demo handles immediate next step
+             if (animateStepsToggle.checked && searchState === 'searching') {
+                  currentStepIndex++; // Move to the next stored step for display
+                  autoDemoInterval = setTimeout(performBinarySearchStep, ANIMATION_DELAY_MS);
+             } else if (!animateStepsToggle.checked && searchState === 'searching') {
+                  // If not animating and still searching, immediately perform the next step (loop in caller)
+                  // This recursive call simulates the instant execution without delay
+                  performBinarySearchStep();
+             } else {
+                  // Search finished (found or not found)
+                  currentStepIndex = searchSteps.length - 1; // Stay on the last step
+             }
+        }
+
+        function startSearch(value) {
+             if (autoDemoRunning) return; // Don't interfere with demo
+
+             // Reset if starting a new search or changing target
+             if (searchState !== 'searching' || target !== value) {
+                 resetSearch(); // This stops any ongoing demo and resets state
+                 target = value;
+                 targetDisplay.textContent = `Target: ${target}`;
+                 searchState = 'searching';
+                 updateStatus();
+                 searchSteps = []; // Ensure steps are clear for the new search
+                 currentStepIndex = 0;
+
+                 if (animateStepsToggle.checked) {
+                     // Start the first step, subsequent steps scheduled by performBinarySearchStep
+                     performBinarySearchStep();
+                 } else {
+                      // Perform all steps instantly
+                     while (searchState === 'searching') {
+                          performBinarySearchStep();
+                     }
+                 }
+             }
+             // If already searching for the same target, do nothing.
+        }
+
+
+        // --- Auto Demo ---
+        function startAutoDemo() {
+             if (autoDemoRunning) return;
+
+             stopAutoDemo(); // Ensure no existing demo is running
+             resetSearch(); // Start from a clean state
+
+             // Pick a random target value that EXISTS in the array
+             target = data[Math.floor(Math.random() * data.length)];
+             // If you wanted a random target that might *not* exist:
+             // target = Math.floor(Math.random() * 100) + 1;
+
+             targetDisplay.textContent = `Target: ${target}`;
+             searchState = 'searching';
+             updateStatus();
+             autoDemoRunning = true;
+             searchSteps = []; // Clear steps
+
+             // Start the animation loop
+             currentStepIndex = 0;
+             performBinarySearchStep(); // Perform the first step
+
+             // Subsequent steps are scheduled by performBinarySearchStep if animating
+             // If not animating, performBinarySearchStep completes instantly
+        }
+
+        function stopAutoDemo() {
+            if (autoDemoInterval) {
+                clearTimeout(autoDemoInterval);
+                autoDemoInterval = null;
+            }
+            autoDemoRunning = false;
+            // Note: searchState remains as it was when stopped ('searching', 'found', 'not found')
+            updateStatus(); // Ensure status reflects current state
+        }
+
+
+        // --- UI Updates ---
+        function updateStatus() {
+            let statusText = 'Status: ';
+            switch (searchState) {
+                case 'ready': statusText += 'Ready'; break;
+                case 'searching':
+                    // Display current step's low/high/mid if animating, otherwise final state
+                    const currentLow = animateStepsToggle.checked && searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].low : low;
+                    const currentHigh = animateStepsToggle.checked && searchSteps[currentStepIndex] ? searchSteps[currentStepIndex].high : high;
+                    statusText += `Searching... (low=${currentLow}, high=${currentHigh})`;
+                    break;
+                case 'found': statusText += `Found at Index ${foundIndex}!`; break;
+                case 'not found': statusText += 'Target Not Found.'; break;
+            }
+            statusDisplay.textContent = statusText;
+        }
+
+         function updateTargetDisplay() {
+             targetDisplay.textContent = `Target: ${target !== null ? target : 'Not Set'}`;
+         }
+
+        function updateFPS(time) {
+            const deltaTime = time - lastFrameTime;
+            lastFrameTime = time;
+            fps = Math.round(1000 / deltaTime);
+            // Throttle FPS display update to avoid flickering
+            if (time % 100 < 16) { // Update roughly every 100ms
+                fpsDisplay.textContent = `FPS: ${fps}`;
+            }
+        }
+
+        // --- Event Handlers ---
+        window.addEventListener('resize', resizeCanvas);
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            // const y = event.clientY - rect.top; // Y not needed for bar selection
+
+            const totalBarWidthPercentage = 100 - (BAR_GAP_PERCENT * ARRAY_SIZE);
+            const barWidthPercentage = totalBarWidthPercentage / ARRAY_SIZE;
+            const barWidthPx = (canvas.width / 100) * barWidthPercentage;
+            const barGapPx = (canvas.width / 100) * BAR_GAP_PERCENT;
+
+            // Determine clicked index based on X coordinate
+            // Click X relative to the start of the bars area
+            const index = Math.floor(x / (barWidthPx + barGapPx));
+
+            if (index >= 0 && index < data.length) {
+                startSearch(data[index]);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const totalBarWidthPercentage = 100 - (BAR_GAP_PERCENT * ARRAY_SIZE);
+            const barWidthPercentage = totalBarWidthPercentage / ARRAY_SIZE;
+            const barWidthPx = (canvas.width / 100) * barWidthPercentage;
+            const barGapPx = (canvas.width / 100) * BAR_GAP_PERCENT;
+
+            let currentHoveredIndex = -1;
+            if (barWidthPx + barGapPx > 0) { // Avoid division by zero if canvas is tiny
+                 currentHoveredIndex = Math.floor(x / (barWidthPx + barGapPx));
+            }
+
+
+            // Check if the hover is actually within the canvas bounds and a valid index
+            if (currentHoveredIndex >= 0 && currentHoveredIndex < data.length) {
+                // Optional: Refine this to only show tooltip if Y is within bar area?
+                // For simplicity, show on hover over the horizontal strip where bars are.
+                if (currentHoveredIndex !== hoveredIndex) {
+                    hoveredIndex = currentHoveredIndex;
+                     tooltip.textContent = `Value: ${data[hoveredIndex]} (Index: ${hoveredIndex})`;
+                     // Position tooltip near cursor but prevent overflow
+                     const tipX = event.clientX + 15;
+                     const tipY = event.clientY + 15;
+
+                     // Adjust if near right edge
+                     if (tipX + tooltip.offsetWidth > window.innerWidth) {
+                         tooltip.style.left = `${event.clientX - tooltip.offsetWidth - 15}px`;
+                     } else {
+                         tooltip.style.left = `${tipX}px`;
+                     }
+
+                     // Adjust if near bottom edge
+                     if (tipY + tooltip.offsetHeight > window.innerHeight) {
+                         tooltip.style.top = `${event.clientY - tooltip.offsetHeight - 15}px`;
+                     } else {
+                         tooltip.style.top = `${tipY}px`;
+                     }
+
+                    tooltip.classList.add('visible');
+                }
+            } else {
+                 if (hoveredIndex !== -1) {
+                     hoveredIndex = -1;
+                     tooltip.classList.remove('visible');
+                 }
+            }
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            hoveredIndex = -1;
+            tooltip.classList.remove('visible');
+        });
+
+
+        randomizeBtn.addEventListener('click', () => {
+            generateRandomSortedArray();
+            resetSearch(); // Reset search state after changing data
+        });
+
+        resetBtn.addEventListener('click', resetSearch);
+
+        autoDemoBtn.addEventListener('click', startAutoDemo);
+
+        // Toggles only affect drawing/animation, no need to reset state
+        showMidToggle.addEventListener('change', draw); // Redraw immediately
+        showRangeToggle.addEventListener('change', draw); // Redraw immediately
+        // animateStepsToggle doesn't need a direct redraw on change, its effect is in the search logic/loop
+
+
+        // Game Loop for drawing and animations
+        function gameLoop(time) {
+            updateFPS(time); // Update FPS
+            // If animating steps, update drawing based on currentStepIndex
+            // If not animating, draw reflects the final state after startSearch completes instantly
+             if (animateStepsToggle.checked && searchState === 'searching' && searchSteps.length > 0) {
+                 // Drawing happens based on state updated by performBinarySearchStep,
+                 // which is scheduled by timeout. The draw() call inside the loop
+                 // ensures a consistent redraw every frame, picking up the latest state
+                 // after the timeout fires and updates the state variables (low, high, mid, currentStepIndex).
+             }
+            draw(); // Redraw visualization
+
+            requestAnimationFrame(gameLoop); // Schedule next frame
+        }
+
+        // --- Start the app ---
+        initialize();
+
+    </script>
+
+</body>
+</html>

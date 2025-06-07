@@ -29,7 +29,7 @@ def generate_webpage_design_prompt(summarised_article: str) -> str:
     from the trimmed summary. Persona: minimalist web developer with 20+ years’ experience.
     """
     return f"""
-You are a minimalist web developer with **20+ years of experience**. Build a **perfectly working, static, non-scrollable, single-page interactive visual learning HTML app** based on the summarised content below.
+You are a minimalist web developer with **20+ years of experience**. Build a **basic, static, non-scrollable, single-page interactive visual learning HTML app** based on the summarised content below.
 
 ---
 
@@ -48,47 +48,43 @@ You are a minimalist web developer with **20+ years of experience**. Build a **p
 2. **Layout & Viewport**  
    - Entire app must fit within a **single static viewport** (no scrolling).  
    - Fixed layout using `vh`/`vw` units.  
-   - Central interactive **canvas element** is required.  
-   - Header, controls, and footer must be clearly positioned and visible.
+   - A central **canvas** or key interactive area is preferred (if applicable).  
+   - Header and footer must be clearly positioned and visible.
 
 3. **Visual Theme**  
-   - Background: **black**.  
-   - UI highlights: **neon colors** (blue, green, pink, etc.) with glow effects.  
-   - Clean, high-contrast, futuristic aesthetic.
+   - Background: **white**.  
+   - Text & elements: **black**, clean.  
+   - Font: **monospace**, readable, no styling distractions.
 
 4. **Interactivity**  
-   - Canvas must support:  
-     - **Click**, **drag**, **hover** actions.  
-     - Real-time visual updates.  
-   - Add buttons for **reset**, **randomize**, and **auto-demo mode**.  
-   - Use **tooltips**, **animated transitions**, and **custom cursors** to enhance usability.
+   - Only add interactivity **if the concept naturally requires it** for learning.  
+   - You may skip advanced interactions if they don’t aid the learning experience.  
+   - Use your expertise to decide how best to **convey the main idea interactively**.  
+   - If added:
+     - Support **click**, **drag**, or **hover**
+     - Add a **reset** button or **demo toggle** (optional)
+     - Light hover hints allowed
 
-5. **Functionality Extensions**  
-   - Add **toggle controls** to activate/deactivate layers or elements.  
-   - Include an **FPS display** or activity indicator.  
-   - Auto-play demo runs through the concept without user input.
-
-6. **Footer Section**  
+5. **Footer Section**  
    - Fixed at the bottom of the screen.  
-   - Includes:  
+   - Includes:
      - [GitHub](https://github.com/AshishJangra27/)  
      - [LinkedIn](https://www.linkedin.com/in/ashish-jangra/)  
-   - Styled to match the neon theme.
+   - Styled to match the clean theme.
 
 ---
 
 📚 **Instructional Priorities**:
-- Emphasize **visual learning over text**.  
-- Each interaction must convey a **clear conceptual takeaway**.  
-- Flow should feel **natural, exploratory, and intuitive**.
+- Convey the **core concept visually and interactively** (if needed).  
+- Avoid unnecessary UI or complexity.  
+- Keep the design clean, direct, and intuitive.
 
 ---
 
 **Non-Negotiables**:  
 - No scrolling.  
-- No incomplete or buggy features.  
-- No long text explanations or quizzes.  
-- All UI elements must function flawlessly.
+- No unnecessary features.  
+- Everything included must clearly support understanding of the main idea.
 
 Return design brief
 """.strip()
@@ -98,8 +94,8 @@ Return design brief
 def generate_webpage_prompt(design_brief: str) -> str:
     """
     Generate a strict prompt for a veteran (20+ years) minimalist web developer
-    to produce a flawless, static, single-page HTML/CSS/JS app based on the given design brief,
-    using a dark theme with neon accents.
+    to produce a clean, static, single-page HTML/CSS/JS app based on the design brief,
+    using a white background, black text, and monospace font.
     """
     return f"""
 You are a minimalist web developer with **20+ years of experience**. Build a **fully functional, static, single-screen HTML application** strictly based on the following design brief.
@@ -115,50 +111,45 @@ You are a minimalist web developer with **20+ years of experience**. Build a **f
 
 1. **File Structure**:
    - Use a single `.html` file.
-   - All CSS and JavaScript must be embedded within the same file (no external stylesheets or scripts).
+   - All CSS and JavaScript must be embedded in the same file (no external stylesheets or scripts).
 
 2. **Theme & Styling**:
-   - Use a **dark neon theme**:
-     - Background: `#000000` (pure black)
-     - Primary accents: **neon colors** like `#39ff14` (green), `#00ffff` (cyan), `#ff00ff` (magenta)
-     - Text: light shades like `#f0f0f0`
-   - Apply **glow effects** on interactive elements.
-   - Maintain pixel-perfect alignment and clean UI spacing.
+   - Background: **white**
+   - Text and elements: **black**
+   - Font: **monospace**, clean and readable
+   - Avoid unnecessary styling, colors, or visual effects
 
 3. **Layout & Viewport**:
-   - The app must be **non-scrollable** and fit entirely within a **1080p screen**.
-   - Use CSS `vh` and `vw` units to make layout responsive to screen size.
-   - A central `<canvas>` element must handle all graphical interactivity.
+   - The entire app must fit within a **1080p screen** without scrolling
+   - Use CSS `vh` and `vw` units to maintain a static layout
+   - If interactivity is required, use a central `<canvas>` or clearly defined interaction area
 
 4. **Interactivity**:
-   - The canvas must support:
-     - **Click**, **drag**, and **hover** events.
-     - **Real-time visual updates**.
-   - Include:
-     - **Reset**, **Randomize**, and **Auto-demo** buttons.
-     - Optional sliders or toggles if required.
-     - Tooltips and animated transitions.
-     - Custom cursors for interaction cues (pointer, grab, crosshair, etc.).
+   - Add interactivity **only if it directly serves the concept** being taught
+   - If used, support:
+     - **Click**, **drag**, or **hover**
+     - **Basic feedback** (no animations or transitions)
+   - A simple **reset** button or **auto-demo** toggle may be included if helpful
 
 5. **Functionality Requirements**:
-   - All components must be **flawlessly implemented**.
-   - No partial or placeholder functionality.
-   - Ensure responsive, smooth, and intuitive user experience.
+   - All components must be **fully working and bug-free**
+   - Keep user interactions intuitive and lightweight
+   - Do not add complexity unless essential for understanding the concept
 
 6. **Footer**:
-   - Fixed at the bottom of the viewport.
+   - Fixed at the bottom of the viewport
    - Includes:
      - GitHub: `https://github.com/AshishJangra27/`
      - LinkedIn: `https://www.linkedin.com/in/ashish-jangra/`
-   - Styled with neon text and links; must not interfere with main UI or canvas.
+   - Styled simply to match the rest of the theme (black text on white background)
 
 7. **Technical Constraints**:
-   - **No external libraries, fonts, or frameworks**.
-   - Use **vanilla HTML, CSS, and JS only**.
+   - Do not use any external libraries, frameworks, fonts, or media
+   - Use only **vanilla HTML, CSS, and JavaScript**
 
 ---
 
 🧾 **Output Format**:
-- Return **only the complete `.html` code as plain text**.
-- **No markdown**, no explanations, no comments—just the full HTML content.
+- Return **only the complete `.html` code as plain text**
+- No markdown, no explanations, no comments — just the HTML
 """.strip()

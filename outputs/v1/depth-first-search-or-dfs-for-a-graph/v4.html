@@ -1,0 +1,995 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Visualizer</title>
+    <style>
+        /* Minimalist Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Neon Colors */
+            --neon-blue: #00FFFF;
+            --neon-cyan: #00FFFF; /* Alias for blue, distinct name for edges */
+            --neon-green: #39ff14; /* Adjusted green */
+            --neon-pink: #FF00FF; /* Magenta */
+            --neon-yellow: #FFFF00;
+            --neon-red: #FF0000;
+            --neon-purple: #8A2BE2;
+
+            /* Glow Effects */
+            --glow-small: 0 0 5px;
+            --glow-medium: 0 0 10px;
+            --glow-large: 0 0 20px;
+        }
+
+        body {
+            background-color: #000;
+            color: var(--neon-blue);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            overflow: hidden; /* Prevent scrolling */
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Full viewport height */
+            width: 100vw; /* Full viewport width */
+            cursor: crosshair; /* Futuristic cursor */
+        }
+
+        /* Layout */
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: relative; /* For positioning elements */
+        }
+
+        header {
+            flex-shrink: 0; /* Don't shrink header */
+            height: 8vh; /* Fixed header height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--neon-blue);
+            box-shadow: var(--glow-small) var(--neon-blue);
+            font-size: 2.5vh;
+            text-shadow: var(--glow-medium) var(--neon-blue);
+            position: relative;
+            z-index: 10;
+            user-select: none; /* Prevent text selection */
+        }
+
+        #main-content {
+            flex-grow: 1; /* Canvas area takes remaining space */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Ensure canvas fits perfectly */
+             user-select: none; /* Prevent text selection */
+        }
+
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            background-color: transparent; /* Canvas draws on black body */
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 1vh;
+            right: 1vw;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8vh;
+            z-index: 20;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+            padding: 1vh 1vw;
+            border: 1px solid var(--neon-green);
+            box-shadow: var(--glow-medium) var(--neon-green);
+            font-size: 1.8vh;
+             user-select: none; /* Prevent text selection */
+        }
+
+        .control-group {
+             display: flex;
+             flex-direction: column;
+             gap: 0.5vh;
+        }
+
+        button, .toggle-control {
+            background-color: transparent;
+            color: var(--neon-pink);
+            border: 1px solid var(--neon-pink);
+            padding: 0.8vh 1vw;
+            font-family: inherit;
+            font-size: inherit;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+            text-shadow: var(--glow-small) var(--neon-pink);
+            box-shadow: var(--glow-small) var(--neon-pink);
+        }
+
+        button:hover, .toggle-control:hover {
+            color: var(--neon-yellow);
+            border-color: var(--neon-yellow);
+            text-shadow: var(--glow-medium) var(--neon-yellow);
+            box-shadow: var(--glow-large) var(--neon-yellow);
+        }
+
+        button:active {
+            color: #fff;
+            border-color: #fff;
+            text-shadow: var(--glow-large) #fff;
+            box-shadow: var(--glow-large) #fff;
+        }
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-control label {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .toggle-control input[type="checkbox"] {
+            /* Hide default checkbox */
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 2vh;
+            height: 2vh;
+            border: 1px solid var(--neon-pink);
+            position: relative;
+            cursor: pointer;
+            outline: none;
+            margin-left: 0.5vw;
+            box-shadow: var(--glow-small) var(--neon-pink);
+            transition: all 0.2s ease-in-out;
+            vertical-align: middle; /* Align with text */
+        }
+
+        .toggle-control input[type="checkbox"]:hover {
+             border-color: var(--neon-yellow);
+             box-shadow: var(--glow-medium) var(--neon-yellow);
+        }
+
+        .toggle-control input[type="checkbox"]:checked {
+            border-color: var(--neon-green);
+            background-color: var(--neon-green);
+            box-shadow: var(--glow-large) var(--neon-green);
+        }
+
+         /* Custom checkmark */
+        .toggle-control input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000; /* Black checkmark */
+            font-size: 1.8vh;
+            font-weight: bold;
+        }
+
+
+        #status-display {
+            position: absolute;
+            top: 1vh;
+            left: 1vw;
+            font-size: 1.8vh;
+            color: var(--neon-green);
+            text-shadow: var(--glow-medium) var(--neon-green);
+            z-index: 20;
+             user-select: none; /* Prevent text selection */
+        }
+
+        footer {
+            flex-shrink: 0; /* Don't shrink footer */
+            height: 4vh; /* Fixed footer height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid var(--neon-purple);
+            box-shadow: var(--glow-small) var(--neon-purple);
+            font-size: 1.5vh;
+            position: relative;
+            z-index: 10;
+             user-select: none; /* Prevent text selection */
+        }
+
+        footer a {
+            color: var(--neon-purple);
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: var(--glow-small) var(--neon-purple);
+            transition: all 0.2s ease-in-out;
+        }
+
+        footer a:hover {
+            color: var(--neon-yellow);
+            text-shadow: var(--glow-medium) var(--neon-yellow);
+        }
+
+        /* Tooltip Styles (using CSS pseudo-elements) */
+        [data-tooltip]:hover::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 0.5vh); /* Position above the element */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: var(--neon-blue);
+            border: 1px solid var(--neon-blue);
+            padding: 0.5vh 0.8vw;
+            border-radius: 0.5vh;
+            white-space: nowrap;
+            font-size: 1.5vh;
+            z-index: 30; /* Ensure tooltip is on top */
+            pointer-events: none; /* Allow clicks on element below */
+            text-shadow: var(--glow-small) var(--neon-blue);
+            box-shadow: var(--glow-small) var(--neon-blue);
+        }
+
+         [data-tooltip]:hover {
+             position: relative; /* Needed for pseudo-element positioning */
+         }
+
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <header>Depth First Search Visualizer</header>
+
+        <main id="main-content">
+            <canvas id="dfsCanvas"></canvas>
+
+            <div id="controls" class="control-group">
+                 <button id="randomizeBtn" data-tooltip="Generate a random graph">Randomize Graph</button>
+                 <button id="resetBtn" data-tooltip="Clear visited state and reset colors">Reset DFS</button>
+                 <button id="autoDemoBtn" data-tooltip="Automatically run DFS visualization">Auto Demo</button>
+                 <div class="toggle-control">
+                     <label for="showLabelsToggle">Show Node Labels</label>
+                     <input type="checkbox" id="showLabelsToggle" checked data-tooltip="Toggle visibility of node identifiers">
+                 </div>
+            </div>
+
+            <div id="status-display">Status: Initializing...</div>
+        </main>
+
+        <footer>
+            <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+            <span>|</span>
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+        </footer>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('dfsCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusDisplay = document.getElementById('status-display');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const showLabelsToggle = document.getElementById('showLabelsToggle');
+
+        // --- Configuration ---
+        // Use a base size relative to min(width, height) for better scaling
+        const BASE_SIZE = Math.min(window.innerWidth, window.innerHeight);
+        const NODE_RADIUS_BASE = BASE_SIZE * 0.015; // 1.5% of the smaller dimension
+
+        // Helper to convert CSS variable to rgba string (reads from computed style)
+        function var_to_rgba_string(varName, alpha = 1) {
+            try {
+                const color = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+                if (color.startsWith('#')) {
+                    const hex = color.slice(1);
+                    const r = parseInt(hex.slice(0, 2), 16);
+                    const g = parseInt(hex.slice(2, 4), 16);
+                    const b = parseInt(hex.slice(4, 6), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                } else if (color.startsWith('rgb(')) {
+                     const parts = color.match(/\d+/g).map(Number);
+                     return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+                }
+            } catch (e) {
+                 console.error("Failed to parse CSS variable color:", varName, e);
+            }
+             // Fallback color
+            return `rgba(100, 100, 100, ${alpha})`; // Fallback gray
+        }
+
+        // Define colors after var_to_rgba_string is available
+        const NODE_COLOR_DEFAULT = '#333'; // Dark gray
+        const NODE_COLOR_HOVER = var_to_rgba_string('--neon-yellow', 0.5);
+        const NODE_COLOR_VISITING = var_to_rgba_string('--neon-pink', 0.8);
+        const NODE_COLOR_VISITED = var_to_rgba_string('--neon-green', 0.6);
+        const NODE_BORDER_COLOR = var_to_rgba_string('--neon-blue', 0.8);
+        const NODE_BORDER_WIDTH = 2;
+
+        const EDGE_COLOR_DEFAULT = '#555'; // Medium gray
+        const EDGE_COLOR_TRAVERSED = var_to_rgba_string('--neon-cyan', 0.8);
+        const EDGE_COLOR_BACKTRACK = var_to_rgba_string('--neon-purple', 0.6);
+        const EDGE_WIDTH_DEFAULT = 1.5;
+        const EDGE_WIDTH_TRAVERSED = 3;
+
+        const TEXT_COLOR = var_to_rgba_string('--neon-blue', 0.9);
+
+        const FPS_TARGET = 60;
+        const AUTO_DEMO_STEP_DELAY_MS = 400; // Delay between algorithm steps
+
+        // --- State Variables ---
+        let nodes = [];
+        let edges = []; // Array of { u: nodeId1, v: nodeId2, state: 'default'|'traversed'|'backtrack' }
+        let adjList = {}; // { nodeId: [neighborId1, ...], ... }
+
+        let visited = new Set();
+        let dfsStack = []; // Stores node indices
+        let dfsPath = []; // Stores node indices representing the current path being explored
+        let dfsEdgePath = []; // Stores *edge objects* that have been traversed as part of the DFS tree
+        let currentDFSNodeIndex = null; // The index of the node currently at the "top" of DFS exploration logic
+        let currentDFSEdge = null; // The edge object currently being highlighted (traversal or backtrack)
+
+        let isDragging = false;
+        let draggedNodeIndex = -1;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        let showNodeLabels = true; // Default to true as per checkbox state
+        let isAutoDemo = false;
+        let isDFSRunning = false; // Status for algorithm execution
+
+        let lastFrameTime = 0;
+        let autoDemoTimer = 0;
+
+        // --- Utility Functions ---
+
+        // Calculate distance between two points
+        function dist(p1, p2) {
+            return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+        }
+
+        // Find node under mouse cursor
+        function getNodeAt(x, y) {
+            // Check from top (last drawn) to handle overlaps
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const node = nodes[i];
+                // Use node.radius for click detection
+                if (dist({x, y}, node) < node.radius) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        // Get canvas dimensions relative to its container
+        function getCanvasSize() {
+            const mainContent = document.getElementById('main-content');
+            return {
+                width: mainContent.clientWidth,
+                height: mainContent.clientHeight
+            };
+        }
+
+         // Get node radius scaled to current canvas size
+         function getScaledNodeRadius() {
+            const { width, height } = getCanvasSize();
+             const scaleFactor = Math.min(width, height) / BASE_SIZE;
+             return NODE_RADIUS_BASE * scaleFactor;
+         }
+
+
+        // --- Graph Management ---
+
+        function createRandomGraph(numNodes, canvasWidth, canvasHeight) {
+            nodes = [];
+            edges = [];
+            adjList = {};
+
+             const radius = getScaledNodeRadius(); // Use scaled radius for new nodes
+
+            // Create nodes at random positions
+            for (let i = 0; i < numNodes; i++) {
+                // Ensure nodes are within canvas bounds, leaving some margin
+                const margin = radius * 2;
+                const x = Math.random() * (canvasWidth - 2 * margin) + margin;
+                const y = Math.random() * (canvasHeight - 2 * margin) + margin;
+
+                nodes.push({
+                    id: i,
+                    x: x,
+                    y: y,
+                    radius: radius, // Store scaled radius
+                    color: NODE_COLOR_DEFAULT,
+                    state: 'default' // 'default', 'hover', 'visiting', 'visited'
+                });
+                 adjList[i] = [];
+            }
+
+            // Create random edges (simple approach: random connections)
+            const maxEdges = numNodes * (numNodes - 1) / 2;
+            const numEdges = Math.min(maxEdges, Math.floor(numNodes * 1.8)); // Max 1.8 edges per node avg for connectivity
+             const edgeSet = new Set(); // To avoid duplicate edges {u,v} and {v,u} treated same
+
+            while (edges.length < numEdges && numNodes > 1) {
+                const u = Math.floor(Math.random() * numNodes);
+                const v = Math.floor(Math.random() * numNodes);
+
+                if (u === v) continue;
+
+                // Create a canonical representation for the edge (smaller, larger)
+                const edgeKey = u < v ? `${u}-${v}` : `${v}-${u}`;
+
+                if (!edgeSet.has(edgeKey)) {
+                    edges.push({ u: u, v: v, color: EDGE_COLOR_DEFAULT, width: EDGE_WIDTH_DEFAULT, state: 'default' });
+                    adjList[u].push(v);
+                    adjList[v].push(u); // Assuming undirected graph
+                    edgeSet.add(edgeKey);
+                }
+            }
+
+             console.log(`Generated graph: ${numNodes} nodes, ${edges.length} edges`);
+        }
+
+        // Reset node/edge states for a new DFS run
+        function resetGraphState() {
+            visited = new Set();
+            dfsStack = [];
+            dfsPath = [];
+            dfsEdgePath = [];
+            currentDFSNodeIndex = null;
+            currentDFSEdge = null;
+            isDFSRunning = false;
+            isAutoDemo = false;
+            autoDemoTimer = 0;
+            autoDemoBtn.textContent = 'Auto Demo';
+            statusDisplay.textContent = 'Status: Ready. Click a node to start DFS.';
+
+            nodes.forEach(node => {
+                node.color = NODE_COLOR_DEFAULT;
+                node.state = 'default';
+                node.radius = getScaledNodeRadius(); // Rescale radius on reset/resize
+            });
+            edges.forEach(edge => {
+                edge.color = EDGE_COLOR_DEFAULT;
+                edge.width = EDGE_WIDTH_DEFAULT;
+                 edge.state = 'default';
+            });
+        }
+
+        // --- Drawing Functions ---
+
+        function drawEdges() {
+            edges.forEach(edge => {
+                const u = nodes[edge.u];
+                const v = nodes[edge.v];
+
+                if (!u || !v) return;
+
+                ctx.beginPath();
+                ctx.moveTo(u.x, u.y);
+                ctx.lineTo(v.x, v.y);
+
+                // Determine edge style based on state
+                 if (edge.state === 'backtrack') {
+                     ctx.strokeStyle = EDGE_COLOR_BACKTRACK;
+                     ctx.lineWidth = EDGE_WIDTH_TRAVERSED;
+                     ctx.shadowBlur = 10;
+                     ctx.shadowColor = var_to_rgba_string('--neon-purple', 0.8);
+                 } else if (edge.state === 'traversed') {
+                    ctx.strokeStyle = EDGE_COLOR_TRAVERSED;
+                    ctx.lineWidth = EDGE_WIDTH_TRAVERSED;
+                     ctx.shadowBlur = 10;
+                    ctx.shadowColor = var_to_rgba_string('--neon-cyan', 0.8);
+                 } else {
+                    ctx.strokeStyle = EDGE_COLOR_DEFAULT;
+                    ctx.lineWidth = EDGE_WIDTH_DEFAULT;
+                     ctx.shadowBlur = 0;
+                 }
+
+                ctx.stroke();
+                 ctx.shadowBlur = 0; // Reset shadow
+            });
+        }
+
+        function drawNodes() {
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+                ctx.fillStyle = node.color;
+                ctx.fill();
+
+                // Draw border/glow
+                ctx.strokeStyle = NODE_BORDER_COLOR;
+                ctx.lineWidth = NODE_BORDER_WIDTH;
+                // Glow intensity based on state
+                ctx.shadowBlur = (node.state === 'hover' || node.state === 'visiting' || node.state === 'visited') ? 15 : 0;
+                ctx.shadowColor = node.state === 'visited' ? var_to_rgba_string('--neon-green', 0.8) :
+                                   node.state === 'visiting' ? var_to_rgba_string('--neon-pink', 0.8) :
+                                   node.state === 'hover' ? var_to_rgba_string('--neon-yellow', 0.8) : 'transparent';
+
+                ctx.stroke();
+
+                // Reset shadow for text
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+
+                // Draw label
+                if (showNodeLabels) {
+                    ctx.fillStyle = TEXT_COLOR;
+                    ctx.font = `${node.radius * 0.9}px ${ctx.font.split(' ').pop()}`; // Scale font with node size
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = TEXT_COLOR;
+                    ctx.fillText(node.id, node.x, node.y);
+                     ctx.shadowBlur = 0; // Reset shadow
+                }
+            });
+        }
+
+        function draw() {
+            const { width, height } = getCanvasSize();
+            canvas.width = width;
+            canvas.height = height;
+
+            // Canvas clearing is implicitly handled by the body background
+            // but we can explicitly clear if needed for effects (e.g., trails)
+            // ctx.clearRect(0, 0, width, height); // Not needed with black body background
+
+            drawEdges();
+            drawNodes();
+        }
+
+        // --- DFS Algorithm & Visualization Steps ---
+
+        function startDFS(startIndex) {
+            if (nodes.length === 0) {
+                 statusDisplay.textContent = 'Status: Cannot start DFS, no graph exists.';
+                 return;
+            }
+             if (isDFSRunning) return; // Prevent starting if already running
+
+            resetGraphState(); // Clear previous state
+            isDFSRunning = true;
+            statusDisplay.textContent = `Status: Running DFS from node ${startIndex}...`;
+
+            // Initialize stack with starting node
+            dfsStack.push(startIndex);
+            dfsPath.push(startIndex);
+            nodes[startIndex].state = 'visiting';
+            nodes[startIndex].color = NODE_COLOR_VISITING;
+            currentDFSNodeIndex = startIndex;
+
+
+            // If not auto demo, we wait for steps, but perform the first step immediately
+            if (!isAutoDemo) {
+                autoDemoBtn.textContent = 'Continue Step';
+                // No stepDFS here, it will be triggered by the first click after start
+                statusDisplay.textContent = `Status: DFS started from ${startIndex}. Click to step.`;
+            } else {
+                 autoDemoBtn.textContent = 'Stop Auto Demo';
+                 // Auto demo loop will call stepDFS after delay
+            }
+        }
+
+        function stepDFS() {
+            if (!isDFSRunning || dfsStack.length === 0) {
+                 if(isDFSRunning) { // Stack just became empty
+                     isDFSRunning = false;
+                     statusDisplay.textContent = `Status: DFS finished. Visited ${visited.size} nodes.`;
+                      autoDemoBtn.textContent = 'Auto Demo';
+                     // Ensure final states are set
+                     nodes.forEach(node => {
+                         if(visited.has(node.id)) {
+                             node.state = 'visited';
+                             node.color = NODE_COLOR_VISITED;
+                         } else {
+                             node.state = 'default';
+                             node.color = NODE_COLOR_DEFAULT;
+                         }
+                     });
+                      edges.forEach(edge => { // Ensure all traversed edges are marked after finish
+                         const isTraversed = dfsEdgePath.some(e => (e.u === edge.u && e.v === edge.v) || (e.u === edge.v && e.v === edge.u));
+                         if (isTraversed) {
+                              edge.state = 'traversed';
+                              edge.color = EDGE_COLOR_TRAVERSED;
+                              edge.width = EDGE_WIDTH_TRAVERSED;
+                         } else {
+                              edge.state = 'default';
+                              edge.color = EDGE_COLOR_DEFAULT;
+                              edge.width = EDGE_WIDTH_DEFAULT;
+                         }
+                     });
+                 } else { // Not running, stack already empty
+                     statusDisplay.textContent = `Status: DFS not running. Click a node to start.`;
+                 }
+                 currentDFSNodeIndex = null;
+                 currentDFSEdge = null;
+                 return;
+            }
+
+             // Reset temporary state from previous step
+            if(currentDFSEdge && currentDFSEdge.state === 'backtrack') {
+                // After one frame, backtrack edges revert to traversed if they are on the path, or default
+                const isTraversed = dfsEdgePath.some(e => (e.u === currentDFSEdge.u && e.v === currentDFSEdge.v) || (e.u === currentDFSEdge.v && e.v === currentDFSEdge.u));
+                 currentDFSEdge.state = isTraversed ? 'traversed' : 'default';
+                 currentDFSEdge.color = isTraversed ? EDGE_COLOR_TRAVERSED : EDGE_COLOR_DEFAULT;
+                 currentDFSEdge.width = isTraversed ? EDGE_WIDTH_TRAVERSED : EDGE_WIDTH_DEFAULT;
+            }
+            currentDFSEdge = null; // Clear current edge highlight
+
+            const u_index = dfsStack[dfsStack.length - 1]; // Peek at top of stack
+            const u = nodes[u_index];
+
+            // Mark current node as visited upon first processing it
+             if (!visited.has(u_index)) {
+                 visited.add(u_index);
+                 u.state = 'visited';
+                 u.color = NODE_COLOR_VISITED;
+                  statusDisplay.textContent = `Status: Visited node ${u_index}. Exploring neighbors...`;
+             } else {
+                  statusDisplay.textContent = `Status: Exploring neighbors of ${u_index}.`;
+             }
+
+
+            let foundNeighbor = false;
+            const neighbors = adjList[u_index] || [];
+
+             // Find first unvisited neighbor
+            // Important: Iterate through neighbors in a consistent order if possible
+            // Adjacency list gives somewhat consistent order, assuming graph generation was consistent.
+            for (const v_index of neighbors) {
+                 // Find the edge object
+                 const edge = edges.find(e => (e.u === u_index && e.v === v_index) || (e.u === v_index && e.v === u_index));
+
+                if (!visited.has(v_index)) {
+                    // Found unvisited neighbor
+                    dfsStack.push(v_index); // Push neighbor to stack
+                    dfsPath.push(v_index); // Add to path for visualization
+
+                    // Highlight the edge being traversed
+                    if(edge) {
+                         edge.state = 'traversed';
+                         edge.color = EDGE_COLOR_TRAVERSED;
+                         edge.width = EDGE_WIDTH_TRAVERSED;
+                         // Check if this edge is already on the dfsEdgePath (shouldn't be for tree edges)
+                         const edgeAlreadyInPath = dfsEdgePath.some(e => (e.u === edge.u && e.v === edge.v) || (e.u === edge.v && e.v === edge.u));
+                         if (!edgeAlreadyInPath) {
+                             dfsEdgePath.push(edge); // Track this edge as part of the DFS tree
+                         }
+                         currentDFSEdge = edge; // Highlight this edge for the current step
+                    }
+
+                    nodes[v_index].state = 'visiting'; // Mark neighbor as visiting (will become visited next step)
+                    nodes[v_index].color = NODE_COLOR_VISITING;
+
+                     currentDFSNodeIndex = v_index; // The node we are moving *to*
+
+                     statusDisplay.textContent = `Status: Traversing edge ${u_index} -> ${v_index}. Visiting node ${v_index}...`;
+
+                    foundNeighbor = true;
+                    break; // Move to process this neighbor in the next step (next stepDFS call)
+                }
+            }
+
+            if (!foundNeighbor) {
+                // No unvisited neighbors from current node. Pop from stack (backtrack).
+                const poppedIndex = dfsStack.pop();
+
+                // Backtracking visualization - occurs *after* popping
+                if (dfsStack.length > 0) {
+                     const to_node_index = dfsStack[dfsStack.length - 1]; // Node we are backtracking *to* (the one still on stack)
+                     // Find the edge between the popped node and the new top node
+                     const edge = edges.find(e => (e.u === poppedIndex && e.v === to_node_index) || (e.u === to_node_index && e.v === poppedIndex));
+                     if(edge) {
+                         edge.state = 'backtrack'; // Mark for temporary backtrack visualization
+                         edge.color = EDGE_COLOR_BACKTRACK;
+                         edge.width = EDGE_WIDTH_TRAVERSED;
+                         currentDFSEdge = edge;
+                     }
+                      currentDFSNodeIndex = to_node_index; // Node we backtrack *to*
+                      statusDisplay.textContent = `Status: Backtracking from ${poppedIndex} to ${to_node_index}.`;
+
+                     // Remove the popped node from the visualization path
+                     const pathIndexToRemove = dfsPath.lastIndexOf(poppedIndex);
+                     if (pathIndexToRemove > -1) {
+                        dfsPath.splice(pathIndexToRemove, 1);
+                     }
+
+                } else {
+                    // Stack is now empty after popping the last node (the starting node)
+                    isDFSRunning = false;
+                    statusDisplay.textContent = `Status: DFS finished. Visited ${visited.size} nodes.`;
+                    autoDemoBtn.textContent = 'Auto Demo'; // Reset button text
+                    currentDFSNodeIndex = null;
+                    currentDFSEdge = null;
+                }
+
+                // The node we just popped (poppedIndex) is fully explored. Ensure it's marked visited.
+                 if (visited.has(poppedIndex)) {
+                     nodes[poppedIndex].state = 'visited';
+                     nodes[poppedIndex].color = NODE_COLOR_VISITED;
+                 }
+            }
+
+             // Update node/edge states for drawing based on the current state after the step
+             nodes.forEach(node => {
+                 if (!isDFSRunning) { // If DFS just finished this step
+                      if(visited.has(node.id)) {
+                           node.state = 'visited';
+                           node.color = NODE_COLOR_VISITED;
+                       } else {
+                            node.state = 'default';
+                           node.color = NODE_COLOR_DEFAULT;
+                       }
+                 } else if (node.id === currentDFSNodeIndex) { // Currently processing node
+                     node.state = 'visiting';
+                     node.color = NODE_COLOR_VISITING;
+                 } else if (visited.has(node.id)) { // Already visited
+                     node.state = 'visited';
+                     node.color = NODE_COLOR_VISITED;
+                 } else if (dfsStack.includes(node.id)) { // On stack but not current (shouldn't happen in simple iterative DFS visualization)
+                     node.state = 'visiting'; // Should conceptually be 'on_stack', visualizing similar to visiting
+                     node.color = NODE_COLOR_VISITING;
+                 } else { // Not visited, not current, not on stack
+                     node.state = 'default';
+                     node.color = NODE_COLOR_DEFAULT;
+                 }
+             });
+
+            edges.forEach(edge => {
+                 if(currentDFSEdge && ((edge.u === currentDFSEdge.u && edge.v === currentDFSEdge.v) || (edge.u === currentDFSEdge.v && edge.v === currentDFSEdge.u))) {
+                      // This is the edge highlighted in the current step (traversal or backtrack)
+                     edge.state = currentDFSEdge.state;
+                     edge.color = currentDFSEdge.color;
+                     edge.width = EDGE_WIDTH_TRAVERSED;
+                 } else {
+                     // All other edges: traversed if on dfsEdgePath, default otherwise
+                      const isTraversed = dfsEdgePath.some(e => (e.u === edge.u && e.v === edge.v) || (e.u === edge.v && e.v === edge.u));
+                      edge.state = isTraversed ? 'traversed' : 'default';
+                      edge.color = isTraversed ? EDGE_COLOR_TRAVERSED : EDGE_COLOR_DEFAULT;
+                      edge.width = isTraversed ? EDGE_WIDTH_TRAVERSED : EDGE_WIDTH_DEFAULT;
+                 }
+            });
+
+        }
+
+
+        // --- Event Handlers ---
+
+        function handleMouseDown(event) {
+             // Only allow dragging if DFS is not running
+             if (isDFSRunning) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const nodeIndex = getNodeAt(x, y);
+            if (nodeIndex !== -1) {
+                isDragging = true;
+                draggedNodeIndex = nodeIndex;
+                dragOffsetX = x - nodes[nodeIndex].x;
+                dragOffsetY = y - nodes[nodeIndex].y;
+                canvas.style.cursor = 'grabbing';
+                 statusDisplay.textContent = `Status: Dragging node ${nodeIndex}...`;
+            } else {
+                 canvas.style.cursor = 'crosshair'; // Reset cursor if not dragging node
+            }
+        }
+
+        function handleMouseMove(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            if (isDragging && draggedNodeIndex !== -1) {
+                nodes[draggedNodeIndex].x = x - dragOffsetX;
+                nodes[draggedNodeIndex].y = y - dragOffsetY;
+            } else {
+                 // Hover effect - only if not dragging and not during DFS
+                 if (!isDFSRunning) {
+                     const nodeIndex = getNodeAt(x, y);
+                     nodes.forEach((node, i) => {
+                         if (i === nodeIndex) {
+                             if (node.state !== 'hover') {
+                                 node.state = 'hover';
+                                 node.color = NODE_COLOR_HOVER;
+                             }
+                         } else {
+                            if (node.state === 'hover') {
+                                node.state = 'default';
+                                node.color = NODE_COLOR_DEFAULT;
+                            }
+                         }
+                     });
+                 }
+            }
+        }
+
+        function handleMouseUp() {
+            if (isDragging) {
+                 statusDisplay.textContent = `Status: Node ${draggedNodeIndex} released.`;
+                isDragging = false;
+                draggedNodeIndex = -1;
+                canvas.style.cursor = 'crosshair';
+                 // Reset hover state after drag ends
+                 nodes.forEach(node => {
+                    if (node.state === 'hover') {
+                         node.state = 'default';
+                         node.color = NODE_COLOR_DEFAULT;
+                    }
+                 });
+            }
+        }
+
+        function handleClick(event) {
+             // Prevent click starting DFS if dragging just ended on the same node
+             if (isDragging) return;
+
+             const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const nodeIndex = getNodeAt(x, y);
+
+            if (nodeIndex !== -1) {
+                 // If DFS is not running, start it from this node
+                 if (!isDFSRunning) {
+                    startDFS(nodeIndex);
+                 }
+                 // If DFS is running and NOT auto-demo, click steps through it
+                 else if (!isAutoDemo) {
+                    stepDFS(); // Perform one step on click
+                 }
+                 // If DFS is running AND IS auto-demo, clicks on nodes are ignored for stepping
+            } else {
+                 // Clicked on canvas background
+                 if (!isDFSRunning) {
+                      statusDisplay.textContent = `Status: Click on a node to start DFS.`;
+                 }
+                 // If DFS is running, ignore clicks on background
+            }
+        }
+
+
+        function handleRandomizeClick() {
+             if (isDFSRunning) {
+                 statusDisplay.textContent = 'Status: Stop DFS or Auto Demo first.';
+                 return;
+             }
+            const { width, height } = getCanvasSize();
+            createRandomGraph(Math.floor(BASE_SIZE / 30), width, height); // Scale node count with size
+            resetGraphState();
+             statusDisplay.textContent = `Status: New graph generated (${nodes.length} nodes, ${edges.length} edges). Click a node to start DFS.`;
+        }
+
+        function handleResetClick() {
+             if (isDFSRunning) {
+                 statusDisplay.textContent = 'Status: Stopping current DFS/Demo...';
+             }
+            resetGraphState(); // This also stops auto demo and resets state text
+             statusDisplay.textContent = `Status: Graph state reset. Click a node to start DFS.`;
+        }
+
+        function handleAutoDemoClick() {
+             if (!isAutoDemo && isDFSRunning) { // If currently in manual step mode
+                 // Clicking "Auto Demo" while manual stepping should switch to auto
+                 isAutoDemo = true;
+                 autoDemoBtn.textContent = 'Stop Auto Demo';
+                 statusDisplay.textContent = `Status: Resuming auto demo from current state.`;
+             } else if (isAutoDemo && isDFSRunning) { // If currently in auto demo
+                 // Clicking "Stop Auto Demo" while auto running should stop auto
+                 isAutoDemo = false;
+                 autoDemoBtn.textContent = 'Continue Step';
+                 statusDisplay.textContent = `Status: Auto demo paused. Click node or button to step.`;
+             }
+             else if (!isDFSRunning) { // If DFS is not running, start a new auto demo
+                 isAutoDemo = true;
+                 // If no nodes, generate a graph first
+                 if (nodes.length === 0) {
+                      handleRandomizeClick(); // This also resets state
+                 } else {
+                      resetGraphState(); // Reset existing graph state
+                 }
+                 // Pick a random start node for auto demo
+                 const startIndex = nodes.length > 0 ? Math.floor(Math.random() * nodes.length) : 0;
+                 if (nodes.length > 0) {
+                     startDFS(startIndex); // startDFS sets the button text
+                 } else {
+                     statusDisplay.textContent = `Status: Generated empty graph. Cannot start demo.`;
+                      isAutoDemo = false;
+                      autoDemoBtn.textContent = 'Auto Demo';
+                 }
+             }
+             // If DFS running but paused (manual step mode), the first block handles switching to auto.
+             // If DFS finished, isDFSRunning is false, handles starting a new auto demo.
+        }
+
+        function handleShowLabelsToggle(event) {
+            showNodeLabels = event.target.checked;
+             statusDisplay.textContent = `Status: Node labels ${showNodeLabels ? 'shown' : 'hidden'}.`;
+        }
+
+         function handleWindowResize() {
+             // Update canvas size
+             const { width: newWidth, height: newHeight } = getCanvasSize();
+             canvas.width = newWidth;
+             canvas.height = newHeight;
+
+             // Recalculate and update node radii based on new size
+             const newRadius = getScaledNodeRadius();
+             nodes.forEach(node => {
+                 node.radius = newRadius;
+             });
+
+             // Note: Node positions are not scaled on resize in this minimalist version.
+             // Extreme resizes might move nodes off-screen or cluster them.
+             // A full re-layout is beyond the scope of a minimalist demo.
+             draw(); // Redraw with new canvas dimensions and scaled radii
+         }
+
+
+        // --- Animation Loop ---
+
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+
+            // Handle Auto Demo stepping
+            if (isAutoDemo && isDFSRunning) {
+                autoDemoTimer += deltaTime;
+                if (autoDemoTimer >= AUTO_DEMO_STEP_DELAY_MS) {
+                    stepDFS();
+                    autoDemoTimer = 0;
+                     // stepDFS itself checks and updates isDFSRunning
+                     // If it finished, isAutoDemo is set to false in stepDFS or handleAutoDemoClick
+                }
+            }
+
+            draw(); // Redraw the canvas
+
+            requestAnimationFrame(gameLoop); // Loop
+        }
+
+        // --- Initialization ---
+
+        function init() {
+            // Add event listeners
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('click', handleClick); // Use click for starting/stepping DFS
+
+
+            randomizeBtn.addEventListener('click', handleRandomizeClick);
+            resetBtn.addEventListener('click', handleResetClick);
+            autoDemoBtn.addEventListener('click', handleAutoDemoClick);
+            showLabelsToggle.addEventListener('change', handleShowLabelsToggle);
+
+             // Handle window resize
+             window.addEventListener('resize', handleWindowResize);
+
+            // Initial graph creation and state reset
+             handleRandomizeClick(); // Creates graph and sets initial state text
+
+            // Start the animation loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the application
+        init();
+
+    </script>
+</body>
+</html>

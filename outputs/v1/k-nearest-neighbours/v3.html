@@ -1,0 +1,853 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KNN Visualizer</title>
+    <style>
+        /* --- General & Layout --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #000;
+            color: #00ffff; /* Neon Cyan */
+            font-family: 'Share Tech Mono', monospace; /* Futuristic font */
+            overflow: hidden; /* Essential: Prevent Scrolling */
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use full viewport height */
+            width: 100vw; /* Use full viewport width */
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2300FFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-crosshair"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="2" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>') 12 12, crosshair; /* Custom default cursor */
+        }
+
+        /* --- Neon Theme Elements --- */
+        .neon-text {
+            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff, 0 0 20px #00aaff;
+        }
+        .neon-button {
+            background-color: transparent;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 0.5vh 1vw;
+            margin: 0.5vh 0.5vw;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23FF00FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-pointer"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>') 8 8, pointer; /* Custom pointer cursor */
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 1.5vh; /* Relative font size */
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .neon-button:hover {
+            background-color: #00ffff;
+            color: black;
+            text-shadow: none;
+            box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff;
+        }
+         .neon-button:active {
+             background-color: #00aaff;
+             box-shadow: 0 0 2px #00aaff;
+         }
+         .neon-button.active { /* Style for selected class button */
+             background-color: #00ffff;
+             color: black;
+             text-shadow: none;
+             box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff;
+         }
+         .neon-button:disabled {
+             border-color: #333;
+             color: #333;
+             cursor: not-allowed;
+             box-shadow: none;
+         }
+
+         input[type="number"], input[type="checkbox"] {
+             cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23FF00FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-pointer"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>') 8 8, pointer;
+         }
+
+
+        /* --- Header --- */
+        header {
+            width: 100%;
+            padding: 1.5vh 2vw;
+            text-align: center;
+            font-size: 3vh; /* Relative font size */
+            flex-shrink: 0; /* Prevent shrinking */
+            border-bottom: 1px solid #00ffff;
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            flex-grow: 1; /* Occupy remaining vertical space */
+            display: flex;
+            flex-direction: column; /* Stack controls and canvas vertically */
+            padding: 1vh 2vw;
+        }
+
+        /* --- Controls --- */
+        .controls {
+            flex-shrink: 0; /* Prevent shrinking */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap; /* Allow items to wrap if needed */
+            padding-bottom: 1vh;
+            border-bottom: 1px dashed #00ffff;
+            margin-bottom: 1vh;
+            font-size: 1.8vh; /* Relative font size */
+        }
+        .controls label {
+            margin: 0.5vh 0.8vw;
+            white-space: nowrap; /* Keep label and input together */
+        }
+        .controls input[type="number"] {
+            width: 4vw; /* Relative width */
+            background-color: transparent;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 0.3vh 0.5vw;
+            font-size: 1.6vh;
+             font-family: 'Share Tech Mono', monospace;
+        }
+         .controls input[type="checkbox"] {
+             accent-color: #00ffff; /* Style checkbox color */
+             margin-right: 0.5vw;
+             width: 1.8vh; /* Make checkbox slightly larger */
+             height: 1.8vh;
+             vertical-align: middle; /* Align with text */
+         }
+
+        /* --- Canvas Container --- */
+        .canvas-container {
+            flex-grow: 1; /* Occupy remaining vertical space */
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Center the canvas */
+            overflow: hidden; /* Prevent canvas overflow */
+             min-height: 0; /* Important for flex items with flex-grow */
+        }
+        canvas {
+            display: block; /* Remove bottom margin */
+            /* Sized by JavaScript based on container */
+            border: 1px dashed #00ffff; /* Canvas border */
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2300FFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-target"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>') 12 12, crosshair; /* Custom canvas cursor */
+        }
+         canvas.grabbing { /* Cursor when dragging a point */
+             cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23FF00FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-move"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 15 22 12 19 9"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>') 12 12, grabbing;
+         }
+
+
+        /* --- Tooltip --- */
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 255, 255, 0.8); /* Semi-transparent cyan */
+            color: black;
+            padding: 0.5vh 1vw;
+            border-radius: 3px;
+            pointer-events: none; /* Allow clicks to pass through */
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 100;
+            font-size: 1.5vh;
+            white-space: nowrap; /* Prevent tooltip text wrapping */
+        }
+         #tooltip.visible {
+             opacity: 1;
+         }
+
+        /* --- FPS Counter --- */
+        #fps {
+            position: absolute;
+            top: 1.5vh;
+            right: 2vw;
+            font-size: 2vh;
+            color: #00ff00; /* Neon Green */
+            text-shadow: 0 0 5px #00ff00;
+            z-index: 99;
+        }
+
+        /* --- Footer --- */
+        footer {
+            width: 100%;
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 1.8vh;
+            flex-shrink: 0; /* Prevent shrinking */
+            border-top: 1px solid #00ffff;
+        }
+        footer a {
+            color: #00ffff; /* Neon Cyan */
+            text-decoration: none;
+            margin: 0 1vw;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23FF00FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-pointer"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>') 8 8, pointer;
+        }
+         footer a:hover {
+             text-decoration: underline;
+             text-shadow: 0 0 5px #00ffff;
+         }
+
+         /* Optional: Share Tech Mono font import */
+         /* @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'); */ /* Omitted as per "No external fonts" constraint */
+
+    </style>
+</head>
+<body>
+
+    <div id="fps" class="neon-text">FPS: --</div>
+
+    <header class="neon-text">
+        K-Nearest Neighbors (KNN) Visualizer
+    </header>
+
+    <div class="main-content">
+        <div class="controls">
+            <label for="kValue">K:</label>
+            <input type="number" id="kValue" value="5" min="1">
+
+             <label>Add Point:</label>
+             <button id="addClass0" class="neon-button">Class 0 (Blue)</button>
+             <button id="addClass1" class="neon-button">Class 1 (Pink)</button>
+             <!-- Add more classes if needed -->
+
+            <button id="randomizeBtn" class="neon-button">Randomize</button>
+            <button id="resetBtn" class="neon-button">Reset</button>
+            <button id="autoDemoBtn" class="neon-button">Auto Demo</button>
+
+            <label><input type="checkbox" id="showLinesToggle" checked> Show K Lines</label>
+             <label><input type="checkbox" id="showPredictionToggle" checked> Show Prediction</label>
+            <label><input type="checkbox" id="showTooltipToggle" checked> Show Tooltips</label>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="knnCanvas"></canvas>
+        </div>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <footer>
+        <span class="neon-text">Developed by:</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Configuration ---
+        let POINT_SIZE = Math.min(window.innerWidth, window.innerHeight) * 0.008; // Size relative to viewport
+        let QUERY_POINT_SIZE = POINT_SIZE * 1.5;
+        const CLASS_COLORS = ['#00aaff', '#ff00ff', '#00ff00', '#ffff00', '#8a2be2', '#dc143c']; // Blue, Pink, Green, Yellow, Purple, Red neon
+        const NEIGHBOR_LINE_COLOR = 'rgba(0, 255, 255, 0.5)'; // Cyan semi-transparent
+        const TOOLTIP_OFFSET = 15; // px offset for tooltip
+        const AUTO_DEMO_ADD_INTERVAL = 100; // ms between adding points
+        const AUTO_DEMO_CLASSIFY_INTERVAL = 500; // ms between classification steps
+        const AUTO_DEMO_POINTS = 30; // Number of points to add in auto-demo
+        const AUTO_DEMO_CLASSIFY_COUNT = 15; // Number of points to classify in auto-demo
+        const AUTO_DEMO_RANDOMIZE_MIN_POINTS = 15; // Min points for randomize in demo
+        const AUTO_DEMO_RANDOMIZE_MAX_POINTS = 40; // Max points for randomize in demo
+        const CLICK_BUFFER = 10; // Extra pixels around point for easier clicking/dragging
+
+        // --- Global Variables ---
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const fpsDisplay = document.getElementById('fps');
+        const kInput = document.getElementById('kValue');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const showLinesToggle = document.getElementById('showLinesToggle');
+        const showPredictionToggle = document.getElementById('showPredictionToggle');
+        const showTooltipToggle = document.getElementById('showTooltipToggle');
+        const addClassButtons = [
+            document.getElementById('addClass0'),
+            document.getElementById('addClass1')
+            // Add more buttons here if more classes are added to CLASS_COLORS
+        ].filter(btn => btn != null); // Filter out potential nulls if not all buttons exist
+
+        let dataPoints = []; // Array of {x, y, class}
+        let k = parseInt(kInput.value);
+        let draggedPoint = null;
+        let isDragging = false;
+        let dragStartX = 0; // Mouse position where drag started
+        let dragStartY = 0;
+        let pointDragStartX = 0; // Point position where drag started
+        let pointDragStartY = 0;
+        let mouseX = -1; // Mouse position relative to canvas
+        let mouseY = -1;
+        let mouseInsideCanvas = false;
+        let autoDemoIntervalId = null;
+        let autoDemoState = 'idle'; // 'idle', 'adding', 'classifying'
+        let autoDemoStep = 0;
+        let addPointClass = 0; // Class to add when clicking empty space
+
+        // --- Utility Functions ---
+
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        function findKNearest(queryPoint, k, points) {
+            if (points.length === 0) return [];
+            // Calculate distances and store with point reference
+            const distances = points.map(p => ({
+                point: p,
+                dist: distance(queryPoint, p)
+            }));
+
+            // Sort by distance
+            distances.sort((a, b) => a.dist - b.dist);
+
+            // Return the top k neighbors. Ensure we don't return more points than available.
+            return distances.slice(0, Math.min(k, points.length));
+        }
+
+        function classify(queryPoint, k, points) {
+            if (points.length === 0) return null; // Cannot classify without data points
+            const nearest = findKNearest(queryPoint, k, points);
+
+             if (nearest.length === 0) return null; // Should not happen if points.length > 0 and k >= 1, but as a safeguard
+
+            const classCounts = {};
+            let maxCount = 0;
+            let predictedClass = null;
+            const winningClasses = [];
+
+            // Count occurrences of each class among the nearest neighbors
+            for (const item of nearest) {
+                const cls = item.point.class;
+                classCounts[cls] = (classCounts[cls] || 0) + 1;
+            }
+
+            // Find the class(es) with the highest count
+            for (const cls in classCounts) {
+                 if (classCounts[cls] > maxCount) {
+                     maxCount = classCounts[cls];
+                     winningClasses.length = 0; // Clear previous winners
+                     winningClasses.push(parseInt(cls));
+                 } else if (classCounts[cls] === maxCount) {
+                      winningClasses.push(parseInt(cls));
+                 }
+            }
+
+             // If there's a tie, pick the class with the lowest index for deterministic behavior
+             predictedClass = winningClasses.sort((a, b) => a - b)[0];
+
+            return { predictedClass, neighbors: nearest };
+        }
+
+        function getCanvasMousePosition(event) {
+             const rect = canvas.getBoundingClientRect();
+             const scaleX = canvas.width / rect.width;    // Relationship between canvas pixels and display pixels
+             const scaleY = canvas.height / rect.height;  // on the Y axis.
+
+             return {
+                 x: (event.clientX - rect.left) * scaleX,
+                 y: (event.clientY - rect.top) * scaleY
+             };
+         }
+
+         function isPointClicked(point, mouseX, mouseY, buffer = POINT_SIZE + CLICK_BUFFER) { // Add a buffer for easier clicking
+             return distance(point, {x: mouseX, y: mouseY}) < buffer;
+         }
+
+        // --- Drawing Functions ---
+
+        function drawPoint(p, size, color, isQuery = false) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = size / 2; // Simple glow effect
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow
+
+             if(isQuery) {
+                 ctx.strokeStyle = color;
+                 ctx.lineWidth = 2;
+                 ctx.stroke();
+             }
+        }
+
+        function drawKNeighbors(queryPoint, neighbors) {
+            if (!showLinesToggle.checked || !neighbors || neighbors.length === 0) return;
+            ctx.strokeStyle = NEIGHBOR_LINE_COLOR;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (const neighbor of neighbors) {
+                // Check if neighbor point is valid before drawing line
+                if (neighbor && neighbor.point) {
+                    ctx.moveTo(queryPoint.x, queryPoint.y);
+                    ctx.lineTo(neighbor.point.x, neighbor.point.y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000'; // Ensure canvas background is black
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw data points
+            for (const p of dataPoints) {
+                drawPoint(p, POINT_SIZE, CLASS_COLORS[p.class % CLASS_COLORS.length]);
+            }
+
+            // Draw potential query point and its prediction if mouse is inside canvas and not dragging or auto-demo adding
+             if (mouseInsideCanvas && !isDragging && autoDemoState !== 'adding') {
+                const queryPoint = { x: mouseX, y: mouseY };
+                const classificationResult = classify(queryPoint, k, dataPoints);
+
+                if (classificationResult) {
+                    if (showPredictionToggle.checked) {
+                         // Draw the query point with its predicted class color and outline
+                        drawPoint(queryPoint, QUERY_POINT_SIZE, CLASS_COLORS[classificationResult.predictedClass % CLASS_COLORS.length], true);
+                    } else if (dataPoints.length > 0) {
+                         // Draw a neutral query point if prediction is off but data exists
+                         drawPoint(queryPoint, QUERY_POINT_SIZE, '#555', true); // Grey outline
+                    }
+
+                    if (showLinesToggle.checked) {
+                        drawKNeighbors(queryPoint, classificationResult.neighbors);
+                    }
+
+                    // Update tooltip
+                    if (showTooltipToggle.checked) {
+                         updateTooltip(
+                             `K=${classificationResult.neighbors.length}/${Math.min(k, dataPoints.length)}, Class: ${classificationResult.predictedClass}`,
+                             mouseX, mouseY
+                         );
+                     } else {
+                         hideTooltip();
+                     }
+                } else if (dataPoints.length === 0) {
+                     // If no data points, just show a neutral query point
+                     drawPoint(queryPoint, QUERY_POINT_SIZE, '#555', true); // Grey outline
+                     if (showTooltipToggle.checked) {
+                          updateTooltip(`Add points first`, mouseX, mouseY);
+                     } else {
+                         hideTooltip();
+                     }
+                } else {
+                     // If data exists but classificationResult is null (e.g., K > data points and no distinct neighbors)
+                     drawPoint({ x: mouseX, y: mouseY }, QUERY_POINT_SIZE, '#555', true); // Draw neutral
+                     hideTooltip(); // No meaningful classification to show
+                }
+
+            } else {
+                 // Hide tooltip if mouse is outside or dragging or auto-demo adding
+                 hideTooltip();
+            }
+
+            // Draw the dragged point on top if dragging
+            if(isDragging && draggedPoint) {
+                 drawPoint(draggedPoint, POINT_SIZE, CLASS_COLORS[draggedPoint.class % CLASS_COLORS.length]);
+            }
+        }
+
+        function updateTooltip(text, x, y) {
+             if (!showTooltipToggle.checked) {
+                 hideTooltip();
+                 return;
+             }
+            tooltip.textContent = text;
+            // Position near mouse, adjusting for viewport boundaries
+            // Use mouse position relative to the body for tooltip placement
+            const tooltipX_body = event ? event.clientX + TOOLTIP_OFFSET : x + canvas.getBoundingClientRect().left + TOOLTIP_OFFSET;
+            const tooltipY_body = event ? event.clientY + TOOLTIP_OFFSET : y + canvas.getBoundingClientRect().top + TOOLTIP_OFFSET;
+
+
+            tooltip.style.left = `${tooltipX_body}px`;
+            tooltip.style.top = `${tooltipY_body}px`;
+            tooltip.classList.add('visible');
+
+             // Readjust if goes out of bounds
+            const rect = tooltip.getBoundingClientRect();
+             const bodyRect = document.body.getBoundingClientRect();
+
+            if (rect.right > bodyRect.right) {
+                tooltip.style.left = `${(event ? event.clientX : x + canvas.getBoundingClientRect().left) - rect.width - TOOLTIP_OFFSET}px`;
+            }
+            if (rect.bottom > bodyRect.bottom) {
+                 tooltip.style.top = `${(event ? event.clientY : y + canvas.getBoundingClientRect().top) - rect.height - TOOLTIP_OFFSET}px`;
+            }
+             // Also check left and top boundaries
+             if (rect.left < bodyRect.left) {
+                  tooltip.style.left = `${(event ? event.clientX : x + canvas.getBoundingClientRect().left) + TOOLTIP_OFFSET}px`; // Revert or shift right
+             }
+             if (rect.top < bodyRect.top) {
+                  tooltip.style.top = `${(event ? event.clientY : y + canvas.getBoundingClientRect().top) + TOOLTIP_OFFSET}px`; // Revert or shift down
+             }
+        }
+
+        function hideTooltip() {
+            tooltip.classList.remove('visible');
+        }
+
+
+        // --- Event Handlers ---
+
+        function handleCanvasMouseDown(event) {
+            if (autoDemoState !== 'idle') return;
+
+            const pos = getCanvasMousePosition(event);
+             dragStartX = event.clientX; // Store screen coordinates for offset calculation
+             dragStartY = event.clientY;
+
+            const clickedPoint = dataPoints.find(p => isPointClicked(p, pos.x, pos.y));
+
+            if (clickedPoint) {
+                isDragging = true;
+                draggedPoint = clickedPoint;
+                 pointDragStartX = draggedPoint.x; // Store point's original position
+                 pointDragStartY = draggedPoint.y;
+                canvas.classList.add('grabbing'); // Change cursor
+                // Prevent default to avoid unwanted browser drag behaviors (like dragging images)
+                event.preventDefault();
+            } else {
+                 isDragging = false; // Not dragging an existing point
+                 draggedPoint = null;
+            }
+             // No point added on mousedown, only on mouseup if not dragging
+        }
+
+        function handleCanvasMouseMove(event) {
+            const pos = getCanvasMousePosition(event);
+            mouseX = pos.x;
+            mouseY = pos.y;
+
+            // Clamp mouse position relative to canvas for drawing bounds
+            mouseX = Math.max(0, Math.min(canvas.width, mouseX));
+            mouseY = Math.max(0, Math.min(canvas.height, mouseY));
+
+
+            if (isDragging && draggedPoint) {
+                // Calculate point position based on mouse movement relative to drag start
+                 const deltaX_screen = event.clientX - dragStartX;
+                 const deltaY_screen = event.clientY - dragStartY;
+
+                 const rect = canvas.getBoundingClientRect();
+                 const scaleX = canvas.width / rect.width;
+                 const scaleY = canvas.height / rect.height;
+
+                 draggedPoint.x = pointDragStartX + deltaX_screen * scaleX;
+                 draggedPoint.y = pointDragStartY + deltaY_screen * scaleY;
+
+
+                // Clamp dragged point position to canvas bounds
+                 draggedPoint.x = Math.max(POINT_SIZE, Math.min(canvas.width - POINT_SIZE, draggedPoint.x));
+                 draggedPoint.y = Math.max(POINT_SIZE, Math.min(canvas.height - POINT_SIZE, draggedPoint.y));
+
+                // Redraw is handled by requestAnimationFrame loop
+            }
+             // Tooltip update happens in drawCanvas based on mouseX, mouseY
+        }
+
+        function handleCanvasMouseUp(event) {
+             if (autoDemoState !== 'idle') return;
+
+             const pos = getCanvasMousePosition(event);
+
+             if (isDragging) {
+                 isDragging = false;
+                 draggedPoint = null;
+                 canvas.classList.remove('grabbing');
+                 // Redraw immediately after dropping a point to update tooltip/prediction
+                 drawCanvas();
+             } else {
+                 // If mousedown didn't start a drag on a point, add a new point on mouseup
+                 // Check if click happened within canvas bounds (mousemove already clamped mouseX/Y)
+                 // Use the clamped mouseX/Y as the point position
+                 if (mouseX >= 0 && mouseX <= canvas.width && mouseY >= 0 && mouseY <= canvas.height) {
+                     dataPoints.push({ x: mouseX, y: mouseY, class: addPointClass });
+                      // Redraw immediately after adding point
+                     drawCanvas();
+                 }
+             }
+             // Reset drag start positions
+             dragStartX = 0;
+             dragStartY = 0;
+             pointDragStartX = 0;
+             pointDragStartY = 0;
+        }
+
+        function handleCanvasMouseOut() {
+             mouseInsideCanvas = false;
+             hideTooltip();
+             // Trigger a redraw to clear the hover point if not dragging or in auto-demo
+             if (!isDragging && autoDemoState === 'idle') {
+                 drawCanvas();
+             }
+        }
+
+        function handleCanvasMouseEnter() {
+             mouseInsideCanvas = true;
+        }
+
+
+        function handleKChange(event) {
+            const newK = parseInt(event.target.value);
+            // K must be at least 1
+            if (!isNaN(newK) && newK >= 1) {
+                k = newK;
+            } else {
+                 // Reset to previous valid value if input is invalid (e.g., empty string, 0, negative)
+                 kInput.value = k;
+            }
+            // Redraw to update visualization with new K
+            drawCanvas();
+        }
+
+        function randomizeData() {
+            stopAutoDemo(); // Stop demo before randomizing
+            dataPoints = [];
+            const numPoints = Math.floor(Math.random() * (AUTO_DEMO_RANDOMIZE_MAX_POINTS - AUTO_DEMO_RANDOMIZE_MIN_POINTS + 1)) + AUTO_DEMO_RANDOMIZE_MIN_POINTS;
+            const numClasses = Math.floor(Math.random() * (CLASS_COLORS.length - 1)) + 2; // At least 2 classes, up to all defined classes
+             const clusters = [];
+             // Create cluster centers
+             for(let i = 0; i < numClasses; i++) {
+                 clusters.push({
+                     x: Math.random() * canvas.width * 0.6 + canvas.width * 0.2,
+                     y: Math.random() * canvas.height * 0.6 + canvas.height * 0.2,
+                     class: i
+                 });
+             }
+
+            // Generate points around cluster centers
+            for (let i = 0; i < numPoints; i++) {
+                const cluster = clusters[i % numClasses]; // Distribute points among clusters
+                const x = cluster.x + (Math.random() - 0.5) * canvas.width * 0.1; // Add some scatter
+                const y = cluster.y + (Math.random() - 0.5) * canvas.height * 0.1; // Add some scatter
+
+                 // Clamp to canvas bounds, leaving space for the point radius
+                 const clampedX = Math.max(POINT_SIZE, Math.min(canvas.width - POINT_SIZE, x));
+                 const clampedY = Math.max(POINT_SIZE, Math.min(canvas.height - POINT_SIZE, y));
+
+                dataPoints.push({ x: clampedX, y: clampedY, class: cluster.class });
+            }
+             // Randomize K based on the number of points and classes, within a reasonable range
+            kInput.value = Math.max(1, Math.min(Math.floor(numPoints / numClasses) || 1, 15)); // Min 1, Max 15, related to points per class
+            k = parseInt(kInput.value);
+            drawCanvas();
+             console.log(`Randomized ${dataPoints.length} points into ${numClasses} classes.`);
+        }
+
+        function resetData() {
+            stopAutoDemo(); // Stop demo before resetting
+            dataPoints = [];
+            kInput.value = 5; // Reset K to default
+            k = 5;
+            addPointClass = 0; // Reset add class
+            addClassButtons.forEach((btn, index) => {
+                 if (index === 0) btn.classList.add('active');
+                 else btn.classList.remove('active');
+            });
+            drawCanvas();
+             console.log('Data reset.');
+        }
+
+         function startAutoDemo() {
+             if (autoDemoState !== 'idle') {
+                 stopAutoDemo();
+                 return;
+             }
+
+             resetData(); // Start with a clean slate
+             autoDemoState = 'adding';
+             autoDemoStep = 0;
+             autoDemoBtn.textContent = 'Stop Demo';
+             disableControls(true); // Disable controls during demo
+
+             autoDemoIntervalId = setInterval(runAutoDemoStep, AUTO_DEMO_ADD_INTERVAL);
+             console.log('Auto demo started: Adding points...');
+         }
+
+         function stopAutoDemo() {
+             if (autoDemoIntervalId) {
+                 clearInterval(autoDemoIntervalId);
+                 autoDemoIntervalId = null;
+             }
+             autoDemoState = 'idle';
+             autoDemoStep = 0;
+             mouseX = -1; // Reset simulated mouse pos
+             mouseY = -1;
+             mouseInsideCanvas = false;
+             autoDemoBtn.textContent = 'Auto Demo';
+             disableControls(false); // Enable controls after demo
+             drawCanvas(); // Redraw to clear any demo artifacts
+             console.log('Auto demo stopped.');
+         }
+
+         function runAutoDemoStep() {
+             if (autoDemoState === 'adding') {
+                 if (autoDemoStep < AUTO_DEMO_POINTS) {
+                     // Add points in two general clusters for visual clarity
+                     const cls = autoDemoStep % 2; // Alternate between 2 classes
+                     const xOffset = cls === 0 ? 0.3 : 0.7;
+                     const yOffset = cls === 0 ? 0.3 : 0.7;
+                     const x = canvas.width * xOffset + (Math.random() - 0.5) * canvas.width * 0.15; // Add scatter
+                     const y = canvas.height * yOffset + (Math.random() - 0.5) * canvas.height * 0.15; // Add scatter
+
+                      // Clamp to canvas bounds, leaving space for point radius
+                      const clampedX = Math.max(POINT_SIZE, Math.min(canvas.width - POINT_SIZE, x));
+                      const clampedY = Math.max(POINT_SIZE, Math.min(canvas.height - POINT_SIZE, y));
+
+
+                     dataPoints.push({ x: clampedX, y: clampedY, class: cls });
+                     autoDemoStep++;
+                 } else {
+                      // Ensure at least K points exist for classification phase
+                      if (dataPoints.length < k) {
+                           console.warn(`Not enough points (${dataPoints.length}) for K=${k}. Adding more...`);
+                           while(dataPoints.length < k) {
+                                const cls = dataPoints.length % 2;
+                                const x = canvas.width * (cls === 0 ? 0.3 : 0.7) + (Math.random() - 0.5) * canvas.width * 0.15;
+                                const y = canvas.height * (cls === 0 ? 0.3 : 0.7) + (Math.random() - 0.5) * canvas.height * 0.15;
+                                dataPoints.push({ x: Math.max(POINT_SIZE, Math.min(canvas.width - POINT_SIZE, x)), y: Math.max(POINT_SIZE, Math.min(canvas.height - POINT_SIZE, y)), class: cls });
+                           }
+                      }
+                     autoDemoState = 'classifying';
+                     autoDemoStep = 0;
+                      // Wait briefly before starting classification
+                     clearInterval(autoDemoIntervalId);
+                     autoDemoIntervalId = setInterval(runAutoDemoStep, AUTO_DEMO_CLASSIFY_INTERVAL);
+                      console.log('Auto demo: Classifying random points...');
+                 }
+             } else if (autoDemoState === 'classifying') {
+                  // Only classify if there are points available
+                 if (dataPoints.length > 0 && autoDemoStep < AUTO_DEMO_CLASSIFY_COUNT) {
+                     // Simulate hovering random points within canvas bounds
+                     mouseX = Math.random() * canvas.width;
+                     mouseY = Math.random() * canvas.height;
+                     mouseInsideCanvas = true; // Simulate mouse inside
+                     autoDemoStep++;
+                     // Drawing is handled by the animation loop
+                 } else {
+                     // Demo finished or no points to classify
+                      console.log('Auto demo finished.');
+                     stopAutoDemo();
+                 }
+             }
+         }
+
+        function disableControls(disabled) {
+             kInput.disabled = disabled;
+             randomizeBtn.disabled = disabled;
+             resetBtn.disabled = disabled;
+             showLinesToggle.disabled = disabled;
+             showPredictionToggle.disabled = disabled;
+             showTooltipToggle.disabled = disabled;
+             addClassButtons.forEach(btn => btn.disabled = disabled);
+             // Also visually indicate disabled state if needed (CSS handles this for .neon-button:disabled)
+        }
+
+        // --- Initialization and Resizing ---
+
+        function resizeCanvas() {
+             const container = canvas.parentElement;
+             // Use clientWidth/clientHeight for the actual pixel dimensions of the container
+             canvas.width = container.clientWidth;
+             canvas.height = container.clientHeight;
+             // Update point size based on new viewport dimensions
+             POINT_SIZE = Math.min(window.innerWidth, window.innerHeight) * 0.008;
+             QUERY_POINT_SIZE = POINT_SIZE * 1.5;
+             drawCanvas(); // Redraw after resize
+        }
+
+        // --- Animation Loop (for smooth dragging/hover and FPS) ---
+
+        let lastFrameTime = 0;
+        let fpsCounter = 0;
+        let lastFpsUpdateTime = 0;
+
+        function animate(currentTime) {
+            const deltaTime = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+
+            // Update FPS counter every second
+            fpsCounter++;
+            if (currentTime - lastFpsUpdateTime >= 1000) {
+                 const fps = (fpsCounter * 1000) / (currentTime - lastFpsUpdateTime);
+                 if (fpsDisplay) {
+                      fpsDisplay.textContent = `FPS: ${Math.round(fps)}`;
+                 }
+                 fpsCounter = 0;
+                 lastFpsUpdateTime = currentTime;
+            }
+
+             // Redraw if necessary
+             // - Dragging is happening
+             // - Mouse is inside canvas AND auto-demo is idle (for interactive hover prediction)
+             // - Auto-demo is active (state is not idle)
+             // - Or if window is resizing (handled by resizeCanvas calling drawCanvas, but good to be sure)
+             if (isDragging || (mouseInsideCanvas && autoDemoState === 'idle') || autoDemoState !== 'idle') {
+                 drawCanvas();
+             }
+
+            requestAnimationFrame(animate);
+        }
+
+
+        // --- Setup ---
+
+        function init() {
+             // Set up event listeners
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+            canvas.addEventListener('mouseout', handleCanvasMouseOut);
+            canvas.addEventListener('mouseenter', handleCanvasMouseEnter); // Detect when mouse enters canvas area
+
+            // Use 'input' for continuous update while dragging number input or using arrows
+            kInput.addEventListener('input', handleKChange);
+            kInput.addEventListener('change', handleKChange); // Also handle final change on blur/enter
+
+            randomizeBtn.addEventListener('click', randomizeData);
+            resetBtn.addEventListener('click', resetData);
+            autoDemoBtn.addEventListener('click', () => {
+                 if (autoDemoState === 'idle') {
+                     startAutoDemo();
+                 } else {
+                     stopAutoDemo();
+                 }
+            });
+
+             // Add listeners for class selection buttons
+            addClassButtons.forEach((btn, index) => {
+                 // Check if class color exists for this index
+                 if (CLASS_COLORS[index]) {
+                     // Update button text with color name hint if available
+                      let colorName = CLASS_COLORS[index]; // Default to hex
+                      if (index === 0) colorName = 'Blue';
+                      else if (index === 1) colorName = 'Pink';
+                      // Add more color names if more buttons/classes are added
+
+                     btn.textContent = `Class ${index} (${colorName})`;
+
+                     btn.addEventListener('click', () => {
+                         // Stop auto-demo if running, as user is taking manual control
+                         stopAutoDemo();
+                         addPointClass = index;
+                         addClassButtons.forEach(b => b.classList.remove('active'));
+                         btn.classList.add('active');
+                     });
+                 } else {
+                      // Hide or disable button if no color defined for its class index
+                     btn.style.display = 'none';
+                 }
+            });
+
+            // Initial setup
+            resizeCanvas(); // Set initial canvas size and POINT_SIZE
+            addClassButtons[0].classList.add('active'); // Set default active class button
+            animate(0); // Start animation loop
+        }
+
+        // Run initialization when the DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+
+</body>
+</html>

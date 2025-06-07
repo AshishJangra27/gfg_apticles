@@ -1,0 +1,647 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept Navigator (Neon Edition)</title>
+    <style>
+        /* Global Reset & Layout Fixes */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Crucial: Prevents scrolling */
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000; /* Black background */
+            color: #f0f0f0; /* Default text color */
+            display: flex;
+            flex-direction: column; /* Stack header, content, footer */
+            user-select: none; /* Prevent text selection */
+            cursor: default; /* Default cursor for non-interactive areas */
+        }
+
+        /* Neon Theme Elements */
+        .neon-text {
+            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff, 0 0 20px #00aaff, 0 0 30px #00aaff, 0 0 40px #00aaff, 0 0 50px #00aaff, 0 0 75px #00aaff;
+            color: #00ffff; /* Ensure base color is also neon */
+        }
+
+        .neon-box-shadow {
+             box-shadow: 0 0 7px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff, 0 0 20px #ff00ff;
+        }
+
+        /* Header */
+        #header {
+            height: 8vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            background: rgba(0, 10, 20, 0.5); /* Semi-transparent background */
+            border-bottom: 2px solid #00ffff; /* Neon border */
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Main Content Area (Controls + Canvas) */
+        #main-content {
+            flex-grow: 1; /* Takes available space */
+            display: flex;
+            flex-direction: row; /* Controls on the left, canvas on the right */
+             /* height: calc(100vh - 8vh - 5vh); Removed as flex-grow 1 handles height */
+        }
+
+        /* Controls Panel */
+        #controls {
+            width: 18vw; /* Fixed width for controls */
+            background: rgba(20, 0, 20, 0.5); /* Semi-transparent background */
+            padding: 1vh 0.8vw;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Space between control items */
+            border-right: 2px solid #ff00ff; /* Neon border */
+            box-sizing: border-box;
+            overflow-y: auto; /* Allow scrolling if controls overflow vertically */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .control-button, .toggle-control {
+            padding: 1vh 0.5vw;
+            font-size: 1em;
+            color: #f0f0f0; /* Default text color */
+            background: transparent;
+            border: 1px solid #00ffff; /* Neon border */
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+            text-align: center;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        .control-button:hover, .toggle-control:hover {
+            border-color: #ff00ff;
+            color: #ff00ff;
+            box-shadow: 0 0 5px #ff00ff;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+
+         .control-button:active, .toggle-control:active {
+            background-color: rgba(255, 0, 255, 0.3);
+            box-shadow: 0 0 10px #ff00ff;
+         }
+
+         .toggle-control.active {
+            background-color: rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 5px #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+         }
+
+        /* Canvas Area */
+        #canvas-container {
+             flex-grow: 1; /* Takes remaining width */
+             display: flex; /* To center canvas if needed, or just hold it */
+             justify-content: center;
+             align-items: center;
+             background: #000; /* Canvas background */
+             cursor: crosshair; /* Custom cursor for interactive area */
+             position: relative; /* Needed for absolute positioning of FPS */
+        }
+
+        #conceptCanvas {
+            display: block; /* Remove extra space below canvas */
+            /* Size will be set by JS based on container */
+        }
+
+        /* FPS Display */
+        #fps-display {
+            position: absolute;
+            top: 1vh; /* Just below header */
+            right: 1vw; /* In the canvas area */
+            color: #00ff00; /* Neon green */
+            font-size: 0.9em;
+            text-shadow: 0 0 3px #00ff00;
+            pointer-events: none; /* Allow clicks to pass through */
+            z-index: 10;
+        }
+
+
+        /* Footer */
+        #footer {
+            height: 5vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 20, 10, 0.5); /* Semi-transparent background */
+            border-top: 2px solid #00ff00; /* Neon border */
+            box-sizing: border-box;
+            font-size: 0.9em;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #footer a {
+            color: #00ff00; /* Neon green links */
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: 0 0 5px #00ff00;
+            transition: text-shadow 0.3s ease;
+        }
+
+        #footer a:hover {
+            text-shadow: 0 0 10px #00ff00, 0 0 15px #00ff00;
+        }
+
+         /* Cursor for dragging */
+         #canvas-container.dragging {
+             cursor: grabbing;
+         }
+         #canvas-container:not(.dragging) .concept-hovered {
+              cursor: pointer;
+         }
+
+    </style>
+</head>
+<body>
+
+    <div id="header" class="neon-text">
+        Concept Navigator
+    </div>
+
+    <div id="main-content">
+        <div id="controls">
+            <button id="resetBtn" class="control-button" title="Return concepts to initial positions">Reset Layout</button>
+            <button id="randomizeBtn" class="control-button" title="Shuffle concept positions randomly">Randomize</button>
+            <button id="autoDemoBtn" class="control-button" title="Watch an automated walkthrough">Start Auto-Demo</button>
+
+            <div style="height: 1.5vh;"></div> <!-- Spacer -->
+
+            <button id="toggleConnectionsBtn" class="toggle-control active" title="Show/hide connecting lines between concepts">Hide Connections</button>
+             <button id="toggleLabelsBtn" class="toggle-control active" title="Show/hide concept labels">Hide Labels</button>
+
+            <div style="flex-grow: 1;"></div> <!-- Push footer links to bottom -->
+
+            <!-- Tooltip example using title attribute -->
+            <p style="font-size: 0.8em; text-align: center; color: rgba(255,255,255,0.6); flex-shrink: 0;">
+                Tip: Hover nodes for labels, Click to activate! Drag nodes to reposition.
+            </p>
+
+        </div>
+        <div id="canvas-container">
+             <canvas id="conceptCanvas"></canvas>
+             <div id="fps-display" class="neon-text">FPS: --</div>
+        </div>
+    </div>
+
+    <div id="footer" class="neon-text">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        // --- Canvas & Graphics Setup ---
+        const canvas = document.getElementById('conceptCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        let animationFrameId = null;
+        let fps = 0;
+        let lastFpsUpdateTime = 0;
+        let frameCount = 0;
+        const fpsDisplay = document.getElementById('fps-display');
+
+
+        // --- Concept Data (Simple Graph) ---
+        // Node data structure: { id, label, x, y, radius, color, connections: [id, ...] }
+        const concepts = [
+            { id: 'start', label: 'Interview Prep Start', x: 0, y: 0, radius: 25, color: '#39ff14', connections: ['ds', 'algo'] },
+            { id: 'ds', label: 'Data Structures', x: 0, y: 0, radius: 20, color: '#ffff00', connections: ['basic_coding', 'advanced_ds'] },
+            { id: 'algo', label: 'Algorithms', x: 0, y: 0, radius: 20, color: '#ff00ff', connections: ['basic_coding', 'advanced_algo'] },
+            { id: 'basic_coding', label: 'Basic Coding Skills', x: 0, y: 0, radius: 15, color: '#00ffff', connections: ['system_design'] },
+            { id: 'advanced_ds', label: 'Advanced DS', x: 0, y: 0, radius: 18, color: '#ff8800', connections: ['basic_coding', 'advanced_problems'] },
+            { id: 'advanced_algo', label: 'Advanced Algorithms', x: 0, y: 0, radius: 18, color: '#8a2be2', connections: ['basic_coding', 'advanced_problems'] },
+            { id: 'advanced_problems', label: 'Problem Solving', x: 0, y: 0, radius: 22, color: '#ff69b4', connections: ['system_design'] },
+            { id: 'system_design', label: 'System Design', x: 0, y: 0, radius: 25, color: '#00bfff', connections: ['end'] },
+             { id: 'end', label: 'Ready for Interview!', x: 0, y: 0, radius: 30, color: '#ffffff', connections: [] }
+        ];
+
+        // Store initial positions for reset (will calculate on first layout)
+        const initialPositions = {};
+
+        // State Variables
+        let activeConceptId = null;
+        let hoveredConceptId = null;
+        let isDragging = false;
+        let draggedConceptId = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        let showConnections = true;
+        let showLabels = true;
+
+        let isAutoDemo = false;
+        // Sequence: Activate each node, then deactivate all and reset layout
+        const autoDemoSequence = ['start', 'ds', 'basic_coding', 'algo', 'advanced_ds', 'advanced_algo', 'advanced_problems', 'system_design', 'end', null]; // null represents reset/deactivate all
+        let currentDemoStep = 0;
+        let lastDemoActionTime = 0;
+        const demoStepInterval = 3000; // 3 seconds per step
+
+        // Animation target positions for smooth transitions
+        const targetPositions = {};
+
+        // --- Layout & Positioning ---
+        function resizeCanvas() {
+            const containerRect = canvasContainer.getBoundingClientRect();
+            canvas.width = containerRect.width;
+            canvas.height = containerRect.height;
+             // Recalculate target positions on resize if nodes exist
+            if (concepts.length > 0) {
+                positionConcepts(false); // Update target positions without immediate jump
+            }
+        }
+
+        // Simple grid-like positioning
+        function positionConcepts(jump = true) {
+            if (canvas.width === 0 || canvas.height === 0) return; // Avoid division by zero on hidden/uninitialized canvas
+
+            const padding = Math.min(canvas.width, canvas.height) * 0.1; // 10% padding
+            const effectiveWidth = canvas.width - 2 * padding;
+            const effectiveHeight = canvas.height - 2 * padding;
+
+            if (effectiveWidth <= 0 || effectiveHeight <= 0) return; // Avoid issues with zero or negative dimensions
+
+            // Simple distribution (can be improved)
+            const cols = Math.ceil(Math.sqrt(concepts.length));
+            const rows = Math.ceil(concepts.length / cols);
+            const cellWidth = effectiveWidth / cols;
+            const cellHeight = effectiveHeight / rows;
+
+            concepts.forEach((concept, index) => {
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+
+                const targetX = padding + col * cellWidth + cellWidth / 2;
+                const targetY = padding + row * cellHeight + cellHeight / 2;
+
+                targetPositions[concept.id] = { x: targetX, y: targetY };
+
+                if (jump || typeof concept.x !== 'number' || typeof concept.y !== 'number') {
+                    // Initial placement or forced jump
+                    concept.x = targetX;
+                    concept.y = targetY;
+                }
+
+                if (!initialPositions[concept.id]) {
+                    // Store initial calculated position the very first time
+                    initialPositions[concept.id] = { x: targetX, y: targetY };
+                }
+            });
+        }
+
+         function randomizePositions() {
+             if (canvas.width === 0 || canvas.height === 0) return;
+             const padding = Math.min(canvas.width, canvas.height) * 0.1; // 10% padding
+             const effectiveWidth = canvas.width - 2 * padding;
+             const effectiveHeight = canvas.height - 2 * padding;
+
+             if (effectiveWidth <= 0 || effectiveHeight <= 0) return;
+
+            concepts.forEach(concept => {
+                const targetX = padding + Math.random() * effectiveWidth;
+                const targetY = padding + Math.random() * effectiveHeight;
+                targetPositions[concept.id] = { x: targetX, y: targetY };
+            });
+        }
+
+        function resetPositions() {
+             concepts.forEach(concept => {
+                 if (initialPositions[concept.id]) {
+                     targetPositions[concept.id] = { ...initialPositions[concept.id] };
+                 } else {
+                     // Fallback if initialPositions weren't stored (shouldn't happen after first layout)
+                     positionConcepts(false); // Recalculate and set target
+                 }
+            });
+             activeConceptId = null; // Reset active state
+             hoveredConceptId = null; // Reset hover state
+        }
+
+
+        // --- Drawing Functions ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const currentTime = performance.now();
+
+            // Update concept positions towards targets (simple animation)
+            const animationSpeed = isDragging ? 1 : 0.08; // Move immediately when dragging, animate smoothly otherwise
+             concepts.forEach(concept => {
+                 if (targetPositions[concept.id]) {
+                    concept.x += (targetPositions[concept.id].x - concept.x) * animationSpeed;
+                    concept.y += (targetPositions[concept.id].y - concept.y) * animationSpeed;
+                 }
+             });
+
+
+            // Draw Connections
+            if (showConnections) {
+                ctx.lineWidth = 2;
+                concepts.forEach(concept => {
+                    const isConceptActive = concept.id === activeConceptId;
+                     // Determine connected concepts, including reciprocal connections for highlighting
+                    const connectedConceptIds = new Set(concept.connections);
+                    if (activeConceptId) {
+                        const activeConcept = concepts.find(c => c.id === activeConceptId);
+                        if (activeConcept && activeConcept.connections.includes(concept.id)) {
+                             connectedConceptIds.add(activeConceptId); // Add active node if this node connects to it
+                        }
+                    }
+
+
+                    concept.connections.forEach(connId => {
+                        const targetConcept = concepts.find(c => c.id === connId);
+                        if (targetConcept) {
+                            // Highlight connections if EITHER node is active OR if activeConcept is connected to this line
+                            const isTargetActive = targetConcept.id === activeConceptId;
+                            const isConnectionHighlighted = isConceptActive || isTargetActive || (activeConceptId && connectedConceptIds.has(targetConcept.id));
+
+
+                             ctx.beginPath();
+                            ctx.moveTo(concept.x, concept.y);
+                            ctx.lineTo(targetConcept.x, targetConcept.y);
+
+                            if (isConnectionHighlighted) {
+                                ctx.strokeStyle = '#00FFFF'; // Highlight color
+                                ctx.shadowColor = '#00FFFF';
+                                ctx.shadowBlur = 15;
+                            } else {
+                                ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)'; // Faded color
+                                ctx.shadowColor = 'transparent';
+                                ctx.shadowBlur = 0;
+                            }
+
+                            ctx.stroke();
+                        }
+                    });
+                });
+                 // Reset shadow after drawing lines
+                 ctx.shadowBlur = 0;
+            }
+
+
+            // Draw Concepts
+            concepts.forEach(concept => {
+                const isConceptActive = concept.id === activeConceptId;
+                const isConceptHovered = concept.id === hoveredConceptId;
+
+                ctx.beginPath();
+                ctx.arc(concept.x, concept.y, concept.radius, 0, Math.PI * 2);
+
+                ctx.fillStyle = isConceptActive ? concept.color : 'rgba(0, 0, 0, 0.8)'; // Fill if active, transparent if not
+                 ctx.fill();
+
+                // Draw border and glow
+                ctx.strokeStyle = isConceptActive ? concept.color : concept.color + '88'; // Solid if active, semi-transparent if not
+                ctx.lineWidth = isConceptActive ? 4 : 2;
+
+                if (isConceptActive || isConceptHovered) {
+                     ctx.shadowColor = concept.color;
+                     ctx.shadowBlur = isConceptActive ? 20 : 10;
+                } else {
+                     ctx.shadowBlur = 0;
+                }
+
+                ctx.stroke();
+
+                 // Draw tooltip/label if hovered or active (and labels are shown)
+                if (showLabels && (isConceptHovered || isConceptActive)) {
+                     ctx.shadowBlur = 0; // Don't glow text
+                     ctx.fillStyle = concept.color;
+                     ctx.font = `${isConceptActive ? 'bold ' : ''}14px Arial`;
+                     ctx.textAlign = 'center';
+                     ctx.textBaseline = 'bottom';
+                     ctx.fillText(concept.label, concept.x, concept.y - concept.radius - 5);
+                 }
+            });
+
+             // Draw FPS
+            if (currentTime - lastFpsUpdateTime > 500) { // Update FPS every 0.5 seconds
+                fps = frameCount * 2; // Multiply frame count by 2 for 0.5s interval
+                frameCount = 0;
+                lastFpsUpdateTime = currentTime;
+                 if (fpsDisplay) fpsDisplay.innerText = `FPS: ${fps}`;
+            }
+            frameCount++;
+
+
+            // Auto Demo Logic
+            if (isAutoDemo && currentTime - lastDemoActionTime > demoStepInterval) {
+                 if (currentDemoStep < autoDemoSequence.length) {
+                    const nextConceptId = autoDemoSequence[currentDemoStep];
+                    if (nextConceptId === null) { // Sentinel for "reset" or "end" state
+                         activeConceptId = null;
+                         resetPositions(); // Go back to initial layout
+                    } else {
+                        const nextConcept = concepts.find(c => c.id === nextConceptId);
+                         if (nextConcept) {
+                             activeConceptId = nextConcept.id;
+                             // Optionally move camera or zoom to concept in more complex setups
+                             // For now, just activating it is sufficient
+                         }
+                    }
+                     currentDemoStep++;
+                     lastDemoActionTime = currentTime;
+                 } else {
+                     // End of demo sequence
+                     stopAutoDemo();
+                     activeConceptId = null; // Ensure state is clean after demo ends
+                 }
+             }
+
+            animationFrameId = requestAnimationFrame(draw);
+        }
+
+        // --- Interaction Handlers ---
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+
+        function isPointInCircle(point, circle) {
+            const dx = point.x - circle.x;
+            const dy = point.y - circle.y;
+            return Math.sqrt(dx * dx + dy * dy) < circle.radius;
+        }
+
+        // Find the top-most concept at a given position
+        function findConceptAtPos(pos) {
+             // Iterate in reverse to hit top-most (last drawn) concept first
+             for (let i = concepts.length - 1; i >= 0; i--) {
+                 const concept = concepts[i];
+                 if (isPointInCircle(pos, concept)) {
+                     return concept;
+                 }
+             }
+             return null;
+        }
+
+
+        canvas.addEventListener('mousedown', (e) => {
+             if (isAutoDemo) {
+                stopAutoDemo();
+            }
+
+            const pos = getMousePos(e);
+            const concept = findConceptAtPos(pos);
+
+            if (concept) {
+                isDragging = true;
+                draggedConceptId = concept.id;
+                dragOffsetX = pos.x - concept.x;
+                dragOffsetY = pos.y - concept.y;
+
+                // Bring dragged concept to front visually (by reordering array)
+                const index = concepts.indexOf(concept);
+                if (index !== -1) {
+                    concepts.splice(index, 1);
+                    concepts.push(concept); // Add to end
+                }
+                 canvasContainer.classList.add('dragging'); // Change cursor
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+
+            if (isDragging && draggedConceptId) {
+                const draggedConcept = concepts.find(c => c.id === draggedConceptId);
+                if (draggedConcept) {
+                     // Update both current and target position immediately while dragging
+                    draggedConcept.x = pos.x - dragOffsetX;
+                    draggedConcept.y = pos.y - dragOffsetY;
+                    targetPositions[draggedConcept.id] = { x: draggedConcept.x, y: draggedConcept.y };
+                }
+            } else {
+                // Hover detection
+                const concept = findConceptAtPos(pos);
+                if (concept && hoveredConceptId !== concept.id) {
+                    hoveredConceptId = concept.id;
+                    canvasContainer.classList.add('concept-hovered'); // Change cursor on hover
+                } else if (!concept && hoveredConceptId !== null) {
+                    hoveredConceptId = null; // No concept is hovered
+                    canvasContainer.classList.remove('concept-hovered'); // Reset cursor
+                }
+                 // Manage cursor based on hover state even when not dragging
+                 if (hoveredConceptId !== null) {
+                     canvas.style.cursor = 'pointer';
+                 } else {
+                     canvas.style.cursor = 'crosshair'; // Default canvas cursor
+                 }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            draggedConceptId = null;
+            canvasContainer.classList.remove('dragging'); // Reset cursor
+             // Restore hover cursor if still hovering after drag ends
+            if (hoveredConceptId !== null) {
+                 canvas.style.cursor = 'pointer';
+            } else {
+                 canvas.style.cursor = 'crosshair';
+            }
+        });
+
+         canvas.addEventListener('click', (e) => {
+             // If dragging happened, the click might be unintended, check distance moved if needed.
+             // For simplicity here, we assume click is intentional if mouseup isn't triggered instantly.
+             const pos = getMousePos(e);
+             const clickedConcept = findConceptAtPos(pos);
+
+             if (clickedConcept) {
+                 // Toggle active state
+                 activeConceptId = (activeConceptId === clickedConcept.id) ? null : clickedConcept.id;
+             } else {
+                 // Clicked on empty space, deactivate all
+                 activeConceptId = null;
+             }
+         });
+
+
+        // --- Control Button Logic ---
+        document.getElementById('resetBtn').addEventListener('click', () => {
+             stopAutoDemo();
+             resetPositions();
+        });
+
+        document.getElementById('randomizeBtn').addEventListener('click', () => {
+             stopAutoDemo();
+             randomizePositions();
+             activeConceptId = null; // Deactivate when randomizing
+        });
+
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        autoDemoBtn.addEventListener('click', () => {
+             if (isAutoDemo) {
+                 stopAutoDemo();
+             } else {
+                 startAutoDemo();
+             }
+        });
+
+        const toggleConnectionsBtn = document.getElementById('toggleConnectionsBtn');
+        toggleConnectionsBtn.addEventListener('click', () => {
+            showConnections = !showConnections;
+            toggleConnectionsBtn.innerText = showConnections ? 'Hide Connections' : 'Show Connections';
+            toggleConnectionsBtn.classList.toggle('active', showConnections);
+        });
+
+         const toggleLabelsBtn = document.getElementById('toggleLabelsBtn');
+        toggleLabelsBtn.addEventListener('click', () => {
+            showLabels = !showLabels;
+            toggleLabelsBtn.innerText = showLabels ? 'Hide Labels' : 'Show Labels';
+             toggleLabelsBtn.classList.toggle('active', showLabels);
+        });
+
+
+         function startAutoDemo() {
+             stopAutoDemo(); // Ensure no multiple demos running
+             isAutoDemo = true;
+             currentDemoStep = 0;
+             lastDemoActionTime = performance.now();
+             autoDemoBtn.innerText = 'Stop Auto-Demo';
+             autoDemoBtn.classList.add('active');
+             resetPositions(); // Start from a known layout
+         }
+
+         function stopAutoDemo() {
+             isAutoDemo = false;
+             autoDemoBtn.innerText = 'Start Auto-Demo';
+             autoDemoBtn.classList.remove('active');
+             activeConceptId = null; // Deactivate currently active node when stopping
+         }
+
+
+        // --- Initialization ---
+        window.addEventListener('load', () => {
+             resizeCanvas(); // Set initial size based on layout
+             positionConcepts(); // Place nodes for the first time
+             draw(); // Start the animation loop
+        });
+
+        window.addEventListener('resize', resizeCanvas); // Handle window resizing
+
+
+    </script>
+
+</body>
+</html>

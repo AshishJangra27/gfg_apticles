@@ -1,0 +1,546 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Software Prep Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        header {
+            height: 5vh;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8vh;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
+            border-bottom: 1px solid #00ffff;
+            box-sizing: border-box;
+        }
+
+        .controls {
+            height: 5vh;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5vh 1vw;
+            gap: 1vw;
+            background-color: #1a1a1a;
+            border-bottom: 1px solid #ff00ff;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 0.8vh 1.5vw;
+            font-size: 1.5vh;
+            color: #39ff14;
+            background-color: transparent;
+            border: 1px solid #39ff14;
+            text-shadow: 0 0 4px #39ff14;
+            box-shadow: 0 0 5px rgba(57, 255, 20, 0.5);
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            color: #000;
+            background-color: #39ff14;
+            text-shadow: none;
+            box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14;
+        }
+
+        button:active {
+            background-color: #2aaa12;
+            box-shadow: 0 0 5px #39ff14;
+        }
+
+        main {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        footer {
+            height: 3vh;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.3vh;
+            border-top: 1px solid #ffff00;
+            box-sizing: border-box;
+        }
+
+        footer a {
+            color: #ffff00;
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: 0 0 4px #ffff00;
+            transition: text-shadow 0.2s ease-in-out;
+        }
+
+        footer a:hover {
+             text-shadow: 0 0 8px #ffff00, 0 0 12px #ffff00;
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: rgba(10, 10, 10, 0.9);
+            color: #f0f0f0;
+            border: 1px solid #ff00ff;
+            padding: 1vh 1.5vw;
+            font-size: 1.5vh;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+            border-radius: 5px;
+            max-width: 30vw;
+            box-sizing: border-box;
+        }
+
+        #fps-counter {
+            position: absolute;
+            top: 1vh;
+            right: 1vw;
+            font-size: 1.4vh;
+            color: #ffff00;
+            text-shadow: 0 0 3px #ffff00;
+            z-index: 101;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Software Prep Visualizer
+    </header>
+    <div class="controls">
+        <button id="resetBtn">Reset Layout</button>
+        <button id="randomizeBtn">Randomize Layout</button>
+        <button id="autoDemoBtn">Auto Demo</button>
+        <button id="toggleLabelsBtn">Hide Labels</button>
+    </div>
+    <main>
+        <canvas id="vizCanvas"></canvas>
+        <div id="tooltip"></div>
+        <div id="fps-counter">FPS: --</div>
+    </main>
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('vizCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltipDiv = document.getElementById('tooltip');
+        const fpsCounterDiv = document.getElementById('fps-counter');
+        const resetBtn = document.getElementById('resetBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const toggleLabelsBtn = document.getElementById('toggleLabelsBtn');
+
+        let nodes = [
+            { id: 'ds', name: 'Data Structures', desc: 'Core data organization methods (Arrays, Lists, Trees, Graphs, Hashes, etc.)', type: 'foundational', color: '#39ff14', x: 0, y: 0, r: 35 },
+            { id: 'algo', name: 'Algorithms', desc: 'Problem-solving procedures (Sorting, Searching, DP, Greedy, Graph Algos)', type: 'foundational', color: '#39ff14', x: 0, y: 0, r: 35 },
+            { id: 'sysd', name: 'System Design', desc: 'Designing large-scale systems (Scalability, Availability, Consistency, Latency, Partitioning)', type: 'advanced', color: '#00ffff', x: 0, y: 0, r: 35 },
+            { id: 'behave', name: 'Behavioral', desc: 'Soft skills, teamwork, handling situations (STAR method, cultural fit)', type: 'soft', color: '#ff00ff', x: 0, y: 0, r: 35 },
+            { id: 'practice', name: 'Coding Practice', desc: 'Solving problems on platforms like LeetCode, HackerRank, etc.', type: 'action', color: '#ffff00', x: 0, y: 0, r: 35 },
+            { id: 'mock', name: 'Mock Interviews', desc: 'Simulating the interview experience with others.', type: 'action', color: '#ffff00', x: 0, y: 0, r: 35 },
+            { id: 'resume', name: 'Resume Prep', desc: 'Crafting a strong resume highlighting relevant experience.', type: 'prep', color: '#39ff14', x: 0, y: 0, r: 35 },
+            { id: 'lang', name: 'Language Basics', desc: 'Proficiency in a chosen programming language (syntax, features, std libs).', type: 'foundational', color: '#39ff14', x: 0, y: 0, r: 35 },
+            { id: 'os', name: 'OS Concepts', desc: 'Processes, Threads, Memory Management, IPC, Concurrency.', type: 'foundational', color: '#00ffff', x: 0, y: 0, r: 35 },
+            { id: 'db', name: 'Databases', desc: 'SQL/NoSQL, Indexing, Transactions, Design Principles.', type: 'foundational', color: '#00ffff', x: 0, y: 0, r: 35 },
+            { id: 'network', name: 'Networking', desc: 'HTTP, TCP/IP, DNS, Load Balancing.', type: 'foundational', color: '#00ffff', x: 0, y: 0, r: 35 }
+        ];
+
+        let links = [
+            { source: 'ds', target: 'algo', color: '#00ffff' },
+            { source: 'ds', target: 'practice', color: '#ffff00' },
+            { source: 'algo', target: 'practice', color: '#ffff00' },
+            { source: 'ds', target: 'sysd', color: '#ff00ff' },
+            { source: 'algo', target: 'sysd', color: '#ff00ff' },
+            { source: 'lang', target: 'ds', color: '#39ff14' },
+            { source: 'lang', target: 'algo', color: '#39ff14' },
+            { source: 'practice', target: 'mock', color: '#ffff00' },
+            { source: 'resume', target: 'mock', color: '#ff00ff' },
+            { source: 'os', target: 'sysd', color: '#00ffff' },
+            { source: 'db', target: 'sysd', color: '#00ffff' },
+            { source: 'network', target: 'sysd', color: '#00ffff' }
+        ];
+
+        const initialNodes = JSON.parse(JSON.stringify(nodes)); // Keep initial positions
+
+        let draggingNode = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let hoveredNode = null;
+        let showLabels = true;
+        let autoDemoRunning = false;
+        let autoDemoStep = 0;
+        let lastTime = 0;
+        let fps = 0;
+
+        function resizeCanvas() {
+            const main = document.querySelector('main');
+            canvas.width = main.clientWidth;
+            canvas.height = main.clientHeight;
+            if (initialNodes[0].x === 0) { // Initialize positions only once
+                 distributeNodes();
+            }
+            draw();
+        }
+
+        function distributeNodes() {
+             const centerX = canvas.width / 2;
+             const centerY = canvas.height / 2;
+             const radius = Math.min(canvas.width, canvas.height) * 0.4;
+             const angleStep = (Math.PI * 2) / nodes.length;
+
+             nodes.forEach((node, index) => {
+                 // Simple circular distribution for initial state
+                 const angle = index * angleStep;
+                 node.x = centerX + radius * Math.cos(angle);
+                 node.y = centerY + radius * Math.sin(angle);
+
+                 // Store initial state
+                 initialNodes[index].x = node.x;
+                 initialNodes[index].y = node.y;
+             });
+        }
+
+
+        function getNodeById(id) {
+            return nodes.find(node => node.id === id);
+        }
+
+        function drawNode(node) {
+            // Draw glow effect (multiple transparent circles)
+            const glowColor = node.color;
+            const glowRadius = node.r;
+            for (let i = 0; i < 10; i++) {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, glowRadius + i * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = `${glowColor}05`; // Low opacity
+                ctx.fill();
+            }
+
+            // Draw node circle
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+            ctx.fillStyle = node === draggingNode || node === hoveredNode ? '#fff' : '#111'; // Highlight on drag/hover
+            ctx.strokeStyle = node.color;
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw text label
+            if (showLabels) {
+                ctx.fillStyle = node === draggingNode || node === hoveredNode ? node.color : '#f0f0f0'; // Text color
+                 ctx.shadowColor = node.color;
+                 ctx.shadowBlur = 5;
+                ctx.font = `${Math.max(10, node.r * 0.5)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.name, node.x, node.y);
+                 ctx.shadowBlur = 0; // Reset shadow
+            }
+        }
+
+        function drawLink(link) {
+            const sourceNode = getNodeById(link.source);
+            const targetNode = getNodeById(link.target);
+            if (!sourceNode || !targetNode) return;
+
+            ctx.beginPath();
+            ctx.moveTo(sourceNode.x, sourceNode.y);
+            ctx.lineTo(targetNode.x, targetNode.y);
+            ctx.strokeStyle = link.color + '80'; // Semi-transparent neon
+             ctx.lineWidth = 2;
+
+            // Draw glow effect for links (multiple strokes)
+             for (let i = 0; i < 5; i++) {
+                 ctx.strokeStyle = link.color + '15'; // Even lower opacity
+                 ctx.lineWidth = 2 + i * 0.5;
+                 ctx.stroke();
+             }
+
+             ctx.strokeStyle = link.color + '80'; // Original opacity stroke
+             ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            links.forEach(drawLink);
+            nodes.forEach(drawNode);
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+
+        function isMouseOverNode(x, y, node) {
+            const distSq = (x - node.x) * (x - node.x) + (y - node.y) * (y - node.y);
+            return distSq < node.r * node.r;
+        }
+
+        function handleMouseDown(evt) {
+            const mousePos = getMousePos(evt);
+            for (let i = nodes.length - 1; i >= 0; i--) { // Check top node first
+                const node = nodes[i];
+                if (isMouseOverNode(mousePos.x, mousePos.y, node)) {
+                    draggingNode = node;
+                    dragOffsetX = mousePos.x - node.x;
+                    dragOffsetY = mousePos.y - node.y;
+                    canvas.style.cursor = 'grabbing';
+                    // Bring dragged node to front for drawing
+                    nodes.splice(i, 1);
+                    nodes.push(node);
+                    draw();
+                    return;
+                }
+            }
+             canvas.style.cursor = 'grab'; // Indicate canvas is draggable background (optional)
+        }
+
+        function handleMouseMove(evt) {
+            const mousePos = getMousePos(evt);
+
+            if (draggingNode) {
+                draggingNode.x = mousePos.x - dragOffsetX;
+                draggingNode.y = mousePos.y - dragOffsetY;
+                draw();
+            } else {
+                let foundHover = false;
+                for (let i = nodes.length - 1; i >= 0; i--) {
+                    const node = nodes[i];
+                    if (isMouseOverNode(mousePos.x, mousePos.y, node)) {
+                        if (hoveredNode !== node) {
+                            hoveredNode = node;
+                            showTooltip(node, mousePos);
+                            canvas.style.cursor = 'pointer';
+                            draw();
+                        }
+                        foundHover = true;
+                        break;
+                    }
+                }
+
+                if (!foundHover && hoveredNode) {
+                    hideTooltip();
+                    hoveredNode = null;
+                    canvas.style.cursor = 'default';
+                    draw();
+                } else if (!foundHover && !draggingNode) {
+                    canvas.style.cursor = 'default';
+                }
+            }
+        }
+
+        function handleMouseUp() {
+            draggingNode = null;
+            canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
+        }
+
+        function handleMouseOut() {
+             if (hoveredNode) {
+                hideTooltip();
+                hoveredNode = null;
+                draw();
+             }
+             if (!draggingNode) {
+                canvas.style.cursor = 'default';
+             }
+        }
+
+        function handleCanvasClick(evt) {
+            const mousePos = getMousePos(evt);
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                 const node = nodes[i];
+                 if (isMouseOverNode(mousePos.x, mousePos.y, node)) {
+                     // Optional: Add a specific action on click if needed
+                     // console.log('Clicked node:', node.name);
+                     break;
+                 }
+            }
+        }
+
+
+        function showTooltip(node, mousePos) {
+            tooltipDiv.innerHTML = `<strong>${node.name}</strong><p>${node.desc}</p>`;
+            tooltipDiv.style.left = `${mousePos.x + 15}px`;
+            tooltipDiv.style.top = `${mousePos.y + 15}px`;
+            tooltipDiv.style.opacity = 1;
+
+            // Adjust tooltip position if it goes off-screen
+             const rect = tooltipDiv.getBoundingClientRect();
+             if (rect.right > canvas.width) {
+                 tooltipDiv.style.left = `${mousePos.x - rect.width - 15}px`;
+             }
+             if (rect.bottom > canvas.height) {
+                 tooltipDiv.style.top = `${mousePos.y - rect.height - 15}px`;
+             }
+        }
+
+        function hideTooltip() {
+            tooltipDiv.style.opacity = 0;
+        }
+
+        function resetLayout() {
+            nodes.forEach((node, index) => {
+                node.x = initialNodes[index].x;
+                node.y = initialNodes[index].y;
+            });
+            draw();
+        }
+
+        function randomizeLayout() {
+            nodes.forEach(node => {
+                node.x = Math.random() * canvas.width;
+                node.y = Math.random() * canvas.height;
+            });
+             // Ensure nodes are within bounds after randomization (optional, but good practice)
+            nodes.forEach(node => {
+                node.x = Math.max(node.r, Math.min(canvas.width - node.r, node.x));
+                node.y = Math.max(node.r, Math.min(canvas.height - node.r, node.y));
+            });
+            draw();
+        }
+
+        function toggleLabels() {
+             showLabels = !showLabels;
+             toggleLabelsBtn.textContent = showLabels ? 'Hide Labels' : 'Show Labels';
+             draw();
+        }
+
+        function runAutoDemo(timestamp) {
+            if (!autoDemoRunning) {
+                 autoDemoBtn.textContent = 'Auto Demo';
+                 return;
+            }
+
+            // Simple demo: Cycle through highlighting nodes
+            const demoNodes = ['ds', 'algo', 'sysd', 'behave', 'practice', 'mock']; // Nodes to highlight
+            const demoInterval = 120; // Frames per step (approx 2 seconds)
+
+            if (timestamp - (autoDemoRunning.lastFrame || 0) > demoInterval) {
+                 hideTooltip(); // Hide tooltip during demo
+                 if (hoveredNode) { // Clear hover state if it was active
+                     hoveredNode = null;
+                     draw(); // Redraw to clear hover highlight
+                 }
+
+                 autoDemoStep = (autoDemoStep + 1) % demoNodes.length;
+                 const nodeIdToHighlight = demoNodes[autoDemoStep];
+                 const nodeToHighlight = getNodeById(nodeIdToHighlight);
+
+                 if (nodeToHighlight) {
+                     // Simulate hover for highlighting
+                     hoveredNode = nodeToHighlight;
+                      // Position tooltip near the node during demo
+                     showTooltip(nodeToHighlight, {x: nodeToHighlight.x, y: nodeToHighlight.y});
+                 }
+
+                 autoDemoRunning.lastFrame = timestamp;
+            }
+
+            requestAnimationFrame(runAutoDemo);
+            draw(); // Always draw during the demo loop
+        }
+
+        function startAutoDemo() {
+            if (!autoDemoRunning) {
+                autoDemoRunning = { lastFrame: performance.now() };
+                autoDemoStep = -1; // Start before the first step
+                 autoDemoBtn.textContent = 'Stop Demo';
+                runAutoDemo(performance.now()); // Start the loop
+            } else {
+                stopAutoDemo();
+            }
+        }
+
+        function stopAutoDemo() {
+             if (autoDemoRunning) {
+                 autoDemoRunning = false;
+                 autoDemoBtn.textContent = 'Auto Demo';
+                 hideTooltip();
+                 if (hoveredNode) {
+                     hoveredNode = null;
+                     draw(); // Redraw to remove demo highlight
+                 }
+             }
+        }
+
+
+        function gameLoop(timestamp) {
+            // FPS Counter
+            if (!lastTime) lastTime = timestamp;
+            const delta = timestamp - lastTime;
+            lastTime = timestamp;
+            fps = Math.round(1000 / delta);
+            if (fpsCounterDiv) fpsCounterDiv.textContent = `FPS: ${fps}`;
+
+
+             // Drawing is handled by mousemove, mouseup, resize, button clicks, autoDemo
+             // If no interaction is happening, no need to redraw constantly unless autoDemo is running.
+             // However, requestAnimationFrame is good for future animations/physics.
+             // For now, only draw if dragging, auto-demo, or hover state changes.
+             // Let's keep a simple draw() call in rAF for robustness with potential future features.
+
+             if (draggingNode || autoDemoRunning) {
+                draw();
+             }
+             // Redrawing on hover is handled in mousemove
+
+            requestAnimationFrame(gameLoop);
+        }
+
+
+        // Event Listeners
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseout', handleMouseOut);
+        canvas.addEventListener('click', handleCanvasClick); // For potential click actions
+
+        resetBtn.addEventListener('click', resetLayout);
+        randomizeBtn.addEventListener('click', randomizeLayout);
+        autoDemoBtn.addEventListener('click', startAutoDemo);
+        toggleLabelsBtn.addEventListener('click', toggleLabels);
+
+
+        // Initial setup
+        resizeCanvas(); // Set initial canvas size and distribute nodes
+        requestAnimationFrame(gameLoop); // Start the animation loop
+    </script>
+</body>
+</html>

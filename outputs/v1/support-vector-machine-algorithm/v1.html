@@ -1,0 +1,951 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVM Visualizer - Minimalist</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #0f0; /* Neon green */
+            font-family: 'Share Tech Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            cursor: default; /* Default cursor */
+            user-select: none; /* Prevent text selection */
+        }
+
+        header {
+            flex-shrink: 0;
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 2.5vh;
+            text-shadow: 0 0 1vh #0f0;
+            border-bottom: 0.2vh solid #0f0;
+            box-shadow: 0 0 2vh #0f0;
+            position: relative;
+            z-index: 10;
+            pointer-events: none; /* Allow clicks to pass through header */
+        }
+         header span { /* Style for the cyan part */
+             pointer-events: auto; /* Re-enable pointer events for child elements if needed */
+         }
+
+
+        .container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative; /* For absolute positioning of canvas */
+            width: 100%;
+             /* No fixed height, flex-grow takes care of it */
+        }
+
+        canvas {
+            display: block;
+            border: 0.2vh solid #0ff; /* Neon cyan border */
+            box-shadow: 0 0 2vh #0ff;
+            cursor: crosshair; /* Default canvas cursor */
+        }
+
+        .controls {
+            position: absolute;
+            top: 2vh;
+            right: 2vw;
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+            z-index: 20;
+        }
+
+        .controls button, .controls label {
+            background: none;
+            border: 0.2vh solid #ff00ff; /* Neon pink */
+            color: #ff00ff;
+            padding: 1vh 1.5vw;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.8vh;
+            cursor: pointer;
+            text-shadow: 0 0 0.5vh #ff00ff;
+            box-shadow: 0 0 1vh #ff00ff;
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+             user-select: none;
+        }
+
+        .controls button:hover, .controls label:hover {
+            text-shadow: 0 0 1vh #ff00ff, 0 0 2vh #ff00ff;
+            box-shadow: 0 0 1.5vh #ff00ff, 0 0 3vh #ff00ff;
+        }
+
+        .controls button:active {
+            box-shadow: none;
+            text-shadow: none;
+        }
+
+        .controls label {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+        }
+
+        .controls input[type="checkbox"] {
+            appearance: none;
+            width: 2vh;
+            height: 2vh;
+            border: 0.2vh solid #00ffff; /* Neon cyan */
+            position: relative;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 0 0.5vh #00ffff;
+            transition: box-shadow 0.2s ease-in-out;
+             flex-shrink: 0; /* Prevent checkbox from shrinking */
+        }
+
+        .controls input[type="checkbox"]:checked {
+            background-color: #00ffff;
+            box-shadow: 0 0 1vh #00ffff, 0 0 2vh #00ffff;
+        }
+
+        .controls input[type="checkbox"]:checked::after {
+             content: '✓';
+             position: absolute;
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%);
+             color: #000;
+             font-size: 1.5vh;
+             font-weight: bold;
+             line-height: 1; /* Ensure checkmark is centered */
+        }
+
+
+        footer {
+            flex-shrink: 0;
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 1.8vh;
+            border-top: 0.2vh solid #00f; /* Neon blue */
+            box-shadow: 0 0 2vh #00f;
+            position: relative;
+            z-index: 10;
+             pointer-events: none; /* Allow clicks to pass through footer */
+        }
+
+        footer a {
+            color: #0ff; /* Neon cyan */
+            text-decoration: none;
+            margin: 0 1vw;
+            text-shadow: 0 0 0.5vh #0ff;
+            transition: text-shadow 0.2s ease-in-out;
+            pointer-events: auto; /* Re-enable pointer events for links */
+        }
+
+        footer a:hover {
+            text-shadow: 0 0 1vh #0ff, 0 0 2vh #0ff;
+        }
+
+        .tooltip {
+            position: fixed; /* Use fixed to position relative to viewport */
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 0.1vh solid #0ff;
+            color: #0ff;
+            padding: 0.5vh 1vw;
+            font-size: 1.6vh;
+            pointer-events: none; /* Allow clicks to pass through */
+            z-index: 100;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            text-shadow: 0 0 0.3vh #0ff;
+            box-shadow: 0 0 0.5vh #0ff;
+            transform: translate(15px, 15px); /* Offset from cursor position */
+        }
+
+        .fps-display {
+            position: absolute;
+            bottom: 2vh;
+            left: 2vw;
+            font-size: 1.8vh;
+            color: #ff00ff; /* Neon pink */
+            text-shadow: 0 0 0.5vh #ff00ff;
+            z-index: 20;
+             pointer-events: none; /* Allow clicks to pass through */
+        }
+
+        /* Custom Cursors for dragging */
+        .canvas-grab {
+            cursor: grab !important;
+        }
+        .canvas-grabbing {
+            cursor: grabbing !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        SVM Visualizer <span style="color: #0ff;">[Support Vector Machines]</span>
+    </header>
+
+    <div class="container">
+        <canvas id="svmCanvas"></canvas>
+
+        <div class="controls">
+            <button id="resetBtn" title="Clear all points and reset line">Reset</button>
+            <button id="randomizeBtn" title="Generate random data points">Randomize</button>
+            <button id="autoDemoBtn" title="Run guided tour (stops if you interact)">Auto Demo</button>
+            <label title="Toggle visibility of margin lines"><input type="checkbox" id="toggleMargins" checked> Show Margins</label>
+            <label title="Toggle highlighting of points closest to margin (Support Vectors)"><input type="checkbox" id="toggleSupportVectors" checked> Show Support Vectors</label>
+            <label title="Highlight points on the wrong side of the line"><input type="checkbox" id="toggleMisclassified"> Highlight Misclassified</label>
+        </div>
+    </div>
+
+    <footer>
+        Created by a minimalist developer with 20+ years of experience.
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <div class="fps-display" id="fpsDisplay">FPS: --</div>
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const canvas = document.getElementById('svmCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.querySelector('.container');
+        const resetButton = document.getElementById('resetBtn');
+        const randomizeButton = document.getElementById('randomizeBtn');
+        const autoDemoButton = document.getElementById('autoDemoBtn');
+        const toggleMargins = document.getElementById('toggleMargins');
+        const toggleSupportVectors = document.getElementById('toggleSupportVectors');
+        const toggleMisclassified = document.getElementById('toggleMisclassified');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+        const tooltipDiv = document.getElementById('tooltip');
+
+        let points = []; // Array of {x, y, class: 1 or -1}
+        let hyperplane = { angle: Math.PI / 4, offset: 0 }; // angle in radians, offset from center
+        let margin = 0;
+        let supportVectors = [];
+        let misclassifiedPoints = [];
+
+        let isDraggingPoint = false;
+        let draggingPointIndex = -1;
+        let isDraggingLine = false;
+        let isDraggingMargin = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let initialHyperplane = { ...hyperplane };
+        let initialMargin = margin;
+        let lineRefX = 0, lineRefY = 0; // Point on the initial line closest to drag start
+
+        let showMargins = toggleMargins.checked;
+        let showSupportVectors = toggleSupportVectors.checked;
+        let showMisclassified = toggleMisclassified.checked;
+
+        let animationFrameId = null;
+        let lastFrameTime = 0;
+
+        let autoDemoInterval = null;
+
+        // --- Canvas Sizing ---
+        function resizeCanvas() {
+            const containerRect = container.getBoundingClientRect();
+            // Calculate canvas dimensions based on a ratio of the container size
+            const aspectRatio = 16 / 9; // Desired aspect ratio, or derive from container if needed
+            let containerWidth = containerRect.width * 0.96;
+            let containerHeight = containerRect.height * 0.96;
+
+            let canvasWidth, canvasHeight;
+
+            // Fit canvas maintaining aspect ratio within 96% of container
+            if (containerWidth / aspectRatio > containerHeight) {
+                 canvasHeight = containerHeight;
+                 canvasWidth = containerHeight * aspectRatio;
+            } else {
+                 canvasWidth = containerWidth;
+                 canvasHeight = containerWidth / aspectRatio;
+            }
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+             // Center the canvas within the container visually
+             canvas.style.position = 'absolute';
+             canvas.style.left = '50%';
+             canvas.style.top = '50%';
+             canvas.style.transform = 'translate(-50%, -50%)';
+
+            updateSVMState(); // Recalculate positions/state based on new size
+            // No need to call draw() explicitly, it's in the animation loop
+        }
+
+        // --- Drawing Functions ---
+        function drawGrid() {
+            ctx.strokeStyle = '#1a1a1a'; // Dark grey
+            ctx.lineWidth = 0.5; // Use slightly thicker lines
+            const step = Math.min(canvas.width, canvas.height) / 20; // Grid step based on size
+
+            // Vertical lines
+            for (let x = 0; x <= canvas.width; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            // Horizontal lines
+            for (let y = 0; y <= canvas.height; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawPoints() {
+            points.forEach((point, index) => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 6, 0, Math.PI * 2); // Point radius 6px
+
+                let color = point.class === 1 ? '#00ffff' : '#ff00ff'; // Cyan for class 1, Pink for class -1
+                let glowColor = point.class === 1 ? '#00ffff' : '#ff00ff';
+
+                const isMisclassified = showMisclassified && misclassifiedPoints.includes(index);
+                const isSupportVector = showSupportVectors && supportVectors.includes(index);
+
+                if (isMisclassified) {
+                     color = '#ff0000'; // Red for misclassified
+                     glowColor = '#ff0000';
+                }
+
+
+                ctx.fillStyle = color;
+                ctx.shadowColor = glowColor;
+                ctx.shadowBlur = isSupportVector || isMisclassified ? 15 : 8; // More glow for SV/misclassified
+                ctx.fill();
+
+                // Draw support vector outline
+                if (isSupportVector) {
+                    ctx.strokeStyle = '#0f0'; // Green outline
+                    ctx.lineWidth = 3;
+                     // Shadow already set for fill, applies to stroke too
+                    ctx.stroke();
+                } else if (isMisclassified) {
+                    // Maybe a different outline for misclassified if not also SV?
+                     // For simplicity, let SV outline override misclassified highlight
+                }
+
+
+                ctx.shadowBlur = 0; // Reset shadow
+            });
+        }
+
+        function drawHyperplane() {
+            ctx.beginPath();
+            ctx.strokeStyle = '#0f0'; // Green line
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#0f0';
+            ctx.shadowBlur = 10;
+
+            // Calculate line endpoints based on angle and offset
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const lineLength = Math.max(canvas.width, canvas.height) * 2; // Extend line beyond canvas
+            const anglePerpendicular = hyperplane.angle + Math.PI / 2; // Angle of the line itself
+            const offsetX = Math.cos(hyperplane.angle) * hyperplane.offset;
+            const offsetY = Math.sin(hyperplane.angle) * hyperplane.offset;
+
+            const p1x = centerX + offsetX + Math.cos(anglePerpendicular) * lineLength / 2;
+            const p1y = centerY + offsetY + Math.sin(anglePerpendicular) * lineLength / 2;
+            const p2x = centerX + offsetX - Math.cos(anglePerpendicular) * lineLength / 2;
+            const p2y = centerY + offsetY - Math.sin(anglePerpendicular) * lineLength / 2;
+
+            ctx.moveTo(p1x, p1y);
+            ctx.lineTo(p2x, p2y);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawMargins() {
+            if (!showMargins || margin <= 0) return;
+
+            ctx.strokeStyle = '#00f'; // Blue margin lines
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = '#00f';
+            ctx.shadowBlur = 8;
+            ctx.setLineDash([5, 5]); // Dashed line
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const lineLength = Math.max(canvas.width, canvas.height) * 2;
+            const anglePerpendicular = hyperplane.angle + Math.PI / 2;
+
+            // Calculate points for margin lines
+            // Margin 1 (offset + margin)
+            const offsetX1 = Math.cos(hyperplane.angle) * (hyperplane.offset + margin);
+            const offsetY1 = Math.sin(hyperplane.angle) * (hyperplane.offset + margin);
+            const m1p1x = centerX + offsetX1 + Math.cos(anglePerpendicular) * lineLength / 2;
+            const m1p1y = centerY + offsetY1 + Math.sin(anglePerpendicular) * lineLength / 2;
+            const m1p2x = centerX + offsetX1 - Math.cos(anglePerpendicular) * lineLength / 2;
+            const m1p2y = centerY + offsetY1 - Math.sin(anglePerpendicular) * lineLength / 2;
+
+            // Margin 2 (offset - margin)
+            const offsetX2 = Math.cos(hyperplane.angle) * (hyperplane.offset - margin);
+            const offsetY2 = Math.sin(hyperplane.angle) * (hyperplane.offset - margin);
+            const m2p1x = centerX + offsetX2 + Math.cos(anglePerpendicular) * lineLength / 2;
+            const m2p1y = centerY + offsetY2 + Math.sin(anglePerpendicular) * lineLength / 2;
+            const m2p2x = centerX + offsetX2 - Math.cos(anglePerpendicular) * lineLength / 2;
+            const m2p2y = centerY + offsetY2 - Math.sin(anglePerpendicular) * lineLength / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(m1p1x, m1p1y);
+            ctx.lineTo(m1p2x, m2p2y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(m2p1x, m2p1y);
+            ctx.lineTo(m2p2x, m2p2y);
+            ctx.stroke();
+
+            ctx.setLineDash([]); // Reset line dash
+            ctx.shadowBlur = 0;
+        }
+
+        // --- Calculation Functions ---
+        // Helper: Get distance from a point (px, py) to a line defined by angle and offset from center
+        // Line equation: (x - cx)cos(angle) + (y - cy)sin(angle) - offset = 0
+        // distance is (px - cx)cos(angle) + (py - cy)sin(angle) - offset
+        function getDistanceToLine(px, py, angle, offset) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const rx = px - centerX;
+            const ry = py - centerY;
+            const dist = rx * Math.cos(angle) + ry * Math.sin(angle) - offset;
+            return dist; // Signed distance
+        }
+
+        function updateSVMState() {
+             if (points.length === 0) {
+                margin = 0;
+                supportVectors = [];
+                misclassifiedPoints = [];
+                return;
+             }
+
+             let minPosDist = Infinity;
+             let maxNegDist = -Infinity;
+             supportVectors = [];
+             misclassifiedPoints = [];
+
+             points.forEach((point, index) => {
+                 const dist = getDistanceToLine(point.x, point.y, hyperplane.angle, hyperplane.offset);
+
+                 // Check for misclassification
+                 if ((point.class === 1 && dist < 0) || (point.class === -1 && dist > 0)) {
+                     misclassifiedPoints.push(index);
+                 }
+
+                 // Find potential support vectors and margin
+                 if (point.class === 1) {
+                     minPosDist = Math.min(minPosDist, dist);
+                 } else { // class -1
+                     maxNegDist = Math.max(maxNegDist, dist);
+                 }
+             });
+
+             // Calculate margin
+             // A separating line exists if minPosDist > maxNegDist
+             if (minPosDist !== Infinity && maxNegDist !== -Infinity && minPosDist > maxNegDist) {
+                 // The distance between margin boundaries is minPosDist - maxNegDist.
+                 // The margin is half of this distance, relative to the line.
+                 // Or, it's the smallest absolute distance from the line to any support vector.
+                 // In the ideal separable case, distance to margin is 1/-1 for points on margin.
+                 // Here, distance is in pixels. So margin is the smallest distance.
+                 margin = Math.min(minPosDist, -maxNegDist); // Smallest distance from line to nearest point of either class
+             } else {
+                 margin = 0; // Not separable by this line or only one class present
+             }
+
+             // Identify support vectors (points closest to the margin boundary)
+             if (margin > 0) {
+                points.forEach((point, index) => {
+                    const dist = getDistanceToLine(point.x, point.y, hyperplane.angle, hyperplane.offset);
+                    const threshold = 5; // Pixels threshold for considering a point a support vector
+                    // Check if point is near the margin boundaries (+margin or -margin)
+                    if (Math.abs(Math.abs(dist) - margin) < threshold) {
+                         // Also check if the point is on the correct side (or misclassified, they can still be SV candidates in soft margin)
+                         // For this visualization, let's stick to points *correctly* classified and near margin.
+                         if ((point.class === 1 && dist >= -threshold) || (point.class === -1 && dist <= threshold)) { // Allow slight overlap due to threshold
+                            supportVectors.push(index);
+                         }
+                    }
+                });
+             } else {
+                 supportVectors = []; // No margin, no clear support vectors
+             }
+        }
+
+
+        // --- Drawing Loop ---
+        function draw(currentTime) {
+            if (!lastFrameTime) lastFrameTime = currentTime;
+            updateFps(currentTime);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill background
+
+            drawGrid();
+            drawHyperplane();
+            drawMargins();
+            drawPoints();
+
+            // Request next frame
+            animationFrameId = requestAnimationFrame(draw);
+        }
+
+        // --- Event Handlers ---
+        canvas.addEventListener('mousedown', (e) => {
+            if (autoDemoInterval) {
+                 clearInterval(autoDemoInterval);
+                 autoDemoInterval = null;
+                 autoDemoButton.textContent = 'Auto Demo';
+                 autoDemoButton.style.cssText = '';
+            }
+
+            // Get mouse position relative to canvas
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Check if clicking on a point
+            draggingPointIndex = points.findIndex(point => {
+                const dist = Math.sqrt((x - point.x)**2 + (y - point.y)**2);
+                return dist < 10; // Hit radius 10px
+            });
+
+            if (draggingPointIndex !== -1) {
+                isDraggingPoint = true;
+                 canvas.classList.add('canvas-grabbing');
+                 dragStartX = x;
+                 dragStartY = y;
+                 // Prevent default right-click context menu when dragging point
+                 if (e.button === 2) e.preventDefault();
+            } else {
+                 // Check if clicking on the hyperplane or margin
+                 const distToLine = getDistanceToLine(x, y, hyperplane.angle, hyperplane.offset);
+                 const distAbs = Math.abs(distToLine);
+                 const hitThreshold = 8; // px
+
+                 if (showMargins && margin > 0) {
+                     const distToMargin1 = Math.abs(distAbs - margin);
+                     const distToMargin2 = Math.abs(distAbs - margin); // Same distance from line to either margin
+                     if (distToMargin1 < hitThreshold) {
+                          isDraggingMargin = true;
+                          canvas.classList.add('canvas-grab');
+                          dragStartX = x;
+                          dragStartY = y;
+                          initialHyperplane = { ...hyperplane };
+                           // Calculate the point on the initial line closest to drag start
+                            const centerX = canvas.width / 2;
+                            const centerY = canvas.height / 2;
+                            const initialNormalX = Math.cos(initialHyperplane.angle);
+                            const initialNormalY = Math.sin(initialHyperplane.angle);
+                             // Projection of drag start relative to center onto initial normal
+                            const proj = (dragStartX - centerX) * initialNormalX + (dragStartY - centerY) * initialNormalY;
+                            // Point on initial line closest to drag start
+                            lineRefX = centerX + proj * initialNormalX;
+                            lineRefY = centerY + proj * initialNormalY;
+                     } else if (distAbs < hitThreshold) { // Check line if not hitting margin first
+                          isDraggingLine = true;
+                          canvas.classList.add('canvas-grab');
+                          dragStartX = x;
+                          dragStartY = y;
+                          initialHyperplane = { ...hyperplane };
+                     } else {
+                          // Add new point
+                         const newPoint = { x, y, class: (e.button === 0 || e.shiftKey) ? 1 : -1 }; // Left click or Shift+Left is Class 1, Right is Class -1
+                         points.push(newPoint);
+                         updateSVMState();
+                     }
+
+                 } else if (distAbs < hitThreshold) { // Check line only if margins are off or 0
+                      isDraggingLine = true;
+                      canvas.classList.add('canvas-grab');
+                      dragStartX = x;
+                      dragStartY = y;
+                      initialHyperplane = { ...hyperplane };
+                 } else {
+                      // Add new point
+                     const newPoint = { x, y, class: (e.button === 0 || e.shiftKey) ? 1 : -1 }; // Left click or Shift+Left is Class 1, Right is Class -1
+                     points.push(newPoint);
+                     updateSVMState();
+                 }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (isDraggingPoint) {
+                points[draggingPointIndex].x = x;
+                points[draggingPointIndex].y = y;
+                updateSVMState();
+            } else if (isDraggingLine) {
+                // Calculate translation vector
+                const dx = x - dragStartX;
+                const dy = y - dragStartY;
+
+                // Project translation onto the direction perpendicular to the line (normal vector)
+                // This ensures we only translate the line perpendicular to itself.
+                const normalX = Math.cos(hyperplane.angle);
+                const normalY = Math.sin(hyperplane.angle);
+                const translationOnNormal = dx * normalX + dy * normalY;
+
+                hyperplane.offset = initialHyperplane.offset + translationOnNormal;
+
+                // Update drag start for next movement (subtract the part of movement *along* the line)
+                // This helps keep the line fixed relative to the mouse in the translation direction
+                 const parallelX = -normalY; // Vector parallel to the line
+                 const parallelY = normalX;
+                 const translationOnParallel = dx * parallelX + dy * parallelY;
+                 dragStartX = x - translationOnParallel * parallelX;
+                 dragStartY = y - translationOnParallel * parallelY;
+
+
+                 updateSVMState();
+
+            } else if (isDraggingMargin) {
+                 // Implement the logic from the comment: Rotate line around lineRef, new margin = dist(mouse, newLine)
+                 const centerX = canvas.width / 2;
+                 const centerY = canvas.height / 2;
+
+                 // Vector from lineRef (point on initial line closest to drag start) to current mouse pos
+                 const vecX = x - lineRefX;
+                 const vecY = y - lineRefY;
+
+                 // New angle: normal is perpendicular to this vector
+                 // Handle zero vector case to avoid NaN
+                 if (vecX !== 0 || vecY !== 0) {
+                     const newNormalAngle = Math.atan2(vecY, vecX); // Angle of the vector from lineRef to mouse
+                     hyperplane.angle = newNormalAngle + Math.PI / 2; // New normal angle is 90deg from this
+
+                     // New offset: Projection of lineRef (relative to center) onto the new normal
+                     const newNormalX = Math.cos(hyperplane.angle);
+                     const newNormalY = Math.sin(hyperplane.angle);
+                     const lineRefX_rel = lineRefX - centerX;
+                     const lineRefY_rel = lineRefY - centerY;
+                     hyperplane.offset = lineRefX_rel * newNormalX + lineRefY_rel * newNormalY;
+
+                     // New margin: Distance from current mouse position to the new hyperplane
+                     margin = Math.abs(getDistanceToLine(x, y, hyperplane.angle, hyperplane.offset));
+                 }
+
+
+                 updateSVMState();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isDraggingPoint || isDraggingLine || isDraggingMargin) {
+                isDraggingPoint = false;
+                isDraggingLine = false;
+                isDraggingMargin = false;
+                draggingPointIndex = -1;
+                 canvas.classList.remove('canvas-grab');
+                 canvas.classList.remove('canvas-grabbing');
+                updateSVMState(); // Final state update after drag ends
+            }
+        });
+
+        // Prevent context menu on right-click
+        canvas.addEventListener('contextmenu', (e) => {
+             // Only prevent if not dragging a point (handled in mousedown)
+             if (!isDraggingPoint) {
+                e.preventDefault();
+             }
+        });
+
+        // --- UI Button Handlers ---
+        resetButton.addEventListener('click', () => {
+            points = [];
+            hyperplane = { angle: Math.PI / 4, offset: 0 };
+            margin = 0;
+             if (autoDemoInterval) {
+                clearInterval(autoDemoInterval);
+                autoDemoInterval = null;
+                autoDemoButton.textContent = 'Auto Demo';
+                autoDemoButton.style.cssText = '';
+             }
+            updateSVMState();
+        });
+
+        randomizeButton.addEventListener('click', () => {
+             if (autoDemoInterval) {
+                clearInterval(autoDemoInterval);
+                autoDemoInterval = null;
+                autoDemoButton.textContent = 'Auto Demo';
+                autoDemoButton.style.cssText = '';
+             }
+
+             points = [];
+             const numPoints = Math.random() * 30 + 20; // 20 to 50 points
+             const sepDistance = Math.min(canvas.width, canvas.height) / (3 + Math.random() * 3); // Separation amount (larger value means less separation)
+             const separationAngle = Math.random() * Math.PI * 2; // Angle of the separation line
+
+             const centerX = canvas.width / 2;
+             const centerY = canvas.height / 2;
+
+             for (let i = 0; i < numPoints; i++) {
+                 let x, y, cls;
+                 let angleSpread = Math.random() * Math.PI/2 - Math.PI/4; // Spread points angularly
+                 let distSpread = Math.random() * sepDistance; // Spread points radially
+
+                 if (Math.random() > 0.5) { // Class 1
+                     cls = 1;
+                     x = centerX + Math.cos(separationAngle + angleSpread) * (sepDistance * 1.5 + distSpread);
+                     y = centerY + Math.sin(separationAngle + angleSpread) * (sepDistance * 1.5 + distSpread);
+                 } else { // Class -1
+                     cls = -1;
+                      x = centerX + Math.cos(separationAngle + angleSpread + Math.PI) * (sepDistance * 1.5 + distSpread); // Opposite direction
+                      y = centerY + Math.sin(separationAngle + angleSpread + Math.PI) * (sepDistance * 1.5 + distSpread);
+                 }
+
+                 // Simple bounds check - reject points too far out
+                 if (Math.abs(x - centerX) > canvas.width/2 || Math.abs(y - centerY) > canvas.height/2) {
+                      i--; // Regenerate this point
+                      continue;
+                 }
+
+                 points.push({ x, y, class: cls });
+             }
+             // Set a default line perpendicular to the separation angle, initially centered
+             hyperplane = { angle: separationAngle + Math.PI/2, offset: 0 };
+             updateSVMState();
+        });
+
+
+        autoDemoButton.addEventListener('click', () => {
+            if (autoDemoInterval) {
+                clearInterval(autoDemoInterval);
+                autoDemoInterval = null;
+                autoDemoButton.textContent = 'Auto Demo';
+                autoDemoButton.style.cssText = ''; // Reset glow/color
+                return;
+            }
+
+            resetButton.click(); // Start from scratch
+            autoDemoButton.textContent = 'Stop Demo';
+            autoDemoButton.style.cssText = 'border-color: #00ffff; color: #00ffff; text-shadow: 0 0 0.5vh #00ffff; box-shadow: 0 0 1vh #00ffff;';
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            let step = 0;
+            const steps = [
+                () => { // Step 1: Add first class points
+                    for(let i=0; i<8; i++) points.push({ x: centerX + Math.random() * centerX * 0.6 - centerX * 0.3, y: centerY + Math.random() * centerY * 0.6 - centerY * 0.3, class: 1 });
+                    updateSVMState();
+                },
+                () => { // Step 2: Add second class points
+                     for(let i=0; i<8; i++) points.push({ x: centerX + Math.random() * centerX * 0.6 + centerX * 0.3, y: centerY + Math.random() * centerY * 0.6 - centerY * 0.3, class: -1 });
+                     updateSVMState();
+                },
+                () => { // Step 3: Add some points closer to center/separation
+                     for(let i=0; i<4; i++) points.push({ x: centerX + Math.random() * centerX * 0.3, y: centerY + Math.random() * centerY * 0.6 - centerY * 0.3, class: 1 });
+                     for(let i=0; i<4; i++) points.push({ x: centerX - Math.random() * centerX * 0.3, y: centerY + Math.random() * centerY * 0.6 - centerY * 0.3, class: -1 });
+                     updateSVMState();
+                },
+                () => { // Step 4: Simulate finding a separating line (basic heuristic)
+                    let sumX1 = 0, sumY1 = 0, count1 = 0;
+                    let sumXNeg1 = 0, sumYNeg1 = 0, countNeg1 = 0;
+                    points.forEach(p => {
+                        if (p.class === 1) { sumX1 += p.x; sumY1 += p.y; count1++; }
+                        else { sumXNeg1 += p.x; sumYNeg1 += p.y; countNeg1++; }
+                    });
+                    if (count1 > 0 && countNeg1 > 0) {
+                        const avgX1 = sumX1 / count1;
+                        const avgY1 = sumY1 / count1;
+                        const avgXNeg1 = sumXNeg1 / countNeg1;
+                        const avgYNeg1 = sumYNeg1 / countNeg1;
+
+                        // Midpoint between centroids
+                        const midX = (avgX1 + avgXNeg1) / 2;
+                        const midY = (avgY1 + avgYNeg1) / 2;
+
+                        // Vector between centroids
+                        const vecX = avgX1 - avgXNeg1;
+                        const vecY = avgY1 - avgYNeg1;
+
+                        // Hyperplane normal is parallel to this vector
+                        hyperplane.angle = Math.atan2(vecY, vecX);
+
+                        // Hyperplane passes through the midpoint
+                        const midX_rel = midX - centerX;
+                        const midY_rel = midY - centerY;
+                         hyperplane.offset = midX_rel * Math.cos(hyperplane.angle) + midY_rel * Math.sin(hyperplane.angle);
+
+                    } else {
+                        // Default line if only one class exists
+                        hyperplane = { angle: Math.PI / 4, offset: 0 };
+                    }
+                     updateSVMState(); // Update after setting line
+                },
+                 () => { // Step 5: Show margins and support vectors
+                     toggleMargins.checked = true; showMargins = true;
+                     toggleSupportVectors.checked = true; showSupportVectors = true;
+                     updateSVMState(); // Update after changing toggles
+                 },
+                () => { // Step 6: Show misclassified
+                    toggleMisclassified.checked = true; showMisclassified = true;
+                    updateSVMState(); // Update after changing toggles
+                },
+                () => { // Step 7: Final state, wait for user interaction or loop
+                     // Stay on this state until stopped manually
+                }
+            ];
+
+             autoDemoInterval = setInterval(() => {
+                if (step < steps.length - 1) {
+                     steps[step]();
+                     step++;
+                } else {
+                     // Last step reached, keep it displayed until manually stopped
+                }
+            }, 3000); // Advance step every 3 seconds
+
+             // Execute the first step immediately
+             if (steps.length > 0) {
+                 steps[step]();
+                 step++;
+             }
+        });
+
+        // --- Toggle Handlers ---
+        toggleMargins.addEventListener('change', (e) => {
+            showMargins = e.target.checked;
+             // No need to updateSVMState here, state doesn't change, just drawing
+        });
+        toggleSupportVectors.addEventListener('change', (e) => {
+            showSupportVectors = e.target.checked;
+             // No need to updateSVMState here
+        });
+         toggleMisclassified.addEventListener('change', (e) => {
+            showMisclassified = e.target.checked;
+             // No need to updateSVMState here
+         });
+
+
+        // --- Tooltips ---
+        document.querySelectorAll('[title]').forEach(el => {
+            // Store original title and remove it to prevent default browser tooltip
+            const originalTitle = el.getAttribute('title');
+            if (originalTitle) {
+                el.dataset.originalTitle = originalTitle;
+                el.removeAttribute('title');
+            }
+
+            el.addEventListener('mouseover', (e) => {
+                const titleText = el.dataset.originalTitle; // Use stored title
+                if (titleText) {
+                    tooltipDiv.textContent = titleText;
+                     // Position initially near the element, then track cursor
+                    const rect = el.getBoundingClientRect();
+                    tooltipDiv.style.left = `${rect.left + rect.width / 2}px`;
+                    tooltipDiv.style.top = `${rect.bottom + 5}px`; // Position below element
+                    tooltipDiv.style.opacity = 1;
+
+                    // Start tracking mouse for fine positioning relative to cursor
+                    document.addEventListener('mousemove', updateTooltipPosition);
+                }
+            });
+
+            el.addEventListener('mouseout', () => {
+                 tooltipDiv.style.opacity = 0;
+                 document.removeEventListener('mousemove', updateTooltipPosition);
+            });
+
+             // Add focus/blur for accessibility (keyboard users)
+             el.addEventListener('focus', (e) => {
+                 const titleText = el.dataset.originalTitle;
+                  if (titleText) {
+                      tooltipDiv.textContent = titleText;
+                       const rect = el.getBoundingClientRect();
+                       tooltipDiv.style.left = `${rect.left + rect.width / 2}px`;
+                       tooltipDiv.style.top = `${rect.bottom + 5}px`;
+                       tooltipDiv.style.opacity = 1;
+                  }
+             });
+             el.addEventListener('blur', () => {
+                 tooltipDiv.style.opacity = 0;
+             });
+        });
+
+         function updateTooltipPosition(e) {
+             // Position relative to cursor, ensuring it stays in bounds
+             const x = e.clientX;
+             const y = e.clientY;
+
+             const tooltipWidth = tooltipDiv.offsetWidth;
+             const tooltipHeight = tooltipDiv.offsetHeight;
+             const viewportWidth = window.innerWidth;
+             const viewportHeight = window.innerHeight;
+
+             let tooltipX = x + 15; // Offset from cursor
+             let tooltipY = y + 15;
+
+             // Adjust if too close to right edge
+             if (tooltipX + tooltipWidth + 5 > viewportWidth) {
+                 tooltipX = x - tooltipWidth - 15;
+             }
+
+             // Adjust if too close to bottom edge
+             if (tooltipY + tooltipHeight + 5 > viewportHeight) {
+                 tooltipY = y - tooltipHeight - 15;
+             }
+
+             tooltipDiv.style.left = `${tooltipX}px`;
+             tooltipDiv.style.top = `${tooltipY}px`;
+         }
+
+
+        // --- FPS Counter ---
+        function updateFps(currentTime) {
+            const elapsed = currentTime - lastFrameTime;
+            lastFrameTime = currentTime;
+            const fps = 1000 / elapsed;
+            // Update every 10 frames for stability
+            if (animationFrameId % 10 === 0) {
+                fpsDisplay.textContent = `FPS: ${Math.round(fps)}`;
+            }
+        }
+
+        // --- Initialization ---
+        window.addEventListener('resize', resizeCanvas);
+        // Use a slight delay for resize to avoid rapid updates
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(resizeCanvas, 100);
+        });
+
+
+        resizeCanvas(); // Initial sizing
+        draw(); // Start the animation loop
+
+
+    </script>
+
+</body>
+</html>

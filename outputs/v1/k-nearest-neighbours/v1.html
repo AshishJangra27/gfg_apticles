@@ -1,0 +1,924 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist KNN Visualizer</title>
+    <style>
+        /* Reset and Basic Layout */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Essential: No scrolling */
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            color: #fff;
+            position: relative; /* For absolute positioning of elements like tooltips */
+            cursor: default; /* Default cursor */
+        }
+
+        /* Neon Theme - Colors and Glows */
+        :root {
+            --neon-blue: #00ffff;
+            --neon-green: #00ff00;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --neon-glow-intensity: 8px;
+        }
+
+        .neon-text {
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+        }
+
+        .neon-button, .neon-slider, .neon-toggle, .neon-input, .neon-label {
+            background-color: rgba(0, 255, 255, 0.1); /* Semi-transparent */
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            text-shadow: 0 0 4px var(--neon-blue);
+            box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-blue);
+            padding: 8px 12px;
+            margin: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            font-size: 0.9em;
+            box-sizing: border-box; /* Include padding and border in element's total width and height */
+        }
+
+        .neon-button:hover, .neon-toggle:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 calc(var(--neon-glow-intensity) * 1.5) var(--neon-blue);
+            text-shadow: 0 0 6px var(--neon-blue);
+        }
+
+        .neon-button:active, .neon-toggle.active {
+             background-color: rgba(0, 255, 255, 0.3);
+             box-shadow: 0 0 calc(var(--neon-glow-intensity) * 2) var(--neon-blue);
+             transform: scale(0.98);
+        }
+
+         .neon-toggle.active {
+             border-color: var(--neon-green);
+             color: var(--neon-green);
+             text-shadow: 0 0 4px var(--neon-green);
+             box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-green);
+         }
+        .neon-toggle.active.class-A {
+             border-color: var(--neon-pink);
+             color: var(--neon-pink);
+             text-shadow: 0 0 4px var(--neon-pink);
+             box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-pink);
+         }
+         .neon-toggle.active.class-B {
+             border-color: var(--neon-yellow);
+             color: var(--neon-yellow);
+             text-shadow: 0 0 4px var(--neon-yellow);
+             box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-yellow);
+         }
+
+         .neon-slider {
+             -webkit-appearance: none;
+             appearance: none;
+             width: 100%; /* Make slider fill container */
+             height: 8px;
+             background: rgba(0, 255, 255, 0.1);
+             outline: none;
+             opacity: 0.7;
+             transition: opacity 0.2s ease-in-out;
+         }
+         .neon-slider:hover {
+             opacity: 1;
+         }
+
+        .neon-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: var(--neon-blue);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-blue);
+             transition: box-shadow 0.2s ease-in-out;
+        }
+        .neon-slider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            background: var(--neon-blue);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-blue);
+             transition: box-shadow 0.2s ease-in-out;
+        }
+         .neon-slider:hover::-webkit-slider-thumb, .neon-slider:hover::-moz-range-thumb {
+             box-shadow: 0 0 12px var(--neon-blue);
+         }
+
+
+        /* Layout Components */
+        header {
+            height: 8vh;
+            min-height: 50px; /* Minimum header height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--neon-blue);
+            box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-blue);
+            z-index: 1; /* Ensure it's above the main content */
+            position: relative;
+            flex-shrink: 0; /* Don't shrink header */
+        }
+
+        header h1 {
+             font-size: 1.5em;
+             margin: 0;
+             padding: 0 10px;
+             text-align: center;
+        }
+
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            /* Height is determined by flex-grow */
+        }
+
+        canvas {
+            flex-grow: 1;
+            display: block;
+            /* The actual canvas size is set by JS for drawing resolution */
+        }
+
+        .controls {
+            width: 280px; /* Fixed width for controls */
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent dark background */
+            border-left: 1px solid var(--neon-blue);
+            box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-blue);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Space between control groups */
+            overflow-y: auto; /* Allow scrolling if controls exceed height */
+             -ms-overflow-style: none;  /* IE and Edge */
+             scrollbar-width: none;  /* Firefox */
+             flex-shrink: 0; /* Don't shrink controls */
+        }
+
+        .controls::-webkit-scrollbar {
+            display: none; /* Hide scrollbar for Chrome, Safari and Opera */
+        }
+
+        .control-group {
+            padding-bottom: 15px; /* More space between groups */
+            border-bottom: 1px dashed rgba(0, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+             gap: 8px; /* More space between elements within a group */
+        }
+         .control-group:last-child {
+             border-bottom: none;
+             padding-bottom: 0;
+         }
+
+        .control-group label {
+            margin-bottom: 5px;
+            font-size: 1em; /* Slightly larger font */
+            color: var(--neon-blue);
+            text-shadow: 0 0 3px var(--neon-blue);
+        }
+
+        .control-group .neon-button,
+        .control-group .neon-toggle {
+            width: 100%; /* Make buttons fill container */
+            text-align: center;
+        }
+
+
+        footer {
+            height: 6vh;
+            min-height: 40px; /* Minimum footer height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid var(--neon-blue);
+            box-shadow: 0 0 var(--neon-glow-intensity) var(--neon-blue);
+            font-size: 0.8em;
+            z-index: 1; /* Ensure it's above the main content */
+            position: relative;
+            flex-shrink: 0; /* Don't shrink footer */
+        }
+
+        footer a {
+            color: var(--neon-green);
+            text-decoration: none;
+            margin: 0 10px;
+            text-shadow: 0 0 4px var(--neon-green);
+             transition: text-shadow 0.2s ease-in-out;
+        }
+
+        footer a:hover {
+            text-shadow: 0 0 8px var(--neon-green), 0 0 12px var(--neon-green);
+        }
+
+        /* Custom Cursors */
+        /* Apply body cursor first, then canvas cursor takes precedence */
+        body.add-cursor-A, canvas.add-cursor-A { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="%23ff00ff" stroke="%23ffffff" stroke-width="1"/></svg>') 12 12, crosshair; }
+        body.add-cursor-B, canvas.add-cursor-B { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="%23ffff00" stroke="%23ffffff" stroke-width="1"/></svg>') 12 12, crosshair; }
+        body.drag-cursor, canvas.drag-cursor { cursor: grabbing; cursor: -webkit-grabbing; }
+
+
+         /* Tooltip Style */
+         /* Use data-tooltip attribute for content */
+         [data-tooltip] {
+            position: relative; /* Needed for absolute positioning of tooltip */
+         }
+
+         [data-tooltip]:hover::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 5px);
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.95); /* More opaque */
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            z-index: 100; /* High z-index */
+            opacity: 0;
+            pointer-events: none; /* Allows clicking through the tooltip */
+            transition: opacity 0.2s ease-in-out;
+            text-shadow: none; /* No text shadow for tooltips */
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.5); /* Subtle glow */
+         }
+
+         [data-tooltip]:hover::before {
+             opacity: 1;
+         }
+
+         /* Hide tooltips on touch devices to avoid sticky tooltips */
+         @media (hover: none) {
+             [data-tooltip]:hover::before {
+                 display: none;
+             }
+         }
+
+          #fpsDisplay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: var(--neon-green);
+            font-size: 0.9em;
+            text-shadow: 0 0 5px var(--neon-green);
+            z-index: 10; /* Ensure it's on top */
+          }
+
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="neon-text">K-Nearest Neighbors (KNN) Visualizer</h1>
+    </header>
+
+    <div id="fpsDisplay" class="neon-text">FPS: --</div>
+
+    <main class="main-content">
+        <canvas id="knnCanvas"></canvas>
+
+        <aside class="controls">
+             <div class="control-group">
+                 <label for="kSlider" class="neon-label">Select K:</label>
+                 <input type="range" id="kSlider" class="neon-slider" min="1" max="15" value="3" step="1">
+                 <span id="kValue" class="neon-text" style="text-align: center;">K = 3</span>
+             </div>
+
+             <div class="control-group">
+                <label class="neon-label">Add Point Class:</label>
+                <button id="addClassToggle" class="neon-toggle class-A" data-tooltip="Click on canvas to add data points of this class.">Add Class A (Pink)</button>
+             </div>
+
+             <div class="control-group">
+                 <label class="neon-label">Actions:</label>
+                 <button id="randomizeBtn" class="neon-button" data-tooltip="Generate random data points for demonstration.">Randomize Data</button>
+                 <button id="resetBtn" class="neon-button" data-tooltip="Clear all data points and the test point.">Reset Canvas</button>
+                 <button id="autoDemoBtn" class="neon-button" data-tooltip="Activate/Deactivate automated demonstration mode.">Start Auto-Demo</button>
+             </div>
+
+             <div class="control-group">
+                 <label class="neon-label">Toggle Display:</label>
+                 <button id="toggleNeighbors" class="neon-toggle" data-tooltip="Show/hide lines to the K nearest neighbors.">Show Neighbors</button>
+                  <button id="toggleClassification" class="neon-toggle" data-tooltip="Show/hide the classified label for the test point.">Show Classification</button>
+             </div>
+
+        </aside>
+    </main>
+
+    <footer>
+        <span class="neon-text">&copy; 2023 Minimalist Dev</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kSlider = document.getElementById('kSlider');
+        const kValueSpan = document.getElementById('kValue');
+        const addClassToggleBtn = document.getElementById('addClassToggle');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const toggleNeighborsBtn = document.getElementById('toggleNeighbors');
+        const toggleClassificationBtn = document.getElementById('toggleClassification');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+
+        let dataPoints = [];
+        let testPoint = null;
+        let k = parseInt(kSlider.value, 10);
+        let addingClass = 'A'; // 'A' for Pink, 'B' for Yellow
+        let isDraggingTestPoint = false;
+        let dragOffsetX, dragOffsetY;
+        let isMouseOverTestPoint = false; // Track if mouse is hovering over test point
+
+        let showNeighbors = true;
+        let showClassification = true;
+
+        let autoDemoActive = false;
+        let autoDemoStep = 0;
+        let autoDemoTimeout; // To control steps
+        let animationFrameId = null; // To control animation frames
+
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        const fpsInterval = 1000; // Update FPS every second
+
+        // --- Configuration ---
+        const pointRadius = 6;
+        const testPointRadius = 8;
+        const classColors = {
+            'A': '#ff00ff', // Neon Pink
+            'B': '#ffff00'  // Neon Yellow
+        };
+        const testPointColor = '#00ffff'; // Neon Blue
+        const neighborLineColor = 'rgba(0, 255, 0, 0.5)'; // Semi-transparent Neon Green
+        const classificationRingColor = '#00ff00'; // Neon Green
+        const dragDetectionRadius = testPointRadius + 5; // Buffer for clicking test point
+
+
+        // --- Helper Functions ---
+
+        function distance(p1, p2) {
+            if (!p1 || !p2) return Infinity;
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        function findNeighbors(point, k, data) {
+            if (!point || !data || data.length === 0 || k <= 0) return [];
+
+            const distances = data.map(p => ({
+                point: p,
+                distance: distance(point, p)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+
+            // Return up to k nearest neighbors
+            return distances.slice(0, Math.min(k, data.length)).map(d => d.point);
+        }
+
+        function classify(point, k, data) {
+             if (!point || !data || data.length === 0 || k <= 0) return null;
+
+            const neighbors = findNeighbors(point, k, data);
+
+             if (neighbors.length === 0) return null;
+
+            const classCounts = {};
+            let majorityClass = null;
+            let maxCount = 0;
+
+            neighbors.forEach(n => {
+                classCounts[n.class] = (classCounts[n.class] || 0) + 1;
+                // Update majority class only if current class count is strictly greater
+                if (classCounts[n.class] > maxCount) {
+                    maxCount = classCounts[n.class];
+                    majorityClass = n.class;
+                }
+                // Simple tie-breaking: The class encountered first amongst those tied for maxCount wins.
+                // This is inherent in how the loop iterates and updates majorityClass.
+            });
+
+            return majorityClass;
+        }
+
+        function getCanvasMousePosition(event) {
+            const rect = canvas.getBoundingClientRect();
+             const devicePixelRatio = window.devicePixelRatio || 1;
+            // Adjust for potential high-DPI screens if canvas size is scaled
+             const scaleX = canvas.width / (rect.width * devicePixelRatio);
+             const scaleY = canvas.height / (rect.height * devicePixelRatio);
+            return {
+                x: (event.clientX - rect.left) * scaleX,
+                y: (event.clientY - rect.top) * scaleY
+            };
+        }
+
+         function setBodyCursor(cursorClass) {
+             // Remove all potential cursor classes from body first
+             document.body.classList.remove('add-cursor-A', 'add-cursor-B', 'drag-cursor');
+             if (cursorClass) {
+                 document.body.classList.add(cursorClass);
+             }
+         }
+
+         function setCanvasCursor(cursorClass) {
+             // Remove all potential cursor classes from canvas first
+             canvas.classList.remove('add-cursor-A', 'add-cursor-B', 'drag-cursor');
+             if (cursorClass) {
+                 canvas.classList.add(cursorClass);
+             } else {
+                 canvas.style.cursor = ''; // Reset to default (which might be set by body)
+             }
+         }
+
+
+        // --- Drawing Functions ---
+
+        function drawPoint(ctx, p, radius, color, borderColor = '#fff', borderWidth = 1) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = borderWidth;
+            ctx.stroke();
+
+            // Add glow effect - redraw with shadow
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow
+        }
+
+        function drawTestPoint(ctx, p, radius, color, classificationColor = null) {
+             // Draw the point itself
+             ctx.beginPath();
+             ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+             ctx.fillStyle = color;
+             ctx.fill();
+             ctx.strokeStyle = '#fff';
+             ctx.lineWidth = 1;
+             ctx.stroke();
+
+             // Add glow effect for the point itself
+             ctx.shadowBlur = 10;
+             ctx.shadowColor = color;
+             ctx.fillStyle = color;
+             ctx.fill();
+             ctx.shadowBlur = 0; // Reset shadow
+
+             // Draw classification ring if needed
+             if (showClassification && classificationColor) {
+                  ctx.beginPath();
+                  ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
+                  ctx.strokeStyle = classificationColor;
+                  ctx.lineWidth = 3;
+                  ctx.shadowBlur = 15;
+                  ctx.shadowColor = classificationColor;
+                  ctx.stroke();
+                  ctx.shadowBlur = 0; // Reset shadow
+             }
+        }
+
+
+        function drawLine(ctx, p1, p2, color, width = 1) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = color;
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow
+        }
+
+        function render() {
+            // Update canvas size to match display size (handles high-DPI)
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+            const devicePixelRatio = window.devicePixelRatio || 1;
+
+             const scaledWidth = displayWidth * devicePixelRatio;
+             const scaledHeight = displayHeight * devicePixelRatio;
+
+             if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
+                canvas.width = scaledWidth;
+                canvas.height = scaledHeight;
+                ctx.scale(devicePixelRatio, devicePixelRatio); // Scale context for high-DPI
+             }
+
+
+            // Clear canvas
+            ctx.clearRect(0, 0, displayWidth, displayHeight); // Clear using display dimensions after scaling context
+
+            // Draw data points
+            dataPoints.forEach(p => {
+                drawPoint(ctx, p, pointRadius, classColors[p.class]);
+            });
+
+            // Draw test point and neighbors/classification
+            if (testPoint) {
+                 const classifiedClass = classify(testPoint, k, dataPoints);
+                 testPoint.class = classifiedClass; // Update test point's internal classification
+                 const classificationColor = classifiedClass ? classColors[classifiedClass] : testPointColor; // Fallback to test point color
+
+                 // Draw neighbors and lines
+                 if (showNeighbors && dataPoints.length > 0) {
+                    const neighbors = findNeighbors(testPoint, k, dataPoints);
+                     neighbors.forEach(n => {
+                         drawLine(ctx, testPoint, n, neighborLineColor, 1);
+                     });
+                 }
+
+                 // Draw the test point itself, potentially with classification ring
+                 drawTestPoint(ctx, testPoint, testPointRadius, testPointColor, classificationColor);
+            }
+
+            // FPS Update
+            const currentTime = performance.now();
+            frameCount++;
+            const elapsed = currentTime - lastFrameTime;
+            if (elapsed >= fpsInterval) {
+                const fps = Math.round((frameCount / elapsed) * 1000);
+                fpsDisplay.textContent = `FPS: ${fps}`;
+                frameCount = 0;
+                lastFrameTime = currentTime;
+            }
+
+            // Request next frame
+            animationFrameId = requestAnimationFrame(render);
+        }
+
+        // --- Event Handlers ---
+
+        function handleCanvasClick(event) {
+            if (autoDemoActive || isDraggingTestPoint) return; // Disable during auto-demo or if dragging just finished
+
+            const pos = getCanvasMousePosition(event);
+
+            // Add a new point if not dragging and not over the test point
+            if (!isMouseOverTestPoint && testPoint) {
+                 dataPoints.push({ x: pos.x, y: pos.y, class: addingClass });
+                  // Ensure K is valid if it was maxed out by previous data count
+                 if (k > dataPoints.length) {
+                     k = dataPoints.length;
+                     kSlider.value = k;
+                     kValueSpan.textContent = `K = ${k}`;
+                 }
+            } else if (!testPoint) {
+                 // If no test point exists, click creates one (handled by mousedown now)
+                 // We could alternatively add a data point here if preferred
+            }
+        }
+
+         function handleCanvasMouseDown(event) {
+            if (autoDemoActive) return; // Disable manual interaction during auto-demo
+
+            const pos = getCanvasMousePosition(event);
+
+             // Check if mouse is over the test point to start dragging
+             if (testPoint && distance(pos, testPoint) < dragDetectionRadius) {
+                isDraggingTestPoint = true;
+                dragOffsetX = pos.x - testPoint.x;
+                dragOffsetY = pos.y - testPoint.y;
+                 setBodyCursor('drag-cursor'); // Change cursor globally during drag
+                 canvas.removeEventListener('click', handleCanvasClick); // Prevent click event when dragging
+             } else {
+                  // If not over test point, treat mousedown as starting point addition,
+                  // but only add on mouseup to prevent adding multiple points while dragging.
+                  // Or, just let click handle point addition if not dragging.
+                  // Sticking to click for adding points, mousedown starts drag if over test point.
+                  // If no test point exists, create one on mousedown to allow dragging immediately.
+                 if (!testPoint) {
+                     testPoint = { x: pos.x, y: pos.y, class: null };
+                     isDraggingTestPoint = true;
+                     dragOffsetX = 0; // Start drag from click point
+                     dragOffsetY = 0;
+                      setBodyCursor('drag-cursor');
+                      canvas.removeEventListener('click', handleCanvasClick);
+                 }
+             }
+         }
+
+         function handleCanvasMouseMove(event) {
+             if (autoDemoActive) return; // Disable manual interaction during auto-demo
+
+             const pos = getCanvasMousePosition(event);
+
+             if (isDraggingTestPoint && testPoint) {
+                testPoint.x = pos.x - dragOffsetX;
+                testPoint.y = pos.y - dragOffsetY;
+
+                 // Clamp test point to canvas bounds
+                 const padding = testPointRadius + 5; // Keep test point fully visible
+                 const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+                 const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+                 testPoint.x = Math.max(padding, Math.min(testPoint.x, canvasWidth - padding));
+                 testPoint.y = Math.max(padding, Math.min(testPoint.y, canvasHeight - padding));
+
+             } else {
+                 // Update cursor based on hover state if not dragging
+                 isMouseOverTestPoint = (testPoint && distance(pos, testPoint) < dragDetectionRadius);
+
+                 if (isMouseOverTestPoint) {
+                      setCanvasCursor('drag-cursor');
+                 } else {
+                     // Restore default cursor for adding point
+                      setCanvasCursor(addingClass === 'A' ? 'add-cursor-A' : 'add-cursor-B');
+                 }
+             }
+         }
+
+         function handleCanvasMouseUp() {
+            if (isDraggingTestPoint) {
+                 isDraggingTestPoint = false;
+                 dragOffsetX = 0;
+                 dragOffsetY = 0;
+                 // Restore cursor based on current mode after drag
+                 if (!autoDemoActive) {
+                      setBodyCursor(addingClass === 'A' ? 'add-cursor-A' : 'add-cursor-B');
+                 } else {
+                      setBodyCursor(''); // Reset body cursor if auto-demo is active
+                 }
+                  // Restore canvas click listener now that drag is done
+                 canvas.addEventListener('click', handleCanvasClick);
+            }
+             // Ensure canvas cursor is updated correctly after mouseup
+             // It will be handled by the next mousemove or by the render loop's cursor logic
+         }
+
+
+        function handleKSliderChange() {
+            k = parseInt(kSlider.value, 10);
+             // Limit K to be at most the number of data points if less than current k
+             if (dataPoints.length > 0 && k > dataPoints.length) {
+                 k = dataPoints.length;
+                 kSlider.value = k; // Update slider visual
+             } else if (dataPoints.length === 0) {
+                  // If no data points, K should arguably be 1 or min_k
+                  k = Math.max(1, parseInt(kSlider.min, 10));
+                  kSlider.value = k;
+             }
+            kValueSpan.textContent = `K = ${k}`;
+        }
+
+        function handleAddClassToggle() {
+            if (addingClass === 'A') {
+                addingClass = 'B';
+                addClassToggleBtn.textContent = 'Add Class B (Yellow)';
+                addClassToggleBtn.classList.remove('class-A');
+                 addClassToggleBtn.classList.add('class-B');
+                 addClassToggleBtn.classList.remove('active'); // Deactivate A styling
+                 addClassToggleBtn.classList.add('active'); // Activate B styling
+                 if (!autoDemoActive) setCanvasCursor('add-cursor-B');
+                 addClassToggleBtn.setAttribute('data-tooltip', 'Click on canvas to add data points of this class.');
+            } else {
+                addingClass = 'A';
+                addClassToggleBtn.textContent = 'Add Class A (Pink)';
+                 addClassToggleBtn.classList.remove('class-B');
+                addClassToggleBtn.classList.add('class-A');
+                 addClassToggleBtn.classList.remove('active'); // Deactivate B styling
+                 addClassToggleBtn.classList.add('active'); // Activate A styling
+                 if (!autoDemoActive) setCanvasCursor('add-cursor-A');
+                 addClassToggleBtn.setAttribute('data-tooltip', 'Click on canvas to add data points of this class.');
+            }
+        }
+
+        function randomizeData(count = 50) {
+            dataPoints = [];
+            const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+            const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+            const padding = 40; // Keep points slightly away from edges
+
+            for (let i = 0; i < count; i++) {
+                dataPoints.push({
+                    x: Math.random() * (canvasWidth - 2 * padding) + padding,
+                    y: Math.random() * (canvasHeight - 2 * padding) + padding,
+                    class: Math.random() > 0.5 ? 'A' : 'B'
+                });
+            }
+             // Ensure K doesn't exceed data points after randomization
+             if (k > dataPoints.length) {
+                 k = dataPoints.length > 0 ? dataPoints.length : 1;
+                 kSlider.value = k;
+                 kValueSpan.textContent = `K = ${k}`;
+             } else if (k === 0 && dataPoints.length > 0) {
+                 k = 1;
+                 kSlider.value = k;
+                 kValueSpan.textContent = `K = ${k}`;
+             }
+
+
+            // Create or reset test point in center
+            testPoint = {
+                x: canvasWidth / 2,
+                y: canvasHeight / 2,
+                class: null
+            };
+        }
+
+        function resetCanvas() {
+            dataPoints = [];
+            testPoint = null;
+            k = parseInt(kSlider.value, 10); // Reset K to slider value
+            kValueSpan.textContent = `K = ${k}`;
+             stopAutoDemo(); // Stop demo if active
+        }
+
+        function toggleAutoDemo() {
+            autoDemoActive = !autoDemoActive;
+            if (autoDemoActive) {
+                 autoDemoBtn.textContent = 'Stop Auto-Demo';
+                 autoDemoBtn.classList.add('active');
+                 resetCanvas(); // Start demo with a clean slate (stops demo first)
+                 autoDemoStep = 0;
+                 // Disable manual interaction cursors
+                 setBodyCursor('');
+                 setCanvasCursor('');
+                 // Disable controls that conflict with demo
+                 addClassToggleBtn.disabled = true;
+                 randomizeBtn.disabled = true;
+                 resetBtn.disabled = true;
+
+                 runAutoDemoStep(); // Start the sequence
+            } else {
+                stopAutoDemo();
+            }
+        }
+
+         function stopAutoDemo() {
+              autoDemoActive = false;
+              autoDemoBtn.textContent = 'Start Auto-Demo';
+              autoDemoBtn.classList.remove('active');
+              clearTimeout(autoDemoTimeout);
+              // Stop any ongoing animation frames related to demo movement
+              // This is handled by the animation loop itself checking autoDemoActive
+
+              // Re-enable manual interaction cursors
+              setBodyCursor(addingClass === 'A' ? 'add-cursor-A' : 'add-cursor-B');
+              // Canvas cursor will be updated by mousemove or init
+
+              // Re-enable controls
+              addClassToggleBtn.disabled = false;
+              randomizeBtn.disabled = false;
+              resetBtn.disabled = false;
+         }
+
+        function runAutoDemoStep() {
+             if (!autoDemoActive) return;
+
+             const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+             const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+             const padding = 40;
+
+             switch(autoDemoStep) {
+                 case 0: // Add some random points
+                     randomizeData(Math.floor(Math.random() * 40) + 30); // 30-70 points
+                     autoDemoTimeout = setTimeout(() => { autoDemoStep = 1; runAutoDemoStep(); }, 2000); // Wait for 2s
+                     break;
+                 case 1: // Move test point to different locations
+                     const targetX = Math.random() * (canvasWidth - 2 * padding) + padding;
+                     const targetY = Math.random() * (canvasHeight - 2 * padding) + padding;
+                     animateTestPointTo(targetX, targetY, 1500); // Animate over 1.5 seconds
+                     autoDemoTimeout = setTimeout(() => { autoDemoStep = 2; runAutoDemoStep(); }, 2000); // Wait for animation + pause
+                     break;
+                 case 2: // Change K value
+                     const maxK = dataPoints.length > 1 ? Math.min(parseInt(kSlider.max, 10), dataPoints.length) : 1;
+                     const newK = Math.floor(Math.random() * maxK) + 1;
+                     kSlider.value = newK;
+                     handleKSliderChange(); // Update K visually and logically
+                     autoDemoTimeout = setTimeout(() => { autoDemoStep = 1; runAutoDemoStep(); }, 1500); // Loop back to moving test point
+                     break;
+                  case 3: // Add more points? (Optional step)
+                       // Could add more points here if needed, then loop back
+                       // dataPoints.push({ x: Math.random() * canvasWidth, y: Math.random() * canvasHeight, class: Math.random() > 0.5 ? 'A' : 'B' });
+                       // autoDemoTimeout = setTimeout(() => { autoDemoStep = 1; runAutoDemoStep(); }, 500);
+                       break;
+                 default: // Should not happen, loop back to start
+                     autoDemoStep = 0;
+                     runAutoDemoStep();
+                     break;
+             }
+        }
+
+         function animateTestPointTo(targetX, targetY, duration) {
+            if (!testPoint || !autoDemoActive) return; // Only animate if test point exists and demo is active
+            const startX = testPoint.x;
+            const startY = testPoint.y;
+            const startTime = performance.now();
+
+            function animate(currentTime) {
+                if (!autoDemoActive) return; // Stop animation if demo is turned off
+
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easingProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI); // Smooth easing (cosine)
+
+                testPoint.x = startX + (targetX - startX) * easingProgress;
+                testPoint.y = startY + (targetY - startY) * easingProgress;
+
+                if (progress < 1) {
+                    animationFrameId = requestAnimationFrame(animate);
+                } else {
+                    // Animation finished
+                }
+            }
+             // Cancel any previous animation frame for the test point movement
+             // This is implicitly handled by the outer timeout structure of runAutoDemoStep
+            // requestAnimationFrame(animate); // Start the animation frame loop
+            animate(performance.now()); // Start immediately
+         }
+
+
+        function handleToggleNeighbors() {
+            showNeighbors = !showNeighbors;
+            toggleNeighborsBtn.classList.toggle('active', showNeighbors);
+            toggleNeighborsBtn.textContent = showNeighbors ? 'Show Neighbors' : 'Hide Neighbors';
+            toggleNeighborsBtn.setAttribute('data-tooltip', showNeighbors ? 'Show/hide lines to the K nearest neighbors.' : 'Show/hide lines to the K nearest neighbors.');
+        }
+
+        function handleToggleClassification() {
+            showClassification = !showClassification;
+            toggleClassificationBtn.classList.toggle('active', showClassification);
+             toggleClassificationBtn.textContent = showClassification ? 'Show Classification' : 'Hide Classification';
+             toggleClassificationBtn.setAttribute('data-tooltip', showClassification ? 'Show/hide the classified label for the test point.' : 'Show/hide the classified label for the test point.');
+        }
+
+         function handleResize() {
+             // The render loop automatically updates canvas size on the next frame
+             // No explicit canvas resize call needed here, just trigger render if it was paused
+             // (It's not paused in this implementation, so resize will be handled on the next animation frame)
+         }
+
+
+        // --- Initialization ---
+
+        function init() {
+            // Set initial canvas size (render loop keeps it updated)
+             canvas.width = canvas.clientWidth;
+             canvas.height = canvas.clientHeight;
+             const devicePixelRatio = window.devicePixelRatio || 1;
+             ctx.scale(devicePixelRatio, devicePixelRatio);
+
+            // Add event listeners
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            // Mouseup needs to be on the document to handle drags ending outside the canvas
+            document.addEventListener('mouseup', handleCanvasMouseUp);
+
+            kSlider.addEventListener('input', handleKSliderChange);
+            addClassToggleBtn.addEventListener('click', handleAddClassToggle);
+            randomizeBtn.addEventListener('click', randomizeData);
+            resetBtn.addEventListener('click', resetCanvas);
+            autoDemoBtn.addEventListener('click', toggleAutoDemo);
+            toggleNeighborsBtn.addEventListener('click', handleToggleNeighbors);
+            toggleClassificationBtn.addEventListener('click', handleToggleClassification);
+            window.addEventListener('resize', handleResize);
+
+
+            // Initial state
+            randomizeData(); // Start with some random data
+            kValueSpan.textContent = `K = ${k}`;
+            // Initialize button active states
+            addClassToggleBtn.classList.add('active'); // Add Class A is active by default
+            toggleNeighborsBtn.classList.add('active');
+            toggleClassificationBtn.classList.add('active');
+
+            // Set initial cursor
+             setCanvasCursor(addingClass === 'A' ? 'add-cursor-A' : 'add-cursor-B');
+
+
+            // Start the render loop
+            render();
+        }
+
+        // Run initialization
+        init();
+
+    </script>
+
+</body>
+</html>

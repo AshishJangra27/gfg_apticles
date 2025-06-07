@@ -1,0 +1,923 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Contribution Visualiser</title>
+    <style>
+        :root {
+            --bg-color: #000;
+            --neon-blue: #00FFFF; /* Cyan */
+            --neon-green: #00FF00; /* Lime */
+            --neon-pink: #FF00FF; /* Magenta */
+            --neon-yellow: #FFFF00;
+            --neon-orange: #FFA500;
+            --text-color: #f0f0f0;
+            --neon-glow-blur: 10px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure full viewport height */
+            width: 100vw; /* Ensure full viewport width */
+            position: fixed; /* Ensure no scrolling */
+            top: 0;
+            left: 0;
+        }
+
+        .header {
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 2.5vh;
+            text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue), 0 0 15px var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0; /* Prevent shrinking */
+            height: 6vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 1vh 2vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2vw; /* Responsive gap */
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0; /* Prevent shrinking */
+            height: 8vh; /* Fixed height */
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        button, input[type="checkbox"] + label {
+            font-size: 1.8vh;
+            padding: 0.8vh 1.5vw;
+            border: 1px solid var(--neon-blue);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: var(--neon-blue);
+            cursor: pointer;
+            text-shadow: 0 0 3px var(--neon-blue);
+            box-shadow: 0 0 5px var(--neon-blue);
+            transition: all 0.3s ease;
+             user-select: none; /* Prevent text selection */
+        }
+
+        button:hover, input[type="checkbox"]:hover + label {
+            color: var(--neon-yellow);
+            border-color: var(--neon-yellow);
+            box-shadow: 0 0 8px var(--neon-yellow), 0 0 12px var(--neon-yellow);
+            text-shadow: 0 0 5px var(--neon-yellow);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled, input[type="checkbox"]:disabled + label {
+             opacity: 0.5;
+             cursor: not-allowed;
+             box-shadow: none;
+             text-shadow: none;
+             border-color: rgba(0, 255, 255, 0.3);
+             color: rgba(0, 255, 255, 0.3);
+        }
+
+
+        input[type="checkbox"] {
+            display: none; /* Hide default checkbox */
+        }
+
+        input[type="checkbox"] + label {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+            box-shadow: 0 0 5px var(--neon-pink);
+            text-shadow: 0 0 3px var(--neon-pink);
+        }
+        input[type="checkbox"]:checked + label {
+             color: var(--neon-green);
+             border-color: var(--neon-green);
+             box-shadow: 0 0 8px var(--neon-green), 0 0 12px var(--neon-green);
+             text-shadow: 0 0 5px var(--neon-green);
+        }
+
+        canvas {
+            display: block;
+            flex-grow: 1; /* Canvas takes remaining space */
+            background-color: var(--bg-color);
+            /* Outline just for visual debugging during development */
+            /* outline: 1px dashed neon-orange; */
+        }
+
+        .footer {
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: 1.8vh;
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0; /* Prevent shrinking */
+            height: 4vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        .footer a {
+            color: var(--neon-pink);
+            text-decoration: none;
+            margin: 0 1vw; /* Responsive margin */
+            text-shadow: 0 0 3px var(--neon-pink);
+            transition: text-shadow 0.3s ease, color 0.3s ease;
+        }
+
+        .footer a:hover {
+            text-shadow: 0 0 8px var(--neon-pink), 0 0 12px var(--neon-pink);
+            color: var(--neon-yellow); /* Change color on hover */
+        }
+
+        .tooltip {
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--neon-orange);
+            color: var(--neon-orange);
+            padding: 0.5vh 1vw;
+            font-size: 1.6vh;
+            pointer-events: none; /* Allow clicks to pass through */
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 100; /* Above everything */
+            box-shadow: 0 0 8px var(--neon-orange);
+        }
+
+         .fps-display {
+            position: absolute; /* Position relative to header */
+            top: 50%;
+            right: 1vw;
+            transform: translateY(-50%);
+            font-size: 1.6vh;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 5px var(--neon-yellow);
+            z-index: 11; /* Above header content but below controls/canvas z-index */
+            pointer-events: none;
+         }
+
+         /* Custom cursor on canvas interaction areas */
+         canvas.interactive-cursor {
+             cursor: pointer;
+         }
+         canvas.dragging-cursor {
+             cursor: grabbing;
+         }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        Content Contribution Visualiser
+        <div class="fps-display">FPS: --</div>
+    </div>
+
+    <div class="controls">
+        <button id="resetBtn">Reset View</button>
+        <button id="randomizeBtn">Randomize</button>
+        <button id="autoDemoBtn">Start Auto-Demo</button>
+        <div>
+            <input type="checkbox" id="showEdgesToggle" checked>
+            <label for="showEdgesToggle">Show Connections</label>
+        </div>
+         <div>
+            <input type="checkbox" id="enableDraggingToggle" checked>
+            <label for="enableDraggingToggle">Enable Drag</label>
+        </div>
+    </div>
+
+    <canvas id="visualCanvas"></canvas>
+
+    <div id="tooltip" class="tooltip">Tooltip Text</div>
+
+    <div class="footer">
+        Made with ❤️ | Connect:
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('visualCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const fpsDisplay = document.querySelector('.fps-display');
+        const resetBtn = document.getElementById('resetBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const showEdgesToggle = document.getElementById('showEdgesToggle');
+        const enableDraggingToggle = document.getElementById('enableDraggingToggle');
+
+        let nodes = [];
+        const NODE_COUNT = 50; // Number of content/community nodes
+        const NODE_RADIUS_VM = 1.5; // vmin - relative to viewport
+        const NODE_COLOR_DEFAULT = 'rgba(0, 255, 255, 0.8)'; // Cyan
+        const NODE_COLOR_HOVER = 'rgba(255, 255, 0, 1)'; // Yellow
+        const NODE_COLOR_ACTIVE = 'rgba(0, 255, 0, 1)'; // Green - Represents 'suggested/improved'
+        const NODE_COLOR_DRAGGING = 'rgba(255, 165, 0, 1)'; // Orange
+        const EDGE_COLOR = 'rgba(255, 0, 255, 0.3)'; // Magenta - Represents connections/engagement
+        const GLOW_COLOR_DEFAULT = 'rgba(0, 255, 255, 0.3)';
+        const GLOW_COLOR_HOVER = 'rgba(255, 255, 0, 0.4)';
+        const GLOW_COLOR_ACTIVE = 'rgba(0, 255, 0, 0.4)';
+        const GLOW_COLOR_DRAGGING = 'rgba(255, 165, 0, 0.4)';
+        const GLOW_BLUR_PX = 10; // Pixels
+
+        let viewportWidth, viewportHeight;
+        let canvasAreaTop, canvasAreaHeight; // Area available for the canvas
+
+        let draggingNode = null;
+        let dragOffsetX, dragOffsetY;
+        let hoveredNode = null;
+        let isDragging = false; // Flag to distinguish click from drag
+
+        let showEdges = true;
+        let enableDragging = true;
+
+        let autoDemoInterval = null;
+        let autoDemoRunning = false;
+        let autoDemoStep = 0;
+        const AUTO_DEMO_SPEED = 1000; // Milliseconds per step
+
+        // FPS variables
+        let lastFpsUpdateTime = 0;
+        let frameCount = 0;
+        let fps = 0;
+
+        // Calculate size and position of canvas area
+        function calculateCanvasArea() {
+            const headerHeight = document.querySelector('.header').offsetHeight;
+            const controlsHeight = document.querySelector('.controls').offsetHeight;
+            const footerHeight = document.querySelector('.footer').offsetHeight;
+
+            viewportWidth = window.innerWidth;
+            viewportHeight = window.innerHeight;
+
+            canvasAreaTop = headerHeight + controlsHeight;
+            canvasAreaHeight = viewportHeight - canvasAreaTop - footerHeight;
+
+            canvas.width = viewportWidth;
+            canvas.height = canvasAreaHeight;
+            canvas.style.top = canvasAreaTop + 'px';
+            canvas.style.left = '0px';
+            canvas.style.position = 'absolute'; // Position it in the calculated area
+        }
+
+        // Convert vmin to pixels
+        function vminToPixels(vmin) {
+            return Math.min(viewportWidth, viewportHeight) * (vmin / 100);
+        }
+
+        // Node constructor/factory
+        function createNode(id, x, y) {
+            return {
+                id: id,
+                x: x,
+                y: y,
+                radius: vminToPixels(NODE_RADIUS_VM),
+                color: NODE_COLOR_DEFAULT,
+                glowColor: GLOW_COLOR_DEFAULT,
+                state: 'default', // 'default', 'hover', 'active', 'dragging'
+                tooltipText: `Content Node ${id + 1}`,
+                connections: [] // Store connected node objects
+            };
+        }
+
+        // Initialize nodes randomly
+        function initializeNodes() {
+            nodes = [];
+            for (let i = 0; i < NODE_COUNT; i++) {
+                // Position within canvas boundaries minus radius
+                const x = Math.random() * (canvas.width - 2 * vminToPixels(NODE_RADIUS_VM)) + vminToPixels(NODE_RADIUS_VM);
+                const y = Math.random() * (canvas.height - 2 * vminToPixels(NODE_RADIUS_VM)) + vminToPixels(NODE_RADIUS_VM);
+                nodes.push(createNode(i, x, y));
+            }
+             // Create some initial random connections for visual interest
+            nodes.forEach(node => {
+                 node.connections = [];
+                 // Connect to a few random other nodes
+                 const numConnections = Math.floor(Math.random() * 3) + 1; // 1 to 3 connections
+                 for(let i = 0; i < numConnections; i++) {
+                     let targetIndex = Math.floor(Math.random() * NODE_COUNT);
+                     // Avoid connecting to self and duplicate connections
+                     if (targetIndex !== node.id && !node.connections.includes(nodes[targetIndex])) {
+                         node.connections.push(nodes[targetIndex]);
+                     }
+                 }
+             });
+        }
+
+        // Draw a single node with glow
+        function drawNode(node) {
+            const glowRadius = node.radius; // Glow applies *around* the node
+            const currentGlowBlur = (node.state === 'hover' || node.state === 'dragging' || node.state === 'active') ? GLOW_BLUR_PX * 1.5 : GLOW_BLUR_PX;
+
+            // Draw glow
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+            ctx.fillStyle = node.color; // Use node color for fill
+            ctx.shadowColor = node.glowColor; // Use glow color for shadow
+            ctx.shadowBlur = currentGlowBlur;
+             ctx.shadowOffsetX = 0; // Ensure glow is centered
+             ctx.shadowOffsetY = 0;
+            ctx.fill();
+
+            // Draw node circle (drawn over the glow)
+            ctx.shadowBlur = 0; // Disable shadow for the node itself
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+            ctx.fillStyle = node.color; // Use node color for fill again
+            ctx.fill();
+
+             // Optional: Draw a small outline or border for clarity
+            // ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            // ctx.lineWidth = 1;
+            // ctx.stroke();
+        }
+
+         // Draw edges between connected nodes
+         function drawEdges() {
+             ctx.strokeStyle = EDGE_COLOR;
+             ctx.lineWidth = 1;
+             ctx.shadowColor = EDGE_COLOR;
+             ctx.shadowBlur = 5; // Subtle glow for edges
+
+             nodes.forEach(node => {
+                 node.connections.forEach(targetNode => {
+                     // To avoid drawing each edge twice (NodeA -> NodeB and NodeB -> NodeA),
+                     // only draw if the current node ID is less than the target node ID
+                     if (node.id < targetNode.id) {
+                         ctx.beginPath();
+                         ctx.moveTo(node.x, node.y);
+                         ctx.lineTo(targetNode.x, targetNode.y);
+                         ctx.stroke();
+                     }
+                 });
+             });
+              ctx.shadowBlur = 0; // Reset shadow
+         }
+
+
+        // Main drawing function
+        function draw(currentTime) {
+            // Calculate FPS
+            frameCount++;
+            if (currentTime > lastFpsUpdateTime + 1000) { // Update FPS every 1 second
+                fps = Math.round(frameCount * 1000 / (currentTime - lastFpsUpdateTime));
+                fpsDisplay.textContent = `FPS: ${fps}`;
+                frameCount = 0;
+                lastFpsUpdateTime = currentTime;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if(showEdges) {
+                drawEdges();
+            }
+
+            // Draw nodes - drawing active/hovered/dragging nodes last ensures they are on top
+             const defaultNodes = nodes.filter(n => n.state === 'default');
+             const interactiveNodes = nodes.filter(n => n.state !== 'default');
+
+             defaultNodes.forEach(node => drawNode(node));
+             interactiveNodes.forEach(node => drawNode(node));
+
+
+            // Request next frame
+            requestAnimationFrame(draw);
+        }
+
+        // Get mouse/touch position relative to canvas
+        function getMousePos(event) {
+            const rect = canvas.getBoundingClientRect();
+            // Handle touch events as well
+            const clientX = event.clientX || (event.touches && event.touches[0] ? event.touches[0].clientX : 0);
+            const clientY = event.clientY || (event.touches && event.touches[0] ? event.touches[0].clientY : 0);
+
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        // Check if mouse is over a node
+        function hitTest(pos) {
+            // Check interactive nodes first so hover/drag works correctly on top elements
+             const checkOrder = nodes.filter(n => n.state !== 'default').reverse().concat(nodes.filter(n => n.state === 'default').reverse());
+
+            for (let i = 0; i < checkOrder.length; i++) {
+                const node = checkOrder[i];
+                const distance = Math.sqrt((node.x - pos.x) ** 2 + (node.y - pos.y) ** 2);
+                // Allow a small tolerance for easier clicking/touching
+                 const hitRadius = node.radius + 5; // Add a few pixels tolerance
+                if (distance < hitRadius) {
+                    return node; // Return the first node found
+                }
+            }
+            return null;
+        }
+
+        // Update node state colors and glow based on interaction state
+        function updateNodeAppearance(node) {
+            switch (node.state) {
+                case 'hover':
+                    node.color = NODE_COLOR_HOVER;
+                    node.glowColor = GLOW_COLOR_HOVER;
+                    break;
+                case 'active': // Clicked/Suggested State
+                    node.color = NODE_COLOR_ACTIVE;
+                    node.glowColor = GLOW_COLOR_ACTIVE;
+                    break;
+                 case 'dragging':
+                    node.color = NODE_COLOR_DRAGGING;
+                    node.glowColor = GLOW_COLOR_DRAGGING;
+                    break;
+                default: // 'default'
+                    node.color = NODE_COLOR_DEFAULT;
+                    node.glowColor = GLOW_COLOR_DEFAULT;
+            }
+        }
+
+        // Hide tooltip
+        function hideTooltip() {
+             tooltip.style.opacity = 0;
+        }
+
+        // Show tooltip
+        function showTooltip(text, x, y) {
+             tooltip.textContent = text;
+             tooltip.style.left = (x + 10) + 'px';
+             tooltip.style.top = (y + 10) + 'px';
+             tooltip.style.opacity = 1;
+        }
+
+
+        // Event Listeners
+        canvas.addEventListener('mousedown', (e) => {
+             if (autoDemoRunning) return; // Disable interaction during demo
+
+            const mousePos = getMousePos(e);
+            const clickedNode = hitTest(mousePos);
+
+            if (clickedNode && enableDragging) {
+                isDragging = false; // Assume not dragging yet
+                draggingNode = clickedNode;
+                dragOffsetX = mousePos.x - draggingNode.x;
+                dragOffsetY = mousePos.y - draggingNode.y;
+                 // Store original state to revert after drag if needed, but simpler to just set default/active
+                 // draggingNode.stateBeforeDrag = draggingNode.state;
+                draggingNode.state = 'dragging';
+                 updateNodeAppearance(draggingNode);
+                 canvas.classList.add('dragging-cursor'); // Change cursor
+                 canvas.classList.remove('interactive-cursor'); // Remove pointer cursor
+                 hideTooltip(); // Hide tooltip while dragging
+            } else if (clickedNode) {
+                // Handle click without dragging enabled
+                if (clickedNode.state === 'active') {
+                    clickedNode.state = 'default';
+                } else {
+                    // Set all others to default, then this one to active (single active selection)
+                    nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+                    clickedNode.state = 'active';
+                }
+                 updateNodeAppearance(clickedNode);
+                 // Show tooltip again after click
+                 showTooltip(clickedNode.tooltipText, e.clientX, e.clientY);
+            } else {
+                // Clicked on background
+                hideTooltip();
+                 // Deselect all active nodes if clicking outside (optional)
+                 nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const mousePos = getMousePos(e);
+
+            if (draggingNode && enableDragging && !autoDemoRunning) {
+                 isDragging = true; // We are now dragging
+                 // Keep node within canvas bounds
+                const newX = mousePos.x - dragOffsetX;
+                const newY = mousePos.y - dragOffsetY;
+                const radius = draggingNode.radius;
+
+                draggingNode.x = Math.max(radius, Math.min(canvas.width - radius, newX));
+                draggingNode.y = Math.max(radius, Math.min(canvas.height - radius, newY));
+
+                 // Update tooltip position even if dragging
+                 showTooltip(draggingNode.tooltipText, e.clientX, e.clientY);
+
+            } else if (!autoDemoRunning) {
+                // Handle hover state when not dragging or in auto-demo
+                const currentHovered = hitTest(mousePos);
+
+                if (hoveredNode && hoveredNode !== currentHovered) {
+                    // Hovering off a node
+                    if (hoveredNode.state === 'hover') hoveredNode.state = 'default'; // Revert state only if it was just hover
+                     // Don't revert 'active' state on hover off
+                    updateNodeAppearance(hoveredNode);
+                    hideTooltip();
+                    hoveredNode = null;
+                     canvas.classList.remove('interactive-cursor'); // Remove pointer cursor
+                }
+
+                if (currentHovered && currentHovered !== hoveredNode) {
+                    // Hovering over a new node
+                    hoveredNode = currentHovered;
+                    if (hoveredNode.state !== 'active' && hoveredNode.state !== 'dragging') { // Don't change state if already active or dragging
+                        hoveredNode.state = 'hover';
+                    }
+                    updateNodeAppearance(hoveredNode);
+                    showTooltip(hoveredNode.tooltipText, e.clientX, e.clientY);
+                     canvas.classList.add('interactive-cursor'); // Add pointer cursor
+                } else if (currentHovered) {
+                     // Update tooltip position even if staying on the same node
+                     showTooltip(currentHovered.tooltipText, e.clientX, e.clientY);
+                } else if (!currentHovered && !draggingNode) {
+                     // Not hovering over anything
+                     hideTooltip();
+                     canvas.classList.remove('interactive-cursor');
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (draggingNode && enableDragging && !autoDemoRunning) {
+                 // If it was a drag (mousemove occurred setting isDragging = true)
+                 if (isDragging) {
+                    // If node was active before drag, keep it active, otherwise set to default
+                    // This is simplified - assuming drag from default/hover goes to default
+                    draggingNode.state = 'default';
+                 } else {
+                     // This was a click (no significant move, isDragging is false)
+                     if (draggingNode.state === 'active' || draggingNode.state === 'dragging') { // dragging state could be left from touchstart before touchend
+                        draggingNode.state = 'default';
+                    } else {
+                        // Set all others to default, then this one to active (single active selection)
+                        nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+                        draggingNode.state = 'active'; // Toggle active state
+                    }
+                    // Show tooltip after click/tap
+                     showTooltip(draggingNode.tooltipText, e.clientX, e.clientY);
+                 }
+
+                updateNodeAppearance(draggingNode);
+                draggingNode = null;
+                canvas.classList.remove('dragging-cursor');
+                // Re-evaluate cursor based on potential hover state after mouseup
+                 const mousePos = getMousePos(e);
+                 if (hitTest(mousePos)) {
+                     canvas.classList.add('interactive-cursor');
+                 } else {
+                     canvas.classList.remove('interactive-cursor');
+                 }
+            } else if (!autoDemoRunning) {
+                 // Handle mouseup on background or non-draggable node (no draggingNode)
+                 const clickedNode = hitTest(getMousePos(e));
+                 if (!clickedNode) {
+                      // Clicked on background, deselect active (optional)
+                      nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+                       hideTooltip();
+                 }
+            }
+
+            isDragging = false; // Reset drag flag
+        });
+
+         // Prevent context menu on right click
+         canvas.addEventListener('contextmenu', (e) => {
+             e.preventDefault();
+         });
+
+         // Handle touch events
+         canvas.addEventListener('touchstart', (e) => {
+             e.preventDefault(); // Prevent default touch behavior (scrolling, zooming)
+             if (autoDemoRunning || e.touches.length > 1) return; // Disable interaction during demo or multi-touch
+
+             const touchPos = getMousePos(e); // Reusing getMousePos for touch
+             const touchedNode = hitTest(touchPos);
+
+             if (touchedNode && enableDragging) {
+                 isDragging = false; // Assume not dragging yet
+                 draggingNode = touchedNode;
+                 dragOffsetX = touchPos.x - draggingNode.x;
+                 dragOffsetY = touchPos.y - draggingNode.y;
+                 draggingNode.state = 'dragging';
+                 updateNodeAppearance(draggingNode);
+                 canvas.classList.add('dragging-cursor'); // Change cursor (visual only, touch doesn't show cursor)
+                 canvas.classList.remove('interactive-cursor');
+                 hideTooltip(); // Hide tooltip during touch interaction start
+             } else if (touchedNode) {
+                 // Handle tap without drag enabled
+                 // Set all others to default, then this one to active (single active selection)
+                 nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+                 touchedNode.state = 'active';
+                  updateNodeAppearance(touchedNode);
+                  // Show tooltip on tap
+                  showTooltip(touchedNode.tooltipText, e.touches[0].clientX, e.touches[0].clientY);
+             } else {
+                 // Tapped on background
+                 hideTooltip();
+                  // Deselect all active nodes if tapping outside (optional)
+                 nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+             }
+         }, { passive: false }); // Use passive: false to allow preventDefault
+
+
+         canvas.addEventListener('touchmove', (e) => {
+              e.preventDefault();
+             if (!draggingNode || !enableDragging || autoDemoRunning || e.touches.length === 0) return;
+
+             isDragging = true; // We are now dragging
+             const touchPos = getMousePos(e);
+
+             // Keep node within canvas bounds
+             const newX = touchPos.x - dragOffsetX;
+             const newY = touchPos.y - dragOffsetY;
+             const radius = draggingNode.radius;
+
+             draggingNode.x = Math.max(radius, Math.min(canvas.width - radius, newX));
+             draggingNode.y = Math.max(radius, Math.min(canvas.height - radius, newY));
+
+             // Update tooltip position during touch move
+             showTooltip(draggingNode.tooltipText, e.touches[0].clientX, e.touches[0].clientY);
+
+         }, { passive: false }); // Use passive: false
+
+         canvas.addEventListener('touchend', (e) => {
+             e.preventDefault();
+             if (autoDemoRunning || e.touches.length > 0) return; // Ignore if demo running or if other touches are still down
+
+             if (draggingNode && enableDragging) {
+                  // If it was a drag (touchmove occurred setting isDragging = true)
+                  if (isDragging) {
+                       // If node was active before drag, keep it active, otherwise set to default
+                       draggingNode.state = 'default'; // Simplified: set to default after drag
+                  } else {
+                       // This was a tap (no significant move, isDragging is false)
+                       if (draggingNode.state === 'active' || draggingNode.state === 'dragging') { // dragging state could be left from touchstart
+                          draggingNode.state = 'default';
+                      } else {
+                           // Set all others to default, then this one to active (single active selection)
+                           nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+                           draggingNode.state = 'active'; // Toggle active state
+                      }
+                       // Show tooltip after tap
+                       // Use changedTouches to get the position of the ended touch
+                       if (e.changedTouches && e.changedTouches[0]) {
+                           showTooltip(draggingNode.tooltipText, e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                       } else {
+                           hideTooltip(); // Fallback if touch position is not available
+                       }
+
+                  }
+
+                 updateNodeAppearance(draggingNode);
+                 draggingNode = null;
+                 canvas.classList.remove('dragging-cursor');
+                 // Re-evaluate cursor based on potential hover state (less relevant for touch)
+                 // canvas.classList.remove('interactive-cursor'); // Assuming no hovering after touch end
+             } else if (!autoDemoRunning) {
+                 // Handle touchend on background or non-draggable node (no draggingNode)
+                 // Use changedTouches to get the position of the ended touch for hit testing
+                 const touchPos = (e.changedTouches && e.changedTouches[0]) ? getMousePos({ clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY }) : null;
+
+                 if (touchPos) {
+                      const tappedNode = hitTest(touchPos);
+                      if (!tappedNode) {
+                           // Tapped on background, deselect active (optional)
+                           nodes.forEach(node => { if (node.state === 'active') node.state = 'default'; updateNodeAppearance(node); });
+                            hideTooltip();
+                      }
+                 } else {
+                      hideTooltip(); // Hide tooltip if touch position is unknown
+                 }
+             }
+
+             isDragging = false; // Reset drag flag
+             // Always hide tooltip and reset cursor after touch ends
+             hideTooltip();
+             canvas.classList.remove('interactive-cursor');
+
+         }, { passive: false }); // Use passive: false
+
+
+        // Control Button Actions
+        resetBtn.addEventListener('click', () => {
+            stopAutoDemo();
+            initializeNodes(); // Re-initialize nodes
+            nodes.forEach(node => {
+                node.state = 'default'; // Reset states
+                updateNodeAppearance(node);
+            });
+             hideTooltip(); // Hide tooltip on reset
+             canvas.classList.remove('interactive-cursor', 'dragging-cursor');
+        });
+
+        randomizeBtn.addEventListener('click', () => {
+             stopAutoDemo();
+             nodes.forEach(node => {
+                 // Keep node within canvas bounds after randomization
+                 const radius = vminToPixels(NODE_RADIUS_VM);
+                 node.x = Math.random() * (canvas.width - 2 * radius) + radius;
+                 node.y = Math.random() * (canvas.height - 2 * radius) + radius;
+                 node.state = 'default'; // Reset states
+                 updateNodeAppearance(node);
+             });
+             // Optional: Randomize connections again
+             nodes.forEach(node => {
+                 node.connections = [];
+                 const numConnections = Math.floor(Math.random() * 3) + 1; // 1 to 3 connections
+                 for(let i = 0; i < numConnections; i++) {
+                     let targetIndex = Math.floor(Math.random() * NODE_COUNT);
+                     if (targetIndex !== node.id && !node.connections.includes(nodes[targetIndex])) {
+                         node.connections.push(nodes[targetIndex]);
+                     }
+                 }
+             });
+             hideTooltip(); // Hide tooltip
+             canvas.classList.remove('interactive-cursor', 'dragging-cursor');
+         });
+
+        autoDemoBtn.addEventListener('click', () => {
+            if (autoDemoRunning) {
+                stopAutoDemo();
+            } else {
+                startAutoDemo();
+            }
+        });
+
+         showEdgesToggle.addEventListener('change', (e) => {
+             showEdges = e.target.checked;
+         });
+
+         enableDraggingToggle.addEventListener('change', (e) => {
+             enableDragging = e.target.checked;
+             // Reset dragging state if disabled mid-drag
+             if (!enableDragging && draggingNode) {
+                 // Revert state based on what it was before dragging started
+                 // For simplicity, just set to default
+                 draggingNode.state = 'default';
+                 updateNodeAppearance(draggingNode);
+                 draggingNode = null;
+                 isDragging = false;
+                 canvas.classList.remove('dragging-cursor');
+             }
+              // Re-evaluate cursor state
+             if (!enableDragging && canvas.classList.contains('interactive-cursor')) {
+                  // If pointer cursor was active due to hover, remove it if drag is the only interaction type wanted there
+                  // In this app, click is also enabled if drag is off, so keep pointer on hover
+             }
+         });
+
+
+        // Auto Demo Logic
+        function startAutoDemo() {
+            if (autoDemoRunning) return;
+            stopAutoDemo(); // Ensure any previous demo is stopped
+
+            autoDemoRunning = true;
+            autoDemoBtn.textContent = 'Stop Auto-Demo';
+            // Disable interactive elements during demo
+            canvas.style.pointerEvents = 'none';
+            resetBtn.disabled = true;
+            randomizeBtn.disabled = true;
+            showEdgesToggle.disabled = true;
+            enableDraggingToggle.disabled = true;
+            hideTooltip(); // Hide tooltip during demo
+            canvas.classList.remove('interactive-cursor', 'dragging-cursor');
+
+
+            // Reset nodes to default state for a clean demo start
+             nodes.forEach(node => {
+                 node.state = 'default';
+                 updateNodeAppearance(node);
+             });
+
+            autoDemoInterval = setInterval(() => {
+                if (nodes.length === 0) {
+                     stopAutoDemo();
+                     return;
+                }
+
+                // Reset the previously manipulated node if any
+                if (autoDemoStep > 0) {
+                    const prevNodeIndex = (autoDemoStep - 1) % nodes.length;
+                    nodes[prevNodeIndex].state = 'default';
+                    updateNodeAppearance(nodes[prevNodeIndex]);
+                }
+
+                // Perform next step
+                const currentNodeIndex = autoDemoStep % nodes.length;
+                const currentNode = nodes[currentNodeIndex];
+
+                // Simulate interaction: Select and mark a node as 'active' (suggesting change)
+                currentNode.state = 'active';
+                updateNodeAppearance(currentNode);
+
+                // Optional: Simulate movement or temporary connection creation/highlighting
+                // For this simple demo, just highlighting is sufficient for visual learning
+
+                autoDemoStep++;
+
+                // If we completed a full cycle, reset step counter to loop
+                if (autoDemoStep >= nodes.length) {
+                     // Reset the last highlighted node after a brief pause before looping
+                     setTimeout(() => {
+                         const lastNodeIndex = (autoDemoStep - 1) % nodes.length;
+                         nodes[lastNodeIndex].state = 'default';
+                         updateNodeAppearance(nodes[lastNodeIndex]);
+                         autoDemoStep = 0; // Reset step counter to start from the beginning
+                     }, AUTO_DEMO_SPEED / 2); // Pause briefly before resetting and looping
+                }
+
+            }, AUTO_DEMO_SPEED); // Run steps at this interval
+        }
+
+        function stopAutoDemo() {
+            if (!autoDemoRunning) return;
+
+            autoDemoRunning = false;
+            clearInterval(autoDemoInterval);
+            autoDemoInterval = null;
+            autoDemoBtn.textContent = 'Start Auto-Demo';
+
+            // Re-enable interactive elements
+            canvas.style.pointerEvents = 'auto';
+             resetBtn.disabled = false;
+             randomizeBtn.disabled = false;
+             showEdgesToggle.disabled = false;
+             enableDraggingToggle.disabled = false;
+
+            // Reset the state of the last manipulated node if demo was stopped mid-step
+            if (nodes.length > 0 && autoDemoStep > 0) {
+                 const lastNodeIndex = (autoDemoStep - 1) % nodes.length;
+                 nodes[lastNodeIndex].state = 'default';
+                 updateNodeAppearance(nodes[lastNodeIndex]);
+            }
+             // Reset all nodes to default state when stopping demo
+             nodes.forEach(node => {
+                node.state = 'default';
+                updateNodeAppearance(node);
+             });
+
+            autoDemoStep = 0; // Reset step counter
+
+            hideTooltip(); // Ensure tooltip is hidden
+            canvas.classList.remove('interactive-cursor', 'dragging-cursor'); // Reset cursor
+        }
+
+
+        // Initialization
+        function init() {
+            calculateCanvasArea(); // Set initial canvas size and position
+            initializeNodes();
+            // Initialize toggle states
+            showEdges = showEdgesToggle.checked;
+            enableDragging = enableDraggingToggle.checked;
+            // Start the animation loop
+            requestAnimationFrame(draw);
+        }
+
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+             stopAutoDemo(); // Stop demo on resize
+             calculateCanvasArea(); // Recalculate canvas size and position
+             // Re-initialize nodes to fit new dimensions and recalculate radius
+             initializeNodes();
+             nodes.forEach(node => {
+                 node.state = 'default'; // Reset states
+                 node.radius = vminToPixels(NODE_RADIUS_VM); // Update radius based on new size
+                 updateNodeAppearance(node); // Ensure colors are correct after re-init
+             });
+             hideTooltip(); // Hide tooltip on resize
+             canvas.classList.remove('interactive-cursor', 'dragging-cursor');
+        });
+
+        // Ensure DOM is fully loaded before initializing
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+
+</body>
+</html>

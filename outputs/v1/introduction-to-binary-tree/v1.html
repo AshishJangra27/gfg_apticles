@@ -1,0 +1,769 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Prep Navigator - Visual Guide</title>
+    <style>
+        /* General styles */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Non-negotiable: No scrolling */
+            background-color: #000; /* Black background */
+            color: #00FFFF; /* Neon Cyan */
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            user-select: none; /* Prevent text selection on interactions */
+            cursor: default; /* Default cursor */
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use vh for full viewport height */
+        }
+
+        /* Header */
+        header {
+            flex-shrink: 0; /* Don't shrink header */
+            padding: 1vh;
+            text-align: center;
+            font-size: 2.5vh;
+            text-shadow: 0 0 1vh #00FFFF, 0 0 2vh #00FFFF; /* Neon glow */
+            border-bottom: 0.2vh solid #00FFFF; /* Neon border */
+            box-sizing: border-box; /* Include border in padding */
+        }
+
+        /* Main content area */
+        main {
+            flex-grow: 1; /* Main content takes remaining space */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Controls */
+        #controls {
+            flex-shrink: 0; /* Don't shrink controls */
+            padding: 1.5vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2vw; /* Responsive gap */
+            border-bottom: 0.2vh solid #00FF00; /* Neon Green border */
+            background-color: rgba(0, 255, 0, 0.05); /* Subtle background */
+            box-sizing: border-box;
+        }
+
+        button, input[type="checkbox"] + label {
+            padding: 1vh 1.5vw;
+            font-size: 1.8vh;
+            background-color: transparent;
+            border: 0.15vh solid #FF00FF; /* Neon Pink border */
+            color: #FF00FF; /* Neon Pink text */
+            text-shadow: 0 0 0.5vh #FF00FF;
+            box-shadow: 0 0 1vh #FF00FF; /* Neon Pink glow */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            border-radius: 0.5vh;
+        }
+
+        button:hover, input[type="checkbox"] + label:hover {
+            background-color: rgba(255, 0, 255, 0.1);
+            box-shadow: 0 0 1.5vh #FF00FF, 0 0 2vh #FF00FF inset;
+        }
+
+        button:active {
+             background-color: rgba(255, 0, 255, 0.2);
+             box-shadow: 0 0 0.5vh #FF00FF inset;
+        }
+
+        input[type="checkbox"] {
+            display: none; /* Hide default checkbox */
+        }
+
+         input[type="checkbox"] + label {
+            border: 0.15vh solid #00FFFF; /* Neon Cyan */
+            color: #00FFFF;
+            text-shadow: 0 0 0.5vh #00FFFF;
+            box-shadow: 0 0 1vh #00FFFF;
+            transition: all 0.3s ease;
+         }
+
+         input[type="checkbox"]:checked + label {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 1.5vh #00FFFF, 0 0 2vh #00FFFF inset;
+         }
+
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+            font-size: 1.8vh;
+            color: #00FF00; /* Neon Green */
+            text-shadow: 0 0 0.5vh #00FF00;
+        }
+
+         .toggle-container > label { /* Target the specific label next to the checkbox input */
+            padding: 0; /* Reset label padding from button style */
+            border: none; /* Reset border */
+            box-shadow: none; /* Reset box-shadow */
+            text-shadow: 0 0 0.5vh #00FF00; /* Maintain label text shadow */
+            cursor: default; /* Default cursor for descriptive label */
+         }
+
+         .toggle-container input[type="checkbox"] + label {
+             cursor: pointer; /* Restore pointer cursor for the styled checkbox label */
+         }
+
+
+        #fpsDisplay {
+            font-size: 1.8vh;
+            color: #FFFF00; /* Neon Yellow */
+            text-shadow: 0 0 0.5vh #FFFF00;
+            margin-left: 2vw;
+        }
+
+        /* Canvas Container */
+        #canvasContainer {
+            flex-grow: 1;
+            width: 100%;
+            overflow: hidden; /* Ensure canvas respects container bounds */
+        }
+
+        canvas {
+             display: block; /* Prevent default margin/padding issues */
+             /* cursor handled by JS based on interaction */
+        }
+
+        /* Tooltip */
+        #tooltip {
+            position: fixed;
+            padding: 0.8vh 1.2vw;
+            background-color: rgba(0, 255, 255, 0.8); /* Semi-transparent Cyan */
+            color: #000;
+            border: 0.15vh solid #00FFFF;
+            box-shadow: 0 0 1vh #00FFFF;
+            pointer-events: none; /* Allows mouse events to pass through */
+            z-index: 1000;
+            font-size: 1.6vh;
+            display: none; /* Hidden by default */
+            opacity: 0; /* Start hidden for transition */
+            transition: opacity 0.2s ease;
+            border-radius: 0.5vh;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+
+        /* Footer */
+        footer {
+            flex-shrink: 0; /* Don't shrink footer */
+            padding: 1vh;
+            text-align: center;
+            font-size: 1.8vh;
+            border-top: 0.2vh solid #FF00FF; /* Neon Pink border */
+            background-color: rgba(255, 0, 255, 0.05); /* Subtle background */
+            box-sizing: border-box;
+        }
+
+        footer a {
+            color: #FF00FF; /* Neon Pink */
+            text-decoration: none;
+            margin: 0 0.8vw;
+            text-shadow: 0 0 0.5vh #FF00FF;
+            transition: text-shadow 0.3s ease;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+            text-shadow: 0 0 1vh #FF00FF, 0 0 2vh #FF00FF;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Interview Prep Navigator</h1>
+        </header>
+        <main>
+            <div id="controls">
+                <button id="resetBtn">Reset</button>
+                <button id="randomizeBtn">Randomize</button>
+                <button id="autoDemoBtn">Auto Demo</button>
+                <div class="toggle-container">
+                    <label for="showLabelsToggle">Show Labels:</label>
+                    <input type="checkbox" id="showLabelsToggle" checked>
+                </div>
+                <div id="fpsDisplay">FPS: --</div>
+            </div>
+            <div id="canvasContainer">
+                 <canvas id="interactiveCanvas"></canvas>
+            </div>
+        </main>
+        <footer>
+            <span>Connect:</span>
+            <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a> |
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </footer>
+        <div id="tooltip"></div> <!-- Tooltip element -->
+    </div>
+
+    <script>
+        const canvas = document.getElementById('interactiveCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+        const showLabelsToggle = document.getElementById('showLabelsToggle');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+
+        let nodes = [];
+        let connections = [];
+        let hoveredNode = null;
+        let draggedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+        let isDragging = false;
+        let isAutoDemo = false;
+        let autoDemoStepIndex = 0;
+        let autoDemoTimer = null;
+
+        const NODE_RADIUS_VH = 2.5; // vh units for base radius
+        const GUIDE_NODE_RADIUS_MULTIPLIER = 1.5;
+        const NODE_COLORS = ['#00FFFF', '#00FF00', '#FF00FF', '#FFFF00', '#FF8C00']; // Cyan, Green, Magenta, Yellow, Orange
+        const GUIDE_NODE_COLOR = '#FF4500'; // OrangeRed - distinctive
+        const CONNECTION_COLOR = 'rgba(0, 255, 255, 0.3)'; // Semi-transparent Cyan
+        const HIGHLIGHT_COLOR = '#FFFFFF'; // White for highlight/path
+        const GLOW_STRENGTH_VH = 1; // vh units for glow radius
+        const PATH_SPEED_VH = 0.02; // vh units per frame for path dot speed
+        const PATH_DOT_SPACING_VH = 1; // vh units for spacing between path dots
+        const PATH_DOT_RADIUS_VH = 0.5; // vh units for path dot radius
+        const LABEL_FONT_SIZE_VH = 1.6; // vh units for label font size
+        const LABEL_OFFSET_VH = 1; // vh units for label offset above node
+
+        // Convert approximate vh units to pixels
+        function vh(value) {
+            return (value / 100) * window.innerHeight;
+        }
+        function vw(value) {
+             return (value / 100) * window.innerWidth;
+        }
+
+        function getCanvasScale() {
+             // Simple scale factor based on 1080p height, adjust as needed
+            const baseHeight = 1080;
+            return window.innerHeight / baseHeight;
+        }
+
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const oldWidth = canvas.width;
+            const oldHeight = canvas.height;
+
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+
+            // Reposition nodes proportionally based on old and new canvas dimensions
+            if (nodes.length > 0 && oldWidth > 0 && oldHeight > 0) {
+                 nodes.forEach(node => {
+                    node.x = (node.x / oldWidth) * canvas.width;
+                    node.y = (node.y / oldHeight) * canvas.height;
+
+                    // Ensure nodes stay within new bounds
+                    const radius = vh(NODE_RADIUS_VH) * (node.type === 'guide' ? GUIDE_NODE_RADIUS_MULTIPLIER : 1);
+                    node.x = Math.max(radius, Math.min(canvas.width - radius, node.x));
+                    node.y = Math.max(radius, Math.min(canvas.height - radius, node.y));
+                 });
+                 resetPathAnimations(); // Path lengths change on resize
+            } else if (nodes.length > 0) {
+                 // Initial positioning if canvas was 0 size before
+                 randomizeNodePositions();
+            }
+
+
+             render(); // Re-render after resize
+        }
+
+        function createNetwork() {
+            nodes = [
+                { id: 'ds', label: 'Data Structures', type: 'concept', x: 0, y: 0, color: NODE_COLORS[0], connections: ['algo', 'guide'] },
+                { id: 'algo', label: 'Algorithms', type: 'concept', x: 0, y: 0, color: NODE_COLORS[1], connections: ['ds', 'sysd', 'guide'] },
+                { id: 'sysd', label: 'System Design', type: 'concept', x: 0, y: 0, color: NODE_COLORS[2], connections: ['algo', 'guide'] },
+                { id: 'behav', label: 'Behavioral', type: 'concept', x: 0, y: 0, color: NODE_COLORS[3], connections: ['guide'] },
+                { id: 'lang', label: 'Programming Lang.', type: 'concept', x: 0, y: 0, color: NODE_COLORS[4], connections: ['ds', 'algo'] },
+                { id: 'guide', label: 'GeeksforGeeks Guide', type: 'guide', x: 0, y: 0, color: GUIDE_NODE_COLOR, connections: [] }
+            ];
+
+            // Create connection objects based on node connections array
+            connections = [];
+            const nodeMap = new Map(nodes.map(node => [node.id, node]));
+            nodes.forEach(node => {
+                node.connections.forEach(connId => {
+                    const targetNode = nodeMap.get(connId);
+                    // Avoid duplicate connections (e.g., A->B and B->A) - only add if not already added in reverse
+                    if (targetNode && !connections.some(c => (c.from === targetNode && c.to === node))) {
+                         connections.push({ from: node, to: targetNode, path: [], pathLength: 0, pathProgress: 0 });
+                    }
+                });
+            });
+
+            randomizeNodePositions();
+        }
+
+        function randomizeNodePositions() {
+             const baseRadius = vh(NODE_RADIUS_VH);
+            nodes.forEach(node => {
+                const radius = baseRadius * (node.type === 'guide' ? GUIDE_NODE_RADIUS_MULTIPLIER : 1);
+                // Position nodes within canvas bounds minus their radius
+                node.x = radius + Math.random() * (canvas.width - 2 * radius);
+                node.y = radius + Math.random() * (canvas.height - 2 * radius);
+            });
+            resetPathAnimations(); // Reset any ongoing animations
+             render(); // Render new positions immediately
+        }
+
+        function resetPathAnimations() {
+            connections.forEach(conn => {
+                conn.pathProgress = 0; // Reset path animation progress
+                 conn.path = []; // Clear path dots
+                 // Recalculate path length as node positions might have changed
+                 conn.pathLength = Math.sqrt(Math.pow(conn.to.x - conn.from.x, 2) + Math.pow(conn.to.y - conn.from.y, 2));
+            });
+        }
+
+
+        function drawNode(node) {
+            const radius = vh(NODE_RADIUS_VH) * (node.type === 'guide' ? GUIDE_NODE_RADIUS_MULTIPLIER : 1);
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = node.color;
+            ctx.shadowBlur = vh(GLOW_STRENGTH_VH);
+            ctx.shadowColor = node.color;
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Draw border/highlight if hovered or dragged
+            if (node === hoveredNode || node === draggedNode) {
+                 ctx.strokeStyle = HIGHLIGHT_COLOR;
+                 ctx.lineWidth = vh(0.3); // Responsive line width
+                 ctx.stroke();
+            }
+
+            // Draw label
+            if (showLabelsToggle.checked && node.label) {
+                ctx.fillStyle = HIGHLIGHT_COLOR;
+                ctx.font = `${vh(LABEL_FONT_SIZE_VH)}px Arial`; // Responsive font size
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowBlur = vh(GLOW_STRENGTH_VH) / 2;
+                ctx.shadowColor = HIGHLIGHT_COLOR;
+                ctx.fillText(node.label, node.x, node.y - radius - vh(LABEL_OFFSET_VH)); // Position label above node
+                 ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawConnection(conn) {
+            ctx.beginPath();
+            ctx.moveTo(conn.from.x, conn.from.y);
+            ctx.lineTo(conn.to.x, conn.to.y);
+            ctx.strokeStyle = CONNECTION_COLOR;
+            ctx.lineWidth = vh(0.15); // Responsive line width
+            ctx.stroke();
+
+            // Draw path animation dots
+            const dotRadius = vh(PATH_DOT_RADIUS_VH);
+            conn.path.forEach(dot => {
+                 ctx.beginPath();
+                 ctx.arc(dot.x, dot.y, dotRadius, 0, Math.PI * 2); // Responsive dot size
+                 ctx.fillStyle = dot.color;
+                 ctx.shadowBlur = vh(GLOW_STRENGTH_VH) / 3;
+                 ctx.shadowColor = dot.color;
+                 ctx.fill();
+                 ctx.shadowBlur = 0;
+            });
+        }
+
+        function updatePathAnimations() {
+             const pathDotSpeed = vh(PATH_SPEED_VH); // Convert speed to pixels per frame
+             const dotSpacing = vh(PATH_DOT_SPACING_VH);
+
+            connections.forEach(conn => {
+                 if (!conn.pathLength || conn.pathLength <= 0) {
+                     // Recalculate length if not set or zero (e.g., after resize)
+                     conn.pathLength = Math.sqrt(Math.pow(conn.to.x - conn.from.x, 2) + Math.pow(conn.to.y - conn.from.y, 2));
+                 }
+
+                if (conn.pathLength > 0) {
+                    // Update progress and add new dots
+                    const maxProgress = conn.pathLength + dotSpacing * 2; // Allow dots to travel slightly past the end
+                    conn.pathProgress = (conn.pathProgress + pathDotSpeed);
+
+                     // Add new dot if enough distance covered since the last one, and not past the end
+                    if (conn.pathProgress <= maxProgress) {
+                         const lastDotDist = conn.path.length > 0 ? conn.path[conn.path.length - 1].progressAtCreation : -dotSpacing;
+                         if (conn.pathProgress - lastDotDist >= dotSpacing) {
+                             const ratio = Math.max(0, Math.min(1, conn.pathProgress / conn.pathLength));
+                             const dotX = conn.from.x + (conn.to.x - conn.from.x) * ratio;
+                             const dotY = conn.from.y + (conn.to.y - conn.from.y) * ratio;
+                             const dotColor = conn.from === hoveredNode ? conn.from.color : conn.to.color; // Color based on source/target
+                             conn.path.push({ x: dotX, y: dotY, color: dotColor, progressAtCreation: conn.pathProgress });
+                         }
+                    }
+
+                    // Remove dots that have traveled past the end of the connection + spacing
+                    conn.path = conn.path.filter(dot => {
+                        return conn.pathProgress - dot.progressAtCreation <= conn.pathLength + dotSpacing;
+                    });
+
+                    // Loop the animation
+                    if (conn.pathProgress >= conn.pathLength + dotSpacing * 2) { // Reset when last dot is past the end
+                         conn.pathProgress = 0;
+                         conn.path = [];
+                    }
+                }
+            });
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw connections
+            connections.forEach(drawConnection);
+
+            // Draw nodes
+            nodes.forEach(drawNode);
+
+             // Update path animations
+             updatePathAnimations();
+
+            // requestAnimationFrame(render); // Render loop is managed externally by FPS loop
+        }
+
+        function getNodeAt(x, y) {
+             // Check nodes in reverse order to pick the top one if overlapping
+             const baseRadius = vh(NODE_RADIUS_VH);
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const node = nodes[i];
+                const radius = baseRadius * (node.type === 'guide' ? GUIDE_NODE_RADIUS_MULTIPLIER : 1);
+                const dx = node.x - x;
+                const dy = node.y - y;
+                if (dx * dx + dy * dy < radius * radius) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function showTooltip(text, x, y) {
+            tooltip.textContent = text;
+            // Adjust position to prevent going off-screen
+            let tooltipX = x + 15;
+            let tooltipY = y + 15;
+
+            const tooltipRect = tooltip.getBoundingClientRect();
+            if (tooltipX + tooltipRect.width > window.innerWidth) {
+                tooltipX = x - tooltipRect.width - 15;
+            }
+             if (tooltipY + tooltipRect.height > window.innerHeight) {
+                 tooltipY = y - tooltipRect.height - 15;
+             }
+
+
+            tooltip.style.left = `${tooltipX}px`;
+            tooltip.style.top = `${tooltipY}px`;
+            tooltip.style.display = 'block';
+             // Use a small delay for opacity to ensure display block takes effect
+             requestAnimationFrame(() => {
+                tooltip.style.opacity = 1;
+             });
+        }
+
+        function hideTooltip() {
+             tooltip.style.opacity = 0;
+             // Wait for transition before hiding completely
+            setTimeout(() => { tooltip.style.display = 'none'; }, 200);
+        }
+
+        function startPathAnimation(fromNode, toNode) {
+            // Find the connection (either direction)
+            const conn = connections.find(c => (c.from === fromNode && c.to === toNode) || (c.from === toNode && c.to === fromNode));
+            if (conn) {
+                 // If found, ensure the path starts correctly from 'fromNode' to 'toNode' for animation
+                 // Reorient the connection temporarily if needed for animation direction
+                 if (conn.to === fromNode && conn.from === toNode) {
+                     // Swap from and to for the animation cycle
+                     const temp = conn.from;
+                     conn.from = conn.to;
+                     conn.to = temp;
+                 }
+                 conn.pathLength = Math.sqrt(Math.pow(conn.to.x - conn.from.x, 2) + Math.pow(conn.to.y - conn.from.y, 2));
+                 conn.pathProgress = 0; // Start animation from the beginning
+                 conn.path = []; // Clear old dots
+            }
+        }
+
+
+        // --- Event Handlers ---
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (isAutoDemo) return; // Disable interaction during auto demo
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const node = getNodeAt(mouseX, mouseY);
+
+            if (node) {
+                isDragging = true;
+                draggedNode = node;
+                dragOffset.x = mouseX - node.x;
+                dragOffset.y = mouseY - node.y;
+                 canvas.style.cursor = 'grabbing';
+                 hideTooltip(); // Hide tooltip while dragging
+                 resetPathAnimations(); // Stop animations when dragging
+                 render(); // Render immediately to update state
+            } else {
+                 isDragging = false;
+                 draggedNode = null;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            if (isDragging && draggedNode) {
+                const radius = vh(NODE_RADIUS_VH) * (draggedNode.type === 'guide' ? GUIDE_NODE_RADIUS_MULTIPLIER : 1);
+                draggedNode.x = Math.max(radius, Math.min(canvas.width - radius, mouseX - dragOffset.x));
+                draggedNode.y = Math.max(radius, Math.min(canvas.height - radius, mouseY - dragOffset.y));
+                resetPathAnimations(); // Recalculate paths from/to this node during drag
+                render(); // Render immediately while dragging
+            } else if (!isAutoDemo) { // Only handle hover if not dragging and not in auto demo
+                const node = getNodeAt(mouseX, mouseY);
+                if (node !== hoveredNode) {
+                    if (hoveredNode) {
+                        hideTooltip();
+                         // Reset path animation from previously hovered node
+                         connections.forEach(conn => {
+                             if (conn.from === hoveredNode || conn.to === hoveredNode) {
+                                 // Restore original connection direction if it was swapped for animation
+                                 const originalConn = connections.find(c => (c.from.id === conn.from.id && c.to.id === conn.to.id) || (c.from.id === conn.to.id && c.to.id === conn.from.id));
+                                  if(originalConn && (conn.from.id !== originalConn.from.id || conn.to.id !== originalConn.to.id)) {
+                                      const temp = conn.from;
+                                      conn.from = conn.to;
+                                      conn.to = temp;
+                                  }
+                                 conn.pathProgress = 0;
+                                 conn.path = [];
+                             }
+                         });
+                    }
+                    hoveredNode = node;
+                    if (hoveredNode) {
+                        showTooltip(hoveredNode.label, e.clientX, e.clientY);
+                         // Start path animation from concept node towards guide on hover
+                         if(hoveredNode.type === 'concept') {
+                             const guideNode = nodes.find(n => n.type === 'guide');
+                             if(guideNode) {
+                                startPathAnimation(hoveredNode, guideNode);
+                             }
+                         }
+                         canvas.style.cursor = 'pointer';
+                    } else {
+                        hideTooltip();
+                         canvas.style.cursor = 'default';
+                         resetPathAnimations(); // Stop animations if mouse leaves all nodes
+                    }
+                     render(); // Re-render only when hover state changes
+                } else if (hoveredNode) {
+                    // If still hovering the same node, update tooltip position
+                     showTooltip(hoveredNode.label, e.clientX, e.clientY);
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                draggedNode = null;
+                 // Determine appropriate cursor after drag (pointer if still over a node, default otherwise)
+                 const rect = canvas.getBoundingClientRect();
+                 const mouseX = e.clientX - rect.left;
+                 const mouseY = e.clientY - rect.top;
+                 const nodeUnderMouse = getNodeAt(mouseX, mouseY);
+                 canvas.style.cursor = nodeUnderMouse ? 'pointer' : 'default';
+
+                 resetPathAnimations(); // Paths may need recalculation after drag
+                 render(); // Final render after drag ends
+            }
+        });
+
+        // Handle mouse leaving canvas
+        canvas.addEventListener('mouseleave', () => {
+             if (hoveredNode) {
+                 hideTooltip();
+                 hoveredNode = null;
+                 resetPathAnimations(); // Stop animations if mouse leaves canvas
+                 render(); // Re-render to remove hover effects
+            }
+             if (isDragging) { // If mouse left while dragging, stop dragging
+                 isDragging = false;
+                 draggedNode = null;
+            }
+            canvas.style.cursor = 'default'; // Always set to default when leaving canvas
+        });
+
+
+        // Button Event Listeners
+        document.getElementById('resetBtn').addEventListener('click', () => {
+             stopAutoDemo();
+             hideTooltip();
+             hoveredNode = null;
+             draggedNode = null;
+             isDragging = false;
+             createNetwork(); // Recreate nodes and randomize positions
+             render();
+        });
+
+        document.getElementById('randomizeBtn').addEventListener('click', () => {
+            stopAutoDemo();
+            hideTooltip();
+             hoveredNode = null;
+             draggedNode = null;
+             isDragging = false;
+            randomizeNodePositions();
+        });
+
+        autoDemoBtn.addEventListener('click', () => {
+            if (isAutoDemo) {
+                stopAutoDemo();
+            } else {
+                startAutoDemo();
+            }
+        });
+
+        showLabelsToggle.addEventListener('change', () => {
+             render(); // Re-render to show/hide labels
+        });
+
+
+        // --- Auto Demo ---
+        function startAutoDemo() {
+            if (isAutoDemo) return; // Prevent starting multiple demos
+
+            stopAutoDemo(); // Ensure any existing demo is stopped
+
+            isAutoDemo = true;
+            autoDemoStepIndex = 0;
+            autoDemoBtn.textContent = 'Stop Demo';
+            canvas.style.cursor = 'auto'; // Disable canvas interactions during demo
+
+            // Hide manual interaction elements
+            hideTooltip();
+            hoveredNode = null;
+            draggedNode = null;
+            isDragging = false;
+
+            // Define demo sequence: concept nodes leading to the guide node
+            const conceptNodes = nodes.filter(node => node.type === 'concept');
+            const guideNode = nodes.find(n => n.type === 'guide');
+            if (!guideNode || conceptNodes.length === 0) {
+                 console.error("Cannot start auto demo: Guide node not found or no concept nodes.");
+                 stopAutoDemo();
+                 return;
+            }
+
+            function runStep() {
+                 if (!isAutoDemo) {
+                     return; // Stop if demo is cancelled
+                 }
+
+                 // Clear previous step highlight/path
+                 resetPathAnimations();
+                 hoveredNode = null; // Remove highlight
+
+                 if (autoDemoStepIndex >= conceptNodes.length) {
+                      // Demo finished, loop or stop
+                     autoDemoStepIndex = 0; // Loop demo
+                     // stopAutoDemo(); // Or stop after one cycle
+                     // return; // Exit if not looping
+                 }
+
+                 const currentNode = conceptNodes[autoDemoStepIndex];
+
+                 // Simulate hover action: highlight current node & start path to guide
+                 hoveredNode = currentNode; // Visually highlight current node
+                 startPathAnimation(currentNode, guideNode); // Start path animation
+
+                 render(); // Render the state change
+
+                 // Move to the next step after a delay
+                 autoDemoTimer = setTimeout(() => {
+                     autoDemoStepIndex++;
+                     runStep(); // Run the next step
+                 }, 3000); // Delay between steps (3 seconds)
+            }
+
+            // Start the first step
+            runStep();
+            // The FPS loop continuously calls render, so no need for render here again.
+        }
+
+        function stopAutoDemo() {
+            if (!isAutoDemo) return;
+
+            isAutoDemo = false;
+            if (autoDemoTimer) {
+                clearTimeout(autoDemoTimer);
+                autoDemoTimer = null;
+            }
+            autoDemoBtn.textContent = 'Auto Demo';
+            canvas.style.cursor = 'default'; // Restore default cursor
+            resetPathAnimations(); // Clear any lingering paths
+            hoveredNode = null; // Remove highlight
+            hideTooltip(); // Hide any demo tooltip
+            render(); // Final render to clear demo state
+        }
+
+
+        // --- FPS Counter ---
+        let lastFrameTime = 0;
+        let frameCount = 0;
+        let fps = 0;
+
+        function gameLoop(timestamp) {
+             // Update FPS
+            if (!lastFrameTime) lastFrameTime = timestamp;
+            const elapsed = timestamp - lastFrameTime;
+
+            if (elapsed > 100) { // Update FPS every 100ms
+                 fps = Math.round(frameCount / (elapsed / 1000));
+                 fpsDisplay.textContent = `FPS: ${fps}`;
+                 frameCount = 0;
+                 lastFrameTime = timestamp;
+            } else {
+                frameCount++;
+            }
+
+            // Render the scene
+            render();
+
+            // Loop the game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+
+        // --- Initialization ---
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initial setup
+        createNetwork(); // Create nodes and position them
+        resizeCanvas(); // Set initial canvas size and draw (calls render)
+        gameLoop(0); // Start the main game loop (includes rendering and FPS update)
+    </script>
+</body>
+</html>

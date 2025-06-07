@@ -1,0 +1,785 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GfG Knowledge Network</title>
+    <style>
+        /* --- Global Styles --- */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Crucial: No scrolling */
+            height: 100%;
+            width: 100%;
+            background-color: #000; /* Black background */
+            font-family: 'Arial', sans-serif;
+            color: #0f0; /* Default text color: Neon Green */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- App Container Layout --- */
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use vh for full viewport height */
+            width: 100vw; /* Use vw for full viewport width */
+            box-sizing: border-box;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 8vh; /* Fixed height */
+            text-align: center;
+            padding: 1vh 0;
+            box-sizing: border-box;
+            border-bottom: 2px solid #0ff; /* Neon Cyan border */
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff; /* Neon glow */
+            flex-shrink: 0; /* Prevent shrinking */
+            position: relative;
+            z-index: 2; /* Ensure header is above canvas */
+            font-size: 2.5vh;
+            color: #0ff; /* Header text color */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Main Content Area (Canvas + Controls) --- */
+        #main-area {
+            flex-grow: 1; /* Takes remaining vertical space */
+            position: relative; /* Container for absolute positioning of canvas and controls */
+            width: 100vw; /* Match viewport width */
+        }
+
+        /* --- Canvas --- */
+        #learningCanvas {
+            position: absolute; /* Cover the main area */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 0; /* Below controls */
+        }
+
+        /* --- Controls Panel --- */
+        #controls {
+            position: absolute;
+            top: 2vh; /* Position from top within main-area */
+            right: 2vw; /* Position from right within main-area */
+            z-index: 1; /* Above canvas */
+            background-color: rgba(0, 15, 15, 0.6); /* Semi-transparent dark background */
+            padding: 1.5vh 1.5vw;
+            border: 2px solid #f0f; /* Neon Pink border */
+            box-shadow: 0 0 10px #f0f, 0 0 20px #f0f; /* Neon glow */
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* Space between controls */
+            align-items: stretch; /* Stretch items to fill container */
+            user-select: none; /* Prevent text selection */
+        }
+
+        #controls button, #controls .toggle {
+            background-color: #000;
+            color: #0f0; /* Neon Green */
+            border: 1px solid #0f0;
+            padding: 1vh 1vw;
+            font-size: 1.8vh;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.1vw;
+            transition: all 0.2s ease;
+            text-align: center;
+            position: relative; /* For pseudo-elements like glow */
+            overflow: hidden; /* Hide excess glow */
+        }
+
+        #controls button::before, #controls .toggle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.3); /* Neon Green overlay */
+            transition: all 0.3s ease;
+        }
+
+        #controls button:hover::before, #controls .toggle:hover::before {
+            left: 0;
+        }
+
+         #controls button:hover, #controls .toggle:hover {
+            color: #0ff; /* Neon Cyan on hover */
+            border-color: #0ff;
+            box-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+        }
+
+        #controls .toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #controls .toggle span:first-child {
+            flex-grow: 1;
+            text-align: left;
+            margin-right: 1vw;
+        }
+
+        #controls .toggle .indicator {
+            width: 2vh;
+            height: 2vh;
+            background-color: #f00; /* Red when off */
+            border: 1px solid #f00;
+            border-radius: 50%;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        #controls .toggle.active .indicator {
+            background-color: #0f0; /* Green when on */
+            border-color: #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+
+        #controls #fps-display {
+            font-size: 1.5vh;
+            color: #0ff; /* Neon Cyan */
+            text-align: right;
+            margin-top: 0.5vh;
+        }
+
+        /* --- Tooltip --- */
+        #tooltip {
+            position: absolute;
+            padding: 0.8vh 1vw;
+            background-color: rgba(0, 20, 20, 0.8);
+            border: 1px solid #ff0; /* Neon Yellow */
+            box-shadow: 0 0 5px #ff0;
+            color: #ff0;
+            font-size: 1.6vh;
+            border-radius: 4px;
+            pointer-events: none; /* Allows clicks to pass through */
+            opacity: 0; /* Start hidden */
+            transition: opacity 0.2s ease;
+            z-index: 10; /* Ensure it's on top */
+            white-space: nowrap; /* Prevent wrapping */
+        }
+
+        /* --- Custom Cursors --- */
+        #learningCanvas {
+            cursor: default; /* Default cursor */
+        }
+        #learningCanvas.hovering {
+            cursor: pointer; /* Pointer when hovering interactive elements */
+        }
+        #learningCanvas.dragging {
+            cursor: grabbing; /* Grabbing hand when dragging */
+        }
+        #learningCanvas.can-drag {
+             cursor: grab; /* Grab hand when over draggable element */
+        }
+
+
+        /* --- Footer --- */
+        footer {
+            height: 6vh; /* Fixed height */
+            text-align: center;
+            padding: 1vh 0;
+            box-sizing: border-box;
+            border-top: 2px solid #f0f; /* Neon Pink border */
+            flex-shrink: 0; /* Prevent shrinking */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2vw; /* Space between links */
+            position: relative;
+            z-index: 2; /* Ensure footer is above canvas */
+        }
+
+        footer a {
+            color: #f0f; /* Neon Pink */
+            text-decoration: none;
+            font-size: 2vh;
+            text-shadow: 0 0 3px #f0f; /* Neon glow */
+            transition: color 0.2s ease, text-shadow 0.2s ease;
+        }
+
+        footer a:hover {
+            color: #fff; /* White on hover */
+            text-shadow: 0 0 8px #fff, 0 0 15px #fff; /* Stronger glow */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+
+        <header>
+            <h1>GfG Knowledge Network</h1>
+        </header>
+
+        <main id="main-area">
+            <canvas id="learningCanvas"></canvas>
+
+            <div id="controls">
+                <button id="resetBtn">Reset</button>
+                <button id="randomizeBtn">Randomize</button>
+                <button id="autoDemoBtn">Auto Demo</button>
+                <div id="flowToggle" class="toggle active">
+                    <span>Flow Animation</span>
+                    <div class="indicator"></div>
+                </div>
+                <div id="fps-display">FPS: --</div>
+            </div>
+
+            <div id="tooltip" class="tooltip"></div>
+
+        </main>
+
+        <footer>
+            <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://www.linkedin.com/in/ashish-jangra-/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            <!-- Note: LinkedIn link provided in prompt had '/' at the end, using that -->
+        </footer>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('learningCanvas');
+        const ctx = canvas.getContext('2d');
+        const appContainer = document.getElementById('app-container');
+        const header = document.querySelector('header');
+        const footer = document.querySelector('footer');
+        const controls = document.getElementById('controls');
+        const tooltip = document.getElementById('tooltip');
+        const resetBtn = document.getElementById('resetBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const flowToggle = document.getElementById('flowToggle');
+        const fpsDisplay = document.getElementById('fps-display');
+
+        // --- Configuration ---
+        // Calculate base node radius responsively
+        let NODE_RADIUS_BASE = Math.min(3.5 * window.innerWidth / 100, 3.5 * window.innerHeight / 100);
+        const GFG_NODE_COLOR = '#0ff'; // Cyan
+        const RESOURCE_NODE_COLOR = '#0f0'; // Green
+        const DEVELOPER_NODE_COLOR = '#f0f'; // Pink
+        const LINE_COLOR = 'rgba(0, 255, 0, 0.3)'; // Semi-transparent Green
+        const PULSE_COLOR = '#ff0'; // Yellow for pulse/highlight
+        const PARTICLE_COLOR = '#0ff'; // Cyan for particles
+
+        const NODES_DATA_INITIAL = [
+            { id: 'gfg', label: 'GeeksforGeeks', type: 'gfg', radiusMultiplier: 1.5, color: GFG_NODE_COLOR, initialPos: { x: 0.25, y: 0.5 } },
+            { id: 'algo', label: 'Algorithms', type: 'resource', radiusMultiplier: 1, color: RESOURCE_NODE_COLOR, initialPos: { x: 0.5, y: 0.2 } },
+            { id: 'ds', label: 'Data Structures', type: 'resource', radiusMultiplier: 1, color: RESOURCE_NODE_COLOR, initialPos: { x: 0.55, y: 0.8 } },
+            { id: 'sys', label: 'System Design', type: 'resource', radiusMultiplier: 1, color: RESOURCE_NODE_COLOR, initialPos: { x: 0.7, y: 0.35 } },
+            { id: 'behave', label: 'Behavioral', type: 'resource', radiusMultiplier: 1, color: RESOURCE_NODE_COLOR, initialPos: { x: 0.75, y: 0.65 } },
+            { id: 'dev', label: 'Developer', type: 'developer', radiusMultiplier: 1.5, color: DEVELOPER_NODE_COLOR, initialPos: { x: 0.9, y: 0.5 } }
+        ];
+
+        // --- State Variables ---
+        let nodes = [];
+        let isDragging = false;
+        let draggedNode = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let hoveredNode = null;
+        let activeFlows = {}; // { resourceId: { progress: 0, pulsing: true } }
+        let flowAnimationEnabled = true;
+        let autoDemoMode = false;
+        let demoStep = 0; // Index for resource nodes in demo
+        let demoTimer = null;
+        let lastFrameTime = 0;
+        let fps = 0;
+
+        // --- Canvas Setup & Resize ---
+        function resizeCanvas() {
+            const mainArea = document.getElementById('main-area');
+            canvas.width = mainArea.clientWidth;
+            canvas.height = mainArea.clientHeight;
+
+             // Recalculate base node radius
+             NODE_RADIUS_BASE = Math.min(3.5 * canvas.width / 100, 3.5 * canvas.height / 100);
+
+            if (nodes.length === 0) {
+                 // Initial placement if nodes haven't been created
+                 initializeNodes();
+            } else {
+                // Update existing node positions and radii based on new dimensions
+                nodes.forEach(node => {
+                    // Re-calculate x,y based on stored percentages
+                    node.x = node.initialXPercent * canvas.width;
+                    node.y = node.initialYPercent * canvas.height;
+                    // Re-calculate radius
+                    const initialData = NODES_DATA_INITIAL.find(d => d.id === node.id);
+                    if (initialData) {
+                        node.radius = NODE_RADIUS_BASE * initialData.radiusMultiplier;
+                    }
+                });
+            }
+
+            draw(); // Redraw after resize
+        }
+
+        // --- Node Initialization ---
+        function initializeNodes() {
+            nodes = NODES_DATA_INITIAL.map(data => {
+                const node = {
+                    id: data.id,
+                    label: data.label,
+                    type: data.type,
+                    radius: NODE_RADIUS_BASE * data.radiusMultiplier,
+                    color: data.color,
+                    // Store initial positions as percentages for responsive layout
+                    initialXPercent: data.initialPos.x,
+                    initialYPercent: data.initialPos.y,
+                    x: data.initialPos.x * canvas.width,
+                    y: data.initialPos.y * canvas.height,
+                    isBeingDragged: false // State for drag
+                };
+                 // Add specific data if needed (e.g., connections)
+                 // Simplified connections based on type
+                if (node.type === 'gfg') node.connections = NODES_DATA_INITIAL.filter(n => n.type === 'resource').map(n => n.id);
+                if (node.type === 'resource') node.connections = ['dev']; // Resources connect to developer
+                return node;
+            });
+             activeFlows = {}; // Reset active flows
+        }
+
+        function resetNodes() {
+            if (autoDemoMode) toggleAutoDemo(); // Stop demo if running
+            initializeNodes(); // Resets positions to initial state
+             activeFlows = {}; // Ensure flows are reset
+        }
+
+        function randomizeNodes() {
+             if (autoDemoMode) toggleAutoDemo(); // Stop demo if running
+             activeFlows = {}; // Ensure flows are reset
+
+             nodes.forEach(node => {
+                // Keep GfG and Developer roughly in place, randomize resources more
+                if (node.type === 'resource') {
+                     node.x = Math.random() * canvas.width * 0.6 + canvas.width * 0.2; // Middle 60% horizontally
+                     node.y = Math.random() * canvas.height * 0.8 + canvas.height * 0.1; // Middle 80% vertically
+                } else {
+                    // Slightly nudge GfG/Dev from their initial positions
+                     const initialData = NODES_DATA_INITIAL.find(d => d.id === node.id);
+                     node.x = initialData.initialPos.x * canvas.width + (Math.random() - 0.5) * Math.min(canvas.width * 0.05, 50); // Nudge by +/- up to 50px or 5% width
+                     node.y = initialData.initialPos.y * canvas.height + (Math.random() - 0.5) * Math.min(canvas.height * 0.05, 50); // Nudge by +/- up to 50px or 5% height
+                }
+                // Ensure within bounds
+                 node.x = Math.max(node.radius, Math.min(canvas.width - node.radius, node.x));
+                 node.y = Math.max(node.radius, Math.min(canvas.height - node.radius, node.y));
+            });
+        }
+
+
+        // --- Drawing Functions ---
+        function drawNode(node) {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+            ctx.fillStyle = node.color;
+            ctx.shadowColor = node.color;
+            ctx.shadowBlur = 15; // Glow effect
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Draw label
+            ctx.fillStyle = '#fff'; // White text
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Adjust font size based on node radius and screen size
+            const fontSize = Math.min(node.radius * 0.5, 20); // Max font size 20px or half radius
+            ctx.font = `${fontSize}px Arial`;
+            ctx.fillText(node.label, node.x, node.y + node.radius + Math.max(10, fontSize * 0.8)); // Position below node, minimum offset 10, or proportional to font size
+        }
+
+        function drawConnection(startNode, endNode, isPulsing = false, pulseProgress = 0) {
+            if (!startNode || !endNode) return;
+
+            ctx.beginPath();
+            ctx.moveTo(startNode.x, startNode.y);
+            ctx.lineTo(endNode.x, endNode.y);
+
+            ctx.strokeStyle = isPulsing ? PULSE_COLOR : LINE_COLOR;
+             ctx.lineWidth = isPulsing ? 3 : 1;
+            ctx.shadowColor = isPulsing ? PULSE_COLOR : 'transparent';
+            ctx.shadowBlur = isPulsing ? 10 : 0;
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Simple marker animation for active flows
+             if (isPulsing && flowAnimationEnabled) {
+                const numMarkers = 4; // Number of markers
+                const markerSize = 4; // Size of markers
+                const flowSpeed = 0.008; // Adjust speed
+
+                ctx.fillStyle = PARTICLE_COLOR;
+                ctx.shadowColor = PARTICLE_COLOR;
+                ctx.shadowBlur = 5; // Marker glow
+
+                for (let i = 0; i < numMarkers; i++) {
+                    // Calculate marker position based on pulseProgress and index
+                    let currentProgress = (pulseProgress + i / numMarkers) % 1;
+
+                    // Optional: Use easing function (e.g., ease-in-out)
+                    // A simple cosine ease-in-out:
+                    let easedProgress = 0.5 - 0.5 * Math.cos(Math.PI * currentProgress);
+
+
+                    const markerX = startNode.x + (endNode.x - startNode.x) * easedProgress;
+                    const markerY = startNode.y + (endNode.y - startNode.y) * easedProgress;
+
+                    ctx.beginPath();
+                    ctx.arc(markerX, markerY, markerSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                 ctx.shadowBlur = 0; // Reset shadow
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Find key nodes for connections
+            const gfgNode = nodes.find(node => node.type === 'gfg');
+            const devNode = nodes.find(node => node.type === 'developer');
+            const resourceNodes = nodes.filter(node => node.type === 'resource');
+
+            // Draw connections
+            if (gfgNode && devNode) {
+                 resourceNodes.forEach(resourceNode => {
+                    // Draw connection from GfG to resource (always static)
+                    drawConnection(gfgNode, resourceNode);
+
+                    // Draw connection from resource to developer (pulsing if active)
+                    const flow = activeFlows[resourceNode.id];
+                    drawConnection(resourceNode, devNode, flow?.pulsing, flow?.progress);
+                 });
+            }
+
+
+            // Draw nodes (draw dragged node last so it's on top)
+            // Store original colors temporarily for pulsing effect
+            const originalColors = {};
+            nodes.forEach(node => {
+                 originalColors[node.id] = node.color;
+            });
+
+
+            nodes.forEach(node => {
+                if (!node.isBeingDragged) {
+                    drawNode(node);
+                }
+            });
+             if (draggedNode) {
+                 drawNode(draggedNode); // Draw dragged node last
+             }
+
+            // Update flow animation progress (only if animation is enabled)
+            if (flowAnimationEnabled) {
+                 const flowSpeed = 0.005; // Adjust speed
+                 for (const id in activeFlows) {
+                     if (activeFlows[id].pulsing) {
+                          activeFlows[id].progress = (activeFlows[id].progress + flowSpeed) % 1;
+                     }
+                 }
+            }
+        }
+
+        // --- Interaction Logic ---
+
+        function getDistance(x1, y1, x2, y2) {
+            return Math.sqrt((x2 - x1)**2 + (y2 - y1)**2);
+        }
+
+        function getNodeAt(x, y) {
+            // Check nodes in reverse order to pick the top one if overlapping (dragged node is always top)
+            const checkNodes = draggedNode ? nodes.filter(n => !n.isBeingDragged).concat([draggedNode]) : nodes;
+
+            for (let i = checkNodes.length - 1; i >= 0; i--) {
+                const node = checkNodes[i];
+                if (getDistance(x, y, node.x, node.y) < node.radius) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function handleMouseMove(event) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = event.clientX - rect.left;
+            mouseY = event.clientY - rect.top;
+
+            if (isDragging && draggedNode) {
+                draggedNode.x = mouseX - dragOffsetX;
+                draggedNode.y = mouseY - dragOffsetY;
+
+                // Constrain dragging within bounds
+                 draggedNode.x = Math.max(draggedNode.radius, Math.min(canvas.width - draggedNode.radius, draggedNode.x));
+                 draggedNode.y = Math.max(draggedNode.radius, Math.min(canvas.height - draggedNode.radius, draggedNode.y));
+
+                // Redraw is handled by the animation loop
+            } else {
+                 const node = getNodeAt(mouseX, mouseY);
+
+                 // Handle custom cursor
+                 if (node && node.type === 'resource') { // Only resources are draggable in this model
+                     canvas.classList.add('can-drag');
+                     canvas.classList.remove('hovering'); // Don't show pointer AND grab
+                 } else if (node) { // Hovering non-draggable interactive node (gfg, dev)
+                     canvas.classList.add('hovering');
+                     canvas.classList.remove('can-drag');
+                 }
+                 else {
+                     canvas.classList.remove('hovering', 'can-drag');
+                 }
+
+
+                 // Handle tooltip
+                 if (node && node !== hoveredNode) {
+                     hoveredNode = node;
+                     tooltip.textContent = hoveredNode.label;
+                     // Position tooltip near the mouse
+                     tooltip.style.left = `${mouseX + 15}px`;
+                     tooltip.style.top = `${mouseY + 15}px`;
+                     tooltip.style.opacity = 1;
+                 } else if (!node && hoveredNode) {
+                     hoveredNode = null;
+                     tooltip.style.opacity = 0;
+                 } else if (node && hoveredNode === node) {
+                    // Update tooltip position while hovering
+                     tooltip.style.left = `${mouseX + 15}px`;
+                     tooltip.style.top = `${mouseY + 15}px`;
+                 }
+            }
+        }
+
+        function handleMouseDown(event) {
+             // Only handle left click (button 0)
+             if (event.button !== 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            mouseX = event.clientX - rect.left;
+            mouseY = event.clientY - rect.top;
+
+            const node = getNodeAt(mouseX, mouseY);
+
+            // Allow dragging only for resource nodes
+            if (node && node.type === 'resource') {
+                isDragging = true;
+                draggedNode = node;
+                dragOffsetX = mouseX - node.x;
+                dragOffsetY = mouseY - node.y;
+                draggedNode.isBeingDragged = true;
+                 canvas.classList.add('dragging');
+                 canvas.classList.remove('can-drag', 'hovering'); // Remove other cursor classes while dragging
+                 if (autoDemoMode) toggleAutoDemo(); // Stop demo if manual interaction starts
+            }
+        }
+
+        function handleMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                 if (draggedNode) {
+                    draggedNode.isBeingDragged = false;
+                    // draggedNode is kept until next animation frame draws correctly below it
+                    // Setting draggedNode to null here might cause a flicker if the loop hasn't drawn yet.
+                    // Let's set it to null after the loop or rely on `isBeingDragged`.
+                    // For simplicity, we'll set it here, the draw loop handles `isBeingDragged`.
+                     draggedNode = null;
+                 }
+                 canvas.classList.remove('dragging');
+                 // Mousemove handles setting back to hovering/can-drag if applicable
+            }
+        }
+
+         function handleMouseLeave() {
+             // If dragging and mouse leaves, stop dragging
+             if (isDragging) {
+                 handleMouseUp();
+             }
+             // Hide tooltip if mouse leaves canvas
+             if (hoveredNode) {
+                 hoveredNode = null;
+                 tooltip.style.opacity = 0;
+             }
+              // Reset cursor
+             canvas.classList.remove('hovering', 'can-drag', 'dragging');
+         }
+
+
+        function handleCanvasClick(event) {
+            // Check if it was a drag ending instead of a click
+             // Get mouse position BEFORE mouseup potentially happened
+             const clickX = event.clientX - canvas.getBoundingClientRect().left;
+             const clickY = event.clientY - canvas.getBoundingClientRect().top;
+            // If the mouse moved significantly between mousedown and mouseup, treat as drag
+            // Threshold of 5 pixels
+             if (draggedNode && getDistance(clickX, clickY, mouseX + dragOffsetX, mouseY + dragOffsetY) > 5) {
+                 // This was the end of a drag. MouseUp already handled the state. Do nothing more.
+                 return;
+             }
+            // If no node was dragged, get the node at the final click position
+            const clickedNode = getNodeAt(clickX, clickY);
+
+            if (clickedNode && clickedNode.type === 'resource') {
+                // CONCEPTUAL TAKEAWAY: Clicking a resource activates/deactivates its flow to the developer.
+                const resourceId = clickedNode.id;
+                // Toggle flow animation for this specific resource
+                if (activeFlows[resourceId]) {
+                    delete activeFlows[resourceId]; // Stop flow
+                } else {
+                     // Start flow
+                    activeFlows[resourceId] = { progress: 0, pulsing: true };
+                }
+                 if (autoDemoMode) toggleAutoDemo(); // Stop demo if manual interaction occurs
+            } else if (clickedNode && (clickedNode.type === 'gfg' || clickedNode.type === 'developer')) {
+                 // CONCEPTUAL TAKEAWAY: Clicking source/target highlights them briefly.
+                 // Simple pulse effect on the node color
+                 const originalColor = NODES_DATA_INITIAL.find(d => d.id === clickedNode.id).color;
+                 clickedNode.color = PULSE_COLOR;
+                 setTimeout(() => {
+                    clickedNode.color = originalColor; // Restore original color
+                 }, 300); // Pulse duration 300ms
+                 if (autoDemoMode) toggleAutoDemo(); // Stop demo if manual interaction occurs
+            }
+        }
+
+
+        // --- Control Button Actions ---
+        resetBtn.addEventListener('click', resetNodes);
+        randomizeBtn.addEventListener('click', randomizeNodes);
+        autoDemoBtn.addEventListener('click', toggleAutoDemo);
+
+        flowToggle.addEventListener('click', () => {
+            flowAnimationEnabled = !flowAnimationEnabled;
+            flowToggle.classList.toggle('active', flowAnimationEnabled);
+            // If disabling flow, stop all active flows visuals (keep data if demo active?)
+            // Let's clear active flows data if toggled off
+            if (!flowAnimationEnabled && !autoDemoMode) {
+                 activeFlows = {};
+            }
+            if (autoDemoMode) {
+                // If demo is running and flow animation is toggled, just update the visual flag.
+                // The demo manages the `activeFlows` data.
+                // However, the brief says interacting stops demo. So, stop demo.
+                 toggleAutoDemo();
+            }
+        });
+
+        function toggleAutoDemo() {
+            autoDemoMode = !autoDemoMode;
+            autoDemoBtn.textContent = autoDemoMode ? 'Stop Demo' : 'Auto Demo';
+
+            if (autoDemoMode) {
+                 // Start demo sequence
+                 resetNodes(); // Start from initial state
+                 demoStep = 0;
+                 activeFlows = {}; // Clear manual flows before starting demo
+                 startDemoStep();
+                 // Ensure flow animation is ON during demo
+                 flowAnimationEnabled = true;
+                 flowToggle.classList.add('active');
+            } else {
+                 // Stop demo
+                 clearInterval(demoTimer);
+                 demoTimer = null;
+                 activeFlows = {}; // Clear demo flows
+                 resetNodes(); // Return to initial state
+                 // Do NOT toggle flowAnimationEnabled off automatically, user controls that via toggle
+            }
+        }
+
+        function startDemoStep() {
+             if (!autoDemoMode) {
+                 clearInterval(demoTimer); // Ensure timer is cleared if autoDemoMode changes during timeout
+                 demoTimer = null;
+                 return;
+             }
+
+            const resourceNodes = nodes.filter(n => n.type === 'resource');
+            if (resourceNodes.length === 0) {
+                 // No resources to demo flows for
+                 toggleAutoDemo(); // Stop demo
+                 return;
+            }
+
+            const currentResource = resourceNodes[demoStep % resourceNodes.length];
+            const nextResource = resourceNodes[(demoStep + 1) % resourceNodes.length];
+
+
+            // Smooth transition: Start next flow slightly before current one ends
+            const transitionDuration = 500; // ms
+            const stepDuration = 3000; // ms per resource flow being prominent
+
+            // Activate current resource flow
+            activeFlows = {}; // Clear previous step's flow
+            activeFlows[currentResource.id] = { progress: 0, pulsing: true };
+
+            // Advance to next step after a delay, overlapping the end
+            demoTimer = setTimeout(() => {
+                demoStep++;
+                startDemoStep(); // Loop through resources
+            }, stepDuration - transitionDuration);
+
+             // Optional: Fade out previous flow visually?
+             // Not strictly necessary with the current logic clearing activeFlows each step,
+             // but could add a visual dissolve effect if needed. Current logic is simpler.
+        }
+
+
+        // --- Animation Loop ---
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+             // Calculate FPS
+            const now = performance.now();
+            const delta = now - lastFrameTime;
+            lastFrameTime = now;
+            // Update FPS display less frequently for readability
+            if (delta > 100) { // Update roughly every 100ms (10 times per second)
+                 fps = Math.round(1000 / delta);
+                 fpsDisplay.textContent = `FPS: ${fps}`;
+            } else {
+                 // Maintain a more stable FPS average if delta is very small (high frame rate)
+                 // Or just update every frame - simpler
+                 fps = Math.round(1000 / delta);
+                 fpsDisplay.textContent = `FPS: ${fps}`;
+            }
+
+
+            draw(); // Draw the current state
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseLeave); // End drag and hide tooltip if mouse leaves canvas
+        canvas.addEventListener('click', handleCanvasClick);
+
+
+        // --- Initialization ---
+        function init() {
+            resizeCanvas(); // Set initial canvas size and create nodes
+            animate(0); // Start the animation loop
+        }
+
+        init(); // Run initialization
+
+    </script>
+
+</body>
+</html>

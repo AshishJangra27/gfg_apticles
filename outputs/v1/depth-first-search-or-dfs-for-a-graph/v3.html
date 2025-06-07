@@ -1,0 +1,914 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Visualizer (Minimalist Neon)</title>
+    <style>
+        /* Minimalist Neon Theme & Layout */
+        :root {
+            --bg-color: #000;
+            --neon-blue: #0ff;
+            --neon-green: #0f0;
+            --neon-pink: #f0f;
+            --neon-yellow: #ff0;
+            --neon-orange: #f80;
+            --glow-intensity: 0.5vh; /* Dynamic glow based on viewport height */
+            --header-height: 6vh;
+            --footer-height: 4vh;
+            --sidebar-width: 25vw;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden; /* Disable scrolling */
+            background-color: var(--bg-color);
+            color: var(--neon-blue);
+            font-family: monospace; /* Fallback to monospace */
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure full viewport height */
+            cursor: crosshair; /* Custom neon cursor */
+        }
+
+        header {
+            height: var(--header-height);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5vh;
+            text-transform: uppercase;
+            letter-spacing: 0.3vh;
+            border-bottom: 0.2vh solid var(--neon-blue);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+            flex-shrink: 0;
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+        }
+
+        main {
+            flex-grow: 1; /* Take remaining vertical space */
+            display: flex;
+            position: relative; /* Needed for canvas positioning if not using flex/grid */
+            padding: 1vh; /* Add some padding around main content */
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+
+        canvas {
+            display: block;
+            flex-grow: 1; /* Take remaining width */
+            height: 100%; /* Fill main's height */
+            border: 0.2vh solid var(--neon-green);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-green);
+            background-color: rgba(0, 10, 10, 0.3); /* Semi-transparent dark background for canvas */
+            box-sizing: border-box;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100%; /* Fill main's height */
+            padding: 1vh;
+            border-left: 0.2vh solid var(--neon-pink);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-pink);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto; /* In case controls exceed height */
+            font-size: 1.5vh;
+            box-sizing: border-box;
+        }
+
+        #sidebar h2, #sidebar h3 {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-yellow);
+            margin-top: 0;
+            margin-bottom: 1vh;
+            border-bottom: 0.1vh dashed rgba(255, 255, 0, 0.3);
+            padding-bottom: 0.5vh;
+            text-transform: uppercase;
+            font-size: 2vh;
+        }
+
+        .control-group {
+            margin-bottom: 2vh;
+            padding-bottom: 1.5vh;
+            border-bottom: 0.1vh solid rgba(0, 255, 255, 0.2);
+        }
+
+        button {
+            background-color: transparent;
+            color: var(--neon-blue);
+            border: 0.2vh solid var(--neon-blue);
+            padding: 1vh 1.5vh;
+            margin: 0.5vh;
+            font-size: 1.6vh;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+            font-family: monospace;
+        }
+
+        button:hover {
+            color: var(--bg-color);
+            background-color: var(--neon-blue);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue), 0 0 var(--glow-intensity) var(--neon-blue) inset;
+        }
+
+        button:active {
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue) inset;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+            text-shadow: none;
+            background-color: transparent;
+            color: var(--neon-blue);
+        }
+
+
+        label {
+            display: block;
+            margin-bottom: 1vh;
+            color: var(--neon-green);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-green);
+            cursor: pointer;
+            font-size: 1.5vh;
+        }
+
+        input[type="checkbox"] {
+             /* Custom checkbox styling */
+            appearance: none;
+            width: 1.8vh;
+            height: 1.8vh;
+            border: 0.2vh solid var(--neon-pink);
+            background-color: transparent;
+            margin-right: 0.5vh;
+            vertical-align: middle;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-pink);
+        }
+
+        input[type="checkbox"]:checked {
+             background-color: var(--neon-pink);
+             box-shadow: 0 0 var(--glow-intensity) var(--neon-pink), 0 0 var(--glow-intensity) var(--neon-pink) inset;
+        }
+
+         input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            top: 0.2vh; left: 0.4vh; /* Center checkmark */
+            width: 0.5vh;
+            height: 1vh;
+            border: solid var(--bg-color);
+            border-width: 0 0.2vh 0.2vh 0;
+            transform: rotate(45deg);
+            display: none; /* Hide checkmark by default */
+         }
+
+         input[type="checkbox"]:checked::after {
+             display: block; /* Show checkmark when checked */
+         }
+
+
+        .info-box {
+             margin-top: 2vh;
+             padding-top: 1.5vh;
+             border-top: 0.1vh solid rgba(255, 0, 255, 0.2);
+             color: var(--neon-orange);
+             text-shadow: 0 0 var(--glow-intensity) var(--neon-orange);
+        }
+
+        .info-box p {
+            margin: 0.5vh 0;
+        }
+
+
+        footer {
+            height: var(--footer-height);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5vh;
+            border-top: 0.2vh solid var(--neon-blue);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+            flex-shrink: 0;
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+        }
+
+        footer a {
+            color: var(--neon-pink);
+            text-decoration: none;
+            margin: 0 1vw;
+            transition: color 0.3s ease;
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-pink);
+        }
+
+        footer a:hover {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 var(--glow-intensity) var(--neon-yellow);
+        }
+
+        /* Tooltip styles */
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 255, 255, 0.8);
+            color: var(--bg-color);
+            padding: 0.5vh 1vh;
+            border: 0.1vh solid var(--neon-blue);
+            box-shadow: 0 0 var(--glow-intensity) var(--neon-blue);
+            font-size: 1.5vh;
+            pointer-events: none; /* Don't block mouse events */
+            z-index: 1000; /* Ensure it's on top */
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        #tooltip.visible {
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>Depth First Search Visualizer</header>
+
+    <main>
+        <canvas id="dfsCanvas"></canvas>
+        <div id="sidebar">
+            <h2>Controls & Info</h2>
+            <div class="control-group">
+                <button id="resetBtn">Reset Graph</button>
+                <button id="randomizeBtn">Randomize Graph</button>
+                <button id="autoDemoBtn">Auto Demo</button>
+            </div>
+            <div class="control-group">
+                <h3>Display Options</h3>
+                <label><input type="checkbox" id="toggleLabels" checked> Show Node Labels</label>
+                <label><input type="checkbox" id="togglePathHighlight" checked> Highlight Traversal</label>
+            </div>
+             <div class="info-box">
+                 <h3>Status</h3>
+                 <p id="statusText">Generate or click node to start.</p>
+                 <p id="fpsDisplay">FPS: --</p>
+             </div>
+        </div>
+    </main>
+
+    <footer>
+        <span>&copy; 2023 Minimalist Developer</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <div id="tooltip" class=""></div>
+
+    <script>
+        // Canvas and Context
+        const canvas = document.getElementById('dfsCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Elements
+        const resetBtn = document.getElementById('resetBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const autoDemoBtn = document.getElementById('autoDemoBtn');
+        const toggleLabelsCheckbox = document.getElementById('toggleLabels');
+        const togglePathHighlightCheckbox = document.getElementById('togglePathHighlight');
+        const statusText = document.getElementById('statusText');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+        const tooltip = document.getElementById('tooltip');
+
+        // Graph Data & State
+        let nodes = [];
+        let edges = [];
+        let adjacencyList = {}; // { nodeId: [neighborId, ...] }
+        let draggingNode = null;
+        let hoverNode = null;
+
+        // DFS State
+        const NODE_STATE = {
+            UNVISITED: 'unvisited',
+            VISITING: 'visiting', // Currently exploring from this node (on stack/recursion path)
+            VISITED: 'visited'    // Finished exploring from this node
+        };
+        const EDGE_STATE = {
+            UNVISITED: 'unvisited',
+            TRAVERSED: 'traversed', // Part of the DFS path
+        };
+
+        let nodeStates = {}; // { nodeId: state }
+        let edgeStates = {}; // { edgeKey: state } where edgeKey is 'fromId-toId' or 'toId-fromId'
+
+        let dfsSteps = []; // Pre-calculated steps for animation
+        let currentStepIndex = 0;
+        let animationStartTime = 0;
+        let animationStepDelay = 300; // Milliseconds per DFS logical step
+        let animationRunning = false;
+        let autoDemoRunning = false;
+
+        // Rendering constants
+        const NODE_RADIUS = Math.min(parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.5, 15); // Dynamic radius based on root font size or fixed small size
+        const COLORS = {
+            UNVISITED_NODE: 'rgba(0, 255, 255, 0.5)', // Neon blue translucent
+            VISITING_NODE: 'rgba(255, 0, 255, 1)',    // Neon pink solid
+            VISITED_NODE: 'rgba(0, 255, 0, 0.8)',     // Neon green solid
+            UNVISITED_EDGE: 'rgba(0, 255, 255, 0.2)', // Neon blue faint
+            TRAVERSED_EDGE: 'rgba(255, 165, 0, 0.8)', // Neon orange solid
+            HOVER_GLOW: 'rgba(255, 255, 0, 0.8)',    // Neon yellow
+            GLOW_COLOR: 'rgba(0, 255, 255, 0.5)',
+            GLOW_RADIUS: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--glow-intensity')) * 2 || 5, // Get from CSS variable, make it a bit larger for canvas drawing
+        };
+         const TEXT_COLOR_DARK = 'rgba(30, 30, 30, 0.9)'; // Dark color for text on bright nodes
+         const TEXT_COLOR_LIGHT = 'rgba(200, 200, 200, 0.9)'; // Light color for text on dark background (canvas)
+
+
+        // Animation & Rendering Loop
+        let lastFrameTime = 0;
+        let fps = 0;
+
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Edges first
+            edges.forEach(edge => drawEdge(edge));
+
+            // Draw Nodes on top
+            nodes.forEach(node => drawNode(node));
+
+             // Draw Hover Node Highlight
+            if (hoverNode && !draggingNode) {
+                drawNodeGlow(hoverNode, COLORS.HOVER_GLOW, COLORS.GLOW_RADIUS * 1.5);
+            }
+
+            // FPS display update (less frequent)
+            const now = performance.now();
+            const delta = now - lastFrameTime;
+            lastFrameTime = now;
+            fps = 1000 / delta;
+        }
+
+        function animationLoop(currentTime) {
+            // Update FPS display every few frames
+            if (currentTime - (animationLoop.lastFpsUpdate || 0) > 200) { // Update ~5 times per second
+                 fpsDisplay.textContent = `FPS: ${Math.round(fps)}`;
+                 animationLoop.lastFpsUpdate = currentTime;
+            }
+
+            // Handle DFS animation step
+            if (animationRunning && currentTime - animationStartTime > animationStepDelay) {
+                 executeNextStep();
+                 animationStartTime = currentTime;
+            }
+
+            draw(); // Draw current state
+
+            // Request next frame
+            requestAnimationFrame(animationLoop);
+        }
+
+        // Drawing Functions
+        function drawNode(node) {
+            const state = nodeStates[node.id];
+            let color = COLORS.UNVISITED_NODE;
+            let glow = COLORS.GLOW_COLOR; // Default glow color
+
+            if (state === NODE_STATE.VISITING) {
+                color = COLORS.VISITING_NODE;
+                glow = COLORS.VISITING_NODE;
+            } else if (state === NODE_STATE.VISITED) {
+                color = COLORS.VISITED_NODE;
+                 glow = COLORS.VISITED_NODE;
+            } else if (hoverNode === node && !draggingNode) {
+                 color = COLORS.UNVISITED_NODE; // Keep base color but add hover glow
+                 glow = COLORS.HOVER_GLOW;
+            }
+
+            // Draw Glow effect
+            drawNodeGlow(node, glow, COLORS.GLOW_RADIUS);
+
+            // Draw Node Circle
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Draw Node Border (optional but adds crispness over glow)
+            ctx.strokeStyle = color.replace(/[^,]+(?=\))/, '1)'); // Make border fully opaque
+            ctx.lineWidth = 0.2vh;
+            ctx.stroke();
+
+            // Draw Node Label
+            if (toggleLabelsCheckbox.checked) {
+                ctx.fillStyle = TEXT_COLOR_DARK; // Text color contrasting with node color
+                ctx.strokeStyle = color.replace(/[^,]+(?=\))/, '1)'); // Outline color
+                ctx.lineWidth = 0.1vh;
+                ctx.font = `${NODE_RADIUS}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(node.id, node.x, node.y);
+                ctx.fillText(node.id, node.x, node.y);
+            }
+        }
+
+        function drawNodeGlow(node, color, radius) {
+             if (!color || radius <= 0) return;
+             ctx.beginPath();
+             ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+             ctx.shadowColor = color;
+             ctx.shadowBlur = radius;
+             ctx.fillStyle = color; // Need a fill or stroke for shadow to apply in some contexts
+             ctx.fill();
+             ctx.shadowColor = 'transparent'; // Reset shadow
+             ctx.shadowBlur = 0;
+        }
+
+
+        function drawEdge(edge) {
+            const key = getEdgeKey(edge.from, edge.to);
+            const state = edgeStates[key];
+            const fromNode = nodes.find(n => n.id === edge.from);
+            const toNode = nodes.find(n => n.id === edge.to);
+
+            if (!fromNode || !toNode) return;
+
+            let color = COLORS.UNVISITED_EDGE;
+            let glow = COLORS.GLOW_COLOR;
+            let lineWidth = 0.15vh; // Base line width
+
+            if (state === EDGE_STATE.TRAVERSED && togglePathHighlightCheckbox.checked) {
+                color = COLORS.TRAVERSED_EDGE;
+                glow = COLORS.TRAVERSED_EDGE;
+                lineWidth = 0.3vh; // Thicker for traversed paths
+            } else if (hoverNode && (edge.from === hoverNode.id || edge.to === hoverNode.id) && !draggingNode) {
+                 // Highlight edge on node hover
+                 color = COLORS.UNVISITED_EDGE.replace(/[^,]+(?=\))/, '0.5)'); // Make slightly more visible
+                 glow = COLORS.HOVER_GLOW;
+            }
+
+
+            ctx.beginPath();
+            ctx.moveTo(fromNode.x, fromNode.y);
+            ctx.lineTo(toNode.x, toNode.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+
+            // Apply glow
+            ctx.shadowColor = glow;
+            ctx.shadowBlur = COLORS.GLOW_RADIUS / 2; // Edge glow can be smaller
+
+            ctx.stroke();
+
+             // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+        }
+
+        // Graph Generation
+        function generateGraph(numNodes = 15, numEdges = 20) {
+            nodes = [];
+            edges = [];
+            adjacencyList = {};
+            nodeStates = {};
+            edgeStates = {};
+            dfsSteps = [];
+            currentStepIndex = 0;
+            animationRunning = false;
+            autoDemoRunning = false;
+
+
+            // Create Nodes
+            const padding = NODE_RADIUS * 4; // Ensure nodes are not too close to edges or each other initially
+             const minX = padding;
+             const maxX = canvas.width - padding;
+             const minY = padding;
+             const maxY = canvas.height - padding;
+
+
+             // Ensure numNodes is reasonable for canvas size
+             const maxPossibleNodes = Math.floor((maxX - minX) * (maxY - minY) / (NODE_RADIUS * NODE_RADIUS * 10)); // Estimate max nodes without extreme overlap
+             numNodes = Math.min(numNodes, maxPossibleNodes);
+             numNodes = Math.max(numNodes, 5); // Minimum 5 nodes
+
+            for (let i = 0; i < numNodes; i++) {
+                let newNode;
+                let overlap;
+                let attempts = 0;
+                // Simple check to avoid significant overlap during generation
+                do {
+                    newNode = {
+                        id: i,
+                        x: minX + Math.random() * (maxX - minX),
+                        y: minY + Math.random() * (maxY - minY)
+                    };
+                    overlap = nodes.some(node => distance(newNode, node) < NODE_RADIUS * 3); // Check distance
+                    attempts++;
+                } while (overlap && attempts < 100); // Limit attempts to prevent infinite loop
+
+                nodes.push(newNode);
+                adjacencyList[i] = [];
+                nodeStates[i] = NODE_STATE.UNVISITED;
+            }
+
+            // Create Edges (simple random connections, may not be fully connected)
+            let addedEdges = new Set();
+             const maxEdges = numNodes * (numNodes - 1) / 2;
+             numEdges = Math.min(numEdges, maxEdges);
+             numEdges = Math.min(numEdges, numNodes * 3); // Cap edges to avoid overly dense graph for visualization
+             numEdges = Math.max(numEdges, numNodes > 1 ? numNodes - 1 : 0); // Ensure at least a connected component if possible
+
+            while (addedEdges.size < numEdges) {
+                const u = Math.floor(Math.random() * numNodes);
+                const v = Math.floor(Math.random() * numNodes);
+
+                if (u === v) continue;
+
+                const key = getEdgeKey(u, v);
+                if (!addedEdges.has(key)) {
+                    edges.push({ from: u, to: v });
+                    adjacencyList[u].push(v);
+                    adjacencyList[v].push(u); // Assume undirected graph for simplicity
+                    edgeStates[key] = EDGE_STATE.UNVISITED;
+                    addedEdges.add(key);
+                }
+            }
+
+            statusText.textContent = `Graph with ${nodes.length} nodes, ${edges.length} edges generated. Click a node to start DFS.`;
+        }
+
+        // DFS Algorithm (Pre-calculation of steps)
+        function runDFS(startNodeId) {
+            if (!nodes.find(n => n.id === startNodeId)) {
+                 statusText.textContent = `Error: Start node ${startNodeId} not found.`;
+                 return;
+            }
+
+            // Reset state for DFS
+            nodes.forEach(node => nodeStates[node.id] = NODE_STATE.UNVISITED);
+            edges.forEach(edge => edgeStates[getEdgeKey(edge.from, edge.to)] = EDGE_STATE.UNVISITED);
+            dfsSteps = [];
+            currentStepIndex = 0;
+            animationRunning = false; // Will be started by the animation loop after setup
+
+            statusText.textContent = `Starting DFS from node ${startNodeId}...`;
+            animationStartTime = performance.now(); // Reset animation timer
+
+            // --- Pre-calculate Steps ---
+            const visited = new Set();
+            const stack = [startNodeId]; // Use a temporary stack for step generation
+            const visitedInStep = new Set(); // Track visited nodes *within* the step generation to handle state correctly
+
+            if (nodes.length > 0) {
+                dfsSteps.push({ type: 'start', nodeId: startNodeId });
+
+                while (stack.length > 0) {
+                    const uId = stack[stack.length - 1]; // Peek
+
+                    if (!visited.has(uId)) {
+                        visited.add(uId);
+                        visitedInStep.add(uId); // Mark as visited in this step generation process
+                        dfsSteps.push({ type: 'visit', nodeId: uId });
+                    }
+
+                    let foundUnvisitedNeighbor = false;
+                    const neighbors = adjacencyList[uId] || [];
+                    // Shuffle neighbors to make random traversals
+                    neighbors.sort(() => Math.random() - 0.5);
+
+                    for (const vId of neighbors) {
+                        if (!visited.has(vId)) {
+                            dfsSteps.push({ type: 'traverse', fromId: uId, toId: vId });
+                            stack.push(vId); // Push neighbor and explore it next
+                            foundUnvisitedNeighbor = true;
+                            break; // Crucial for DFS: explore this branch fully
+                        }
+                    }
+
+                    // If no unvisited neighbors from u, we backtrack
+                    if (!foundUnvisitedNeighbor) {
+                        stack.pop(); // Remove u as we've explored all reachable from here
+                        if (stack.length > 0) {
+                            // This node is now fully explored from, mark as VISITED *after* backtracking from its branch
+                            // In the steps, the 'backtrack' step represents returning *from* this node's exploration.
+                            // The state change to VISITED will happen when executeNextStep processes the backtrack step.
+                             // No explicit backtrack step needed in sequence if we manage state correctly on visit/pop
+                        }
+                    }
+                }
+                // Add a final 'finish' step
+                dfsSteps.push({ type: 'finish' });
+
+            } else {
+                 statusText.textContent = 'Cannot run DFS on empty graph.';
+            }
+
+
+            animationRunning = true; // Start the animation playback
+             disableUI(); // Disable UI during animation
+        }
+
+        // Execute a single step from the pre-calculated sequence
+        function executeNextStep() {
+             if (currentStepIndex >= dfsSteps.length) {
+                 animationRunning = false;
+                 autoDemoRunning = false;
+                 statusText.textContent = 'DFS finished.';
+                 enableUI();
+                 return;
+             }
+
+            const step = dfsSteps[currentStepIndex];
+
+            switch (step.type) {
+                case 'start':
+                    statusText.textContent = `Exploring from node ${step.nodeId}...`;
+                    break;
+                case 'visit':
+                    const visitNode = nodes.find(n => n.id === step.nodeId);
+                     if (visitNode) {
+                          // Mark the node we are ABOUT TO explore from
+                          nodeStates[step.nodeId] = NODE_STATE.VISITING;
+                          statusText.textContent = `Visiting node ${step.nodeId}`;
+                     }
+                    break;
+                case 'traverse':
+                    const fromNode = nodes.find(n => n.id === step.fromId);
+                    const toNode = nodes.find(n => n.id === step.toId);
+                    if (fromNode && toNode) {
+                        const edgeKey = getEdgeKey(step.fromId, step.toId);
+                         edgeStates[edgeKey] = EDGE_STATE.TRAVERSED; // Mark edge as traversed
+                         statusText.textContent = `Traversing edge ${step.fromId} -> ${step.toId}`;
+                    }
+                    break;
+                 case 'backtrack': // This step type is not strictly necessary with state management on pops
+                     // The state change happens when a node is popped from the stack.
+                     // Let's remove the explicit backtrack step in the generator and handle state on visit/finish
+                     break;
+                 case 'finish':
+                      // Mark all remaining VISITING nodes as VISITED (should be the case for all nodes explored)
+                     nodes.forEach(node => {
+                         if (nodeStates[node.id] === NODE_STATE.VISITING) {
+                              nodeStates[node.id] = NODE_STATE.VISITED;
+                         }
+                     });
+                      statusText.textContent = 'DFS finished.';
+                      animationRunning = false;
+                      autoDemoRunning = false;
+                      enableUI();
+                      break;
+            }
+
+            currentStepIndex++;
+             // If animation just finished, the next step is out of bounds and will be handled in the next animationLoop frame
+             if (currentStepIndex >= dfsSteps.length && animationRunning) {
+                  // This was the last step before finish, add finish step if needed (handled by executeNextStep itself)
+             }
+        }
+
+
+        // Utility Functions
+        function distance(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getNodeAt(x, y) {
+            for (let i = nodes.length - 1; i >= 0; i--) { // Check from end to draw on top
+                const node = nodes[i];
+                 if (distance({ x, y }, node) < NODE_RADIUS * 1.5) { // Increase hit area slightly
+                    return node;
+                }
+            }
+            return null;
+        }
+
+         function getEdgeKey(nodeId1, nodeId2) {
+              // Create a consistent key regardless of order
+              return nodeId1 < nodeId2 ? `${nodeId1}-${nodeId2}` : `${nodeId2}-${nodeId1}`;
+         }
+
+         function disableUI() {
+             resetBtn.disabled = true;
+             randomizeBtn.disabled = true;
+             autoDemoBtn.disabled = true;
+             toggleLabelsCheckbox.disabled = true;
+             togglePathHighlightCheckbox.disabled = true;
+             canvas.style.pointerEvents = 'none'; // Disable clicks/mouse events on canvas
+         }
+
+         function enableUI() {
+             resetBtn.disabled = false;
+             randomizeBtn.disabled = false;
+             autoDemoBtn.disabled = false;
+             toggleLabelsCheckbox.disabled = false;
+             togglePathHighlightCheckbox.disabled = false;
+             canvas.style.pointerEvents = 'auto'; // Enable clicks/mouse events on canvas
+         }
+
+         function resizeCanvas() {
+             const main = document.querySelector('main');
+              const rect = main.getBoundingClientRect();
+             // Set canvas size based on main area minus sidebar width and padding
+             const targetWidth = rect.width - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) - 2 * parseFloat(getComputedStyle(main).paddingLeft);
+             const targetHeight = rect.height - 2 * parseFloat(getComputedStyle(main).paddingTop);
+
+
+             if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                  canvas.width = targetWidth;
+                  canvas.height = targetHeight;
+                  // Regeneration needed for proper scaling if layout changes significantly,
+                  // but for static layout, just redraw.
+                  draw();
+             }
+         }
+
+
+        // Event Handlers
+        function handleCanvasClick(event) {
+            if (animationRunning || autoDemoRunning) return; // Ignore clicks if animation is running
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const clickedNode = getNodeAt(x, y);
+
+            if (clickedNode) {
+                 runDFS(clickedNode.id);
+            } else {
+                 // Optional: Click background resets graph state?
+                 // resetGraphState(); // Implement if needed
+                 statusText.textContent = 'Click a node to start DFS.';
+            }
+        }
+
+         function handleMouseDown(event) {
+             if (animationRunning || autoDemoRunning) return;
+
+             const rect = canvas.getBoundingClientRect();
+             const x = event.clientX - rect.left;
+             const y = event.clientY - rect.top;
+
+             const node = getNodeAt(x, y);
+             if (node) {
+                 draggingNode = node;
+                 // Store initial mouse offset relative to node center
+                 draggingNode.offsetX = x - node.x;
+                 draggingNode.offsetY = y - node.y;
+                 canvas.style.cursor = 'grabbing'; // Change cursor while dragging
+                  // Hide tooltip while dragging
+                 tooltip.classList.remove('visible');
+                 hoverNode = null;
+             }
+         }
+
+         function handleMouseMove(event) {
+             const rect = canvas.getBoundingClientRect();
+             const x = event.clientX - rect.left;
+             const y = event.clientY - rect.top;
+
+             // Handle Dragging
+             if (draggingNode) {
+                 // Calculate new position, staying within canvas bounds
+                 draggingNode.x = Math.max(NODE_RADIUS, Math.min(canvas.width - NODE_RADIUS, x - draggingNode.offsetX));
+                 draggingNode.y = Math.max(NODE_RADIUS, Math.min(canvas.height - NODE_RADIUS, y - draggingNode.offsetY));
+                 // Redraw is handled by the animation loop
+             } else {
+                // Handle Tooltip & Hover Highlight only if not dragging
+                if (!animationRunning && !autoDemoRunning) {
+                    const node = getNodeAt(x, y);
+                    if (node) {
+                        if (hoverNode !== node) {
+                            hoverNode = node;
+                            tooltip.textContent = `Node ${node.id} (${nodeStates[node.id].toUpperCase()})`;
+                            tooltip.classList.add('visible');
+                        }
+                        // Position tooltip - slight offset from cursor
+                        tooltip.style.left = `${event.clientX + 15}px`;
+                        tooltip.style.top = `${event.clientY + 15}px`;
+
+                    } else {
+                        if (hoverNode) {
+                            hoverNode = null;
+                            tooltip.classList.remove('visible');
+                        }
+                    }
+                }
+             }
+         }
+
+         function handleMouseUp(event) {
+             if (draggingNode) {
+                 draggingNode = null;
+                 canvas.style.cursor = 'crosshair'; // Reset cursor
+                  // Re-check for hover state after releasing drag
+                 handleMouseMove(event);
+             }
+         }
+
+         function handleMouseOut(event) {
+             // Hide tooltip and reset hover state if mouse leaves canvas or relevant area
+             // Check if mouse is truly leaving the canvas element bounds
+             const rect = canvas.getBoundingClientRect();
+             if (event.clientX < rect.left || event.clientX >= rect.right ||
+                 event.clientY < rect.top || event.clientY >= rect.bottom) {
+
+                 if (!draggingNode && hoverNode) {
+                    hoverNode = null;
+                    tooltip.classList.remove('visible');
+                 }
+                 if (draggingNode) {
+                    draggingNode = null; // Stop dragging if mouse leaves viewport
+                    canvas.style.cursor = 'crosshair';
+                 }
+             }
+         }
+
+         // Helper to reset just the DFS state visually
+         function resetGraphState() {
+             nodes.forEach(node => nodeStates[node.id] = NODE_STATE.UNVISITED);
+             edges.forEach(edge => edgeStates[getEdgeKey(edge.from, edge.to)] = EDGE_STATE.UNVISITED);
+             dfsSteps = [];
+             currentStepIndex = 0;
+             animationRunning = false;
+             autoDemoRunning = false;
+             statusText.textContent = 'Graph state reset. Click a node to start DFS.';
+             enableUI();
+         }
+
+
+         resetBtn.addEventListener('click', () => {
+             generateGraph(0, 0); // Generate empty graph
+             statusText.textContent = 'Graph reset.';
+             enableUI();
+         });
+
+         randomizeBtn.addEventListener('click', () => {
+             // Use canvas dimensions to scale graph generation
+             // Estimate num nodes based on canvas area vs node area + padding
+             const canvasArea = canvas.width * canvas.height;
+             const estimatedNodeArea = Math.pow(NODE_RADIUS * 5, 2); // Assume each node needs ~this much space
+             const suggestedNodes = Math.floor(canvasArea / estimatedNodeArea);
+             const numNodes = Math.min(50, Math.max(10, suggestedNodes)); // Cap nodes for performance/visual clarity
+
+             const suggestedEdges = Math.floor(numNodes * 1.5); // More edges than nodes usually
+             const numEdges = Math.min(numNodes * (numNodes - 1) / 2, suggestedEdges); // Cap by max possible and suggestion
+
+             generateGraph(numNodes, numEdges);
+             statusText.textContent = 'New graph generated. Click node to start DFS.';
+             enableUI();
+         });
+
+         autoDemoBtn.addEventListener('click', () => {
+             if (nodes.length === 0) {
+                  randomizeBtn.click(); // Generate if empty
+             }
+             // Ensure graph state is reset before auto demo
+             resetGraphState(); // Reset state without clearing the graph itself
+
+             autoDemoRunning = true;
+             disableUI();
+             const startNodeId = nodes[Math.floor(Math.random() * nodes.length)].id;
+             runDFS(startNodeId); // runDFS will set animationRunning = true
+         });
+
+         toggleLabelsCheckbox.addEventListener('change', draw); // Redraw when toggle changes
+         togglePathHighlightCheckbox.addEventListener('change', draw);
+
+
+        // Initial Setup
+        window.addEventListener('resize', () => {
+             // Handle resize with a slight delay to avoid excessive calls during dragging resize
+             if (resizeCanvas.timeout) clearTimeout(resizeCanvas.timeout);
+             resizeCanvas.timeout = setTimeout(() => {
+                 resizeCanvas();
+                 randomizeBtn.click(); // Regenerate graph on resize for better distribution
+             }, 200); // Wait 200ms after resize ends
+        });
+
+        // Initial sizing and graph generation
+        resizeCanvas();
+        randomizeBtn.click();
+
+
+        // Add event listeners for mouse interactions on the canvas
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseout', handleMouseOut); // Use mouseout for leaving element
+
+        // Start the animation loop
+        requestAnimationFrame(animationLoop);
+
+
+    </script>
+
+</body>
+</html>
