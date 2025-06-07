@@ -1,0 +1,763 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Linear SVM Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #ffffff; /* GfG White */
+            color: #222222; /* GfG Dark */
+        }
+        .container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        .visualization-area {
+            flex-grow: 1; /* Takes remaining space */
+            position: relative;
+            background-color: #ffffff;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            width: 300px; /* Fixed width for control panel */
+            background-color: #ffffff; /* GfG White */
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto; /* Allow scrolling if controls exceed height */
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #eee; /* Subtle separator */
+        }
+        .title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2f8d46; /* GfG Green */
+            text-align: center;
+        }
+        .control-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+         .control-group:last-of-type {
+             border-bottom: none;
+         }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #222222;
+        }
+         .control-group div {
+             display: flex;
+             align-items: center;
+             flex-wrap: wrap;
+         }
+         .control-group button {
+             margin-bottom: 5px; /* Space out buttons if they wrap */
+         }
+
+        button {
+            background-color: #2f8d46; /* GfG Green */
+            color: #ffffff; /* GfG White */
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-right: 5px;
+            font-size: 0.9em;
+             flex-shrink: 0; /* Prevent shrinking in flex container */
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:active {
+             opacity: 0.7;
+        }
+         button.active {
+             background-color: #1e6e35; /* Darker Green */
+         }
+        input[type="range"] {
+            flex-grow: 1; /* Take available space */
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #ddd;
+            outline: none;
+            opacity: 0.8;
+            transition: opacity .2s;
+            border-radius: 4px;
+             margin-left: 5px;
+             margin-right: 5px;
+        }
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #2f8d46; /* GfG Green */
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #2f8d46; /* GfG Green */
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .slider-output {
+             font-weight: normal;
+             min-width: 30px; /* Reserve space for value */
+             text-align: right;
+        }
+
+        .footer {
+            margin-top: auto; /* Pushes the footer to the bottom of the flex container */
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            font-size: 0.9em;
+             color: #555;
+        }
+        .footer a {
+            color: #2f8d46; /* GfG Green */
+            text-decoration: none;
+            margin: 0 5px;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="visualization-area">
+            <canvas id="svmCanvas"></canvas>
+        </div>
+        <div class="controls">
+            <div class="title">Linear SVM Visualization</div>
+
+            <div class="control-group">
+                <label>Add Point Class:</label>
+                <div>
+                    <button id="class1Btn" class="active">Class 1 (+1)</button>
+                    <button id="classNeg1Btn">Class -1 (-1)</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Actions:</label>
+                 <div>
+                    <button id="clearBtn">Clear Points</button>
+                 </div>
+            </div>
+
+             <div class="control-group">
+                <label>Visualization Options:</label>
+                <div>
+                    <button id="toggleMarginBtn" class="active">Hide Margin</button>
+                    <button id="toggleSVBtn" class="active">Hide Support Vectors</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Margin Type:</label>
+                 <div>
+                    <button id="hardMarginBtn" class="active">Hard Margin</button>
+                    <button id="softMarginBtn">Soft Margin</button>
+                 </div>
+            </div>
+
+            <div id="cSliderGroup" class="control-group" style="display: none;">
+                <label for="cSlider">Regularization (C): <span id="cValue" class="slider-output">1.0</span></label>
+                <div>
+                    <input type="range" id="cSlider" min="0.1" max="100" value="1" step="0.1">
+                </div>
+            </div>
+
+            <!-- Kernel Selection removed as per refined scope -->
+
+            <div class="footer">
+                <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+                <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants and State ---
+        const canvas = document.getElementById('svmCanvas');
+        const ctx = canvas.getContext('2d');
+        const range = 1.5; // Conceptual range [-range, range] for x and y
+        let points = [];
+        let w = { x: 0, y: 0 }; // Weights vector
+        let b = 0; // Bias term
+        let C = 1.0; // Regularization parameter for Soft Margin
+
+        // Parameters for iterative training (tuned for visualization)
+        let learningRate = 0.01;
+        const softMarginLR = 0.01;
+        const hardMarginLR = 0.005; // Smaller rate for basic Hard Margin simulation
+        let trainingIterationsPerFrame = 20; // More iterations per frame for faster convergence visualization
+        let maxAnimationFrames = 300; // Max frames for animation
+
+        let showMargin = true;
+        let showSupportVectors = true;
+        let isSoftMargin = false;
+        let currentAddingClass = 1; // 1 or -1
+
+        let draggedPoint = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        let animationFrameId = null; // To hold the animation frame ID
+        let isAnimating = false;
+
+        // --- UI Elements ---
+        const class1Btn = document.getElementById('class1Btn');
+        const classNeg1Btn = document.getElementById('classNeg1Btn');
+        const clearBtn = document.getElementById('clearBtn');
+        const toggleMarginBtn = document.getElementById('toggleMarginBtn');
+        const toggleSVBtn = document.getElementById('toggleSVBtn');
+        const hardMarginBtn = document.getElementById('hardMarginBtn');
+        const softMarginBtn = document.getElementById('softMarginBtn');
+        const cSliderGroup = document.getElementById('cSliderGroup');
+        const cSlider = document.getElementById('cSlider');
+        const cValueSpan = document.getElementById('cValue');
+
+        // --- Coordinate Mapping ---
+        function screenToConceptual(px, py) {
+            const x = (px / canvas.width * 2 - 1) * range;
+            const y = -(py / canvas.height * 2 - 1) * range; // Y is inverted
+            return { x, y };
+        }
+
+        function conceptualToScreen(x, y) {
+            const px = (x / (2 * range) + 0.5) * canvas.width;
+            const py = (-y / (2 * range) + 0.5) * canvas.height; // Y is inverted
+            return { px, py };
+        }
+
+        // --- Drawing Functions ---
+        function drawLine(wX, wY, bias, style, width) {
+             // Draws the line wX * x + wY * y + bias = 0 within the conceptual range [-range, range]
+             // Solve for x and y at the boundaries x = +/-range, y = +/-range
+             let p1 = null, p2 = null;
+
+             // Find points by checking canvas boundaries
+             const boundaries = [-range, range];
+             const pointsOnBoundaries = [];
+
+             boundaries.forEach(val => {
+                 // Check vertical boundaries (x = val)
+                 if (Math.abs(wY) > 1e-6) { // Avoid division by zero
+                     let y = (-bias - wX * val) / wY;
+                     if (y >= -range - 1e-6 && y <= range + 1e-6) { // Add tolerance
+                         pointsOnBoundaries.push({ x: val, y: y });
+                     }
+                 }
+                 // Check horizontal boundaries (y = val)
+                 if (Math.abs(wX) > 1e-6) { // Avoid division by zero
+                      let x = (-bias - wY * val) / wX;
+                      if (x >= -range - 1e-6 && x <= range + 1e-6) { // Add tolerance
+                          pointsOnBoundaries.push({ x: x, y: val });
+                      }
+                 }
+             });
+
+             // Remove duplicate points (points that land exactly on corners)
+             const uniquePoints = [];
+             pointsOnBoundaries.forEach(p => {
+                 if (!uniquePoints.some(up => Math.abs(up.x - p.x) < 1e-5 && Math.abs(up.y - p.y) < 1e-5)) {
+                     uniquePoints.push(p);
+                 }
+             });
+
+             // Sort points to ensure drawing a single line segment
+             if (uniquePoints.length > 1) {
+                // Simple sort based on x then y
+                uniquePoints.sort((a, b) => {
+                    if (Math.abs(a.x - b.x) > 1e-5) return a.x - b.x;
+                    return a.y - b.y;
+                });
+                p1 = uniquePoints[0];
+                p2 = uniquePoints[uniquePoints.length - 1];
+             }
+
+
+             // Special case: Horizontal or vertical line exactly through a boundary/corner point
+             if (!p1 && (Math.abs(wX) < 1e-6 || Math.abs(wY) < 1e-6) && Math.abs(bias) <= range * Math.sqrt(wX*wX + wY*wY) + 1e-6) {
+                 if (Math.abs(wY) > 1e-6) { // Horizontal line y = -bias/wY
+                      let y = -bias / wY;
+                       if (y >= -range - 1e-6 && y <= range + 1e-6) {
+                           p1 = {x: -range, y: y};
+                           p2 = {x: range, y: y};
+                       }
+                 } else if (Math.abs(wX) > 1e-6) { // Vertical line x = -bias/wX
+                      let x = -bias / wX;
+                       if (x >= -range - 1e-6 && x <= range + 1e-6) {
+                           p1 = {x: x, y: -range};
+                           p2 = {x: x, y: range};
+                       }
+                 }
+             }
+
+
+             if (p1 && p2) {
+                const screenP1 = conceptualToScreen(p1.x, p1.y);
+                const screenP2 = conceptualToScreen(p2.x, p2.y);
+
+                ctx.beginPath();
+                ctx.strokeStyle = style;
+                ctx.lineWidth = width;
+                ctx.moveTo(screenP1.px, screenP1.py);
+                ctx.lineTo(screenP2.px, screenP2.py);
+                ctx.stroke();
+            }
+        }
+
+        function drawSVMState() {
+            if (!canvas || !ctx) return; // Ensure context is available
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff'; // GfG White background
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw origin axes (subtle)
+            const origin = conceptualToScreen(0, 0);
+            ctx.strokeStyle = '#eeeeee'; // Light gray
+            ctx.lineWidth = 1;
+            if (origin.py > 0 && origin.py < canvas.height) {
+                ctx.beginPath();
+                ctx.moveTo(0, origin.py);
+                ctx.lineTo(canvas.width, origin.py);
+                ctx.stroke();
+            }
+             if (origin.px > 0 && origin.px < canvas.width) {
+                ctx.beginPath();
+                ctx.moveTo(origin.px, 0);
+                ctx.lineTo(origin.px, canvas.height);
+                ctx.stroke();
+            }
+
+
+            // Draw Hyperplane (w.x + b = 0)
+            const wMagSq = w.x * w.x + w.y * w.y;
+            if (wMagSq > 1e-6) { // Only draw if w is not effectively zero vector
+                drawLine(w.x, w.y, b, '#2f8d46', 2); // GfG Green
+            }
+
+            // Draw Margins (w.x + b = 1 and w.x + b = -1)
+            if (showMargin && wMagSq > 1e-6) {
+                drawLine(w.x, w.y, b - 1, '#a8d8b6', 1); // Lighter Green/Gray for margin
+                drawLine(w.x, w.y, b + 1, '#a8d8b6', 1);
+            }
+
+            // Draw Points
+            points.forEach(point => {
+                const screenPos = conceptualToScreen(point.x, point.y);
+                const pointRadius = 6;
+                ctx.beginPath();
+                ctx.arc(screenPos.px, screenPos.py, pointRadius, 0, Math.PI * 2, false); // Point radius
+
+                ctx.fillStyle = point.class === 1 ? '#2f8d46' : '#222222'; // GfG Green for +1, Dark for -1
+                ctx.fill();
+
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#555555'; // Default border color
+
+                 // Identify and highlight misclassified points in soft margin
+                if (isSoftMargin && wMagSq > 1e-6) {
+                     const margin = point.class * (w.x * point.x + w.y * point.y + b);
+                     if (margin < 0) { // Misclassified
+                         ctx.strokeStyle = '#ff0000'; // Red border for misclassified
+                         ctx.lineWidth = 2;
+                     }
+                 }
+
+
+                // Highlight support vectors (applied after misclassified check so red border has priority if misclassified SV)
+                if (showSupportVectors && point.isSupportVector) {
+                     ctx.lineWidth = 3; // Thicker border for SVs
+                     ctx.strokeStyle = '#222222'; // Dark border for SVs
+                 }
+
+
+                ctx.stroke();
+            });
+        }
+
+        // --- SVM Training Logic (Iterative Primal Subgradient) ---
+        function trainSVM_iterative(iterations) {
+            if (points.length === 0) {
+                w = { x: 0, y: 0 };
+                b = 0;
+                identifySupportVectors(); // Clear SVs
+                return { converged: true, wChange: 0, bChange: 0 };
+            }
+
+            let currentLearningRate = isSoftMargin ? softMarginLR : hardMarginLR;
+             let totalWChange = 0;
+             let totalBChange = 0;
+
+            for (let i = 0; i < iterations; i++) {
+                 let w_prev = { x: w.x, y: w.y };
+                 let b_prev = b;
+
+                 let gradW = { x: w.x, y: w.y }; // Gradient of ||w||^2/2 term
+                 let gradB = 0;
+
+                 if (isSoftMargin) {
+                     // Soft Margin Update: Standard subgradient descent
+                     points.forEach(p => {
+                        const margin = p.class * (w.x * p.x + w.y * p.y + b);
+                        if (margin < 1) {
+                            gradW.x -= C * p.class * p.x; // Gradient of hinge loss term
+                            gradW.y -= C * p.class * p.y;
+                            gradB -= C * p.class;
+                        }
+                    });
+                 } else {
+                     // Hard Margin Simulation: Only update on strictly misclassified points
+                      // This is a simplified update, not a true Hard Margin QP solver
+                     let misclassifiedPoints = points.filter(p => p.class * (w.x * p.x + w.y * p.y + b) < 0);
+                     if (misclassifiedPoints.length > 0) {
+                          // Update based on misclassified points, similar to perceptron but with w decay
+                          misclassifiedPoints.forEach(p => {
+                                gradW.x -= p.class * p.x;
+                                gradW.y -= p.class * p.y;
+                                gradB -= p.class;
+                          });
+                           // Add decay term
+                           gradW.x += w.x;
+                           gradW.y += w.y;
+
+                           // Use a potentially larger effective learning rate if misclassified
+                           // currentLearningRate = hardMarginLR * misclassifiedPoints.length; // Scale LR? Or keep fixed? Fixed is simpler.
+                     } else {
+                         // If no misclassified points, data is linearly separable by current w,b.
+                         // Add strong decay to prefer smaller ||w|| (larger margin)
+                         gradW.x = w.x;
+                         gradW.y = w.y;
+                         gradB = 0; // No bias update needed if all correct
+                          // Use a smaller learning rate for decay only
+                         currentLearningRate = hardMarginLR / 10;
+                     }
+                 }
+
+
+                // Apply update step
+                w.x -= currentLearningRate * gradW.x;
+                w.y -= currentLearningRate * gradW.y;
+                b -= currentLearningRate * gradB;
+
+
+                 // Calculate change (L2 norm of changes)
+                 let wChange = Math.sqrt(Math.pow(w.x - w_prev.x, 2) + Math.pow(w.y - w_prev.y, 2));
+                 let bChange = Math.abs(b - b_prev);
+                 totalWChange += wChange;
+                 totalBChange += bChange;
+
+            }
+
+            identifySupportVectors();
+
+            // Check for overall convergence based on average change over iterations
+             const avgWChange = totalWChange / iterations;
+             const avgBChange = totalBChange / iterations;
+             const convergenceThreshold = 1e-5;
+            return { converged: avgWChange < convergenceThreshold && avgBChange < convergenceThreshold, wChange: avgWChange, bChange: avgBChange };
+        }
+
+        function identifySupportVectors() {
+            const epsilon = 1e-3; // Tolerance for floating point comparisons
+             const wMagSq = w.x * w.x + w.y * w.y;
+
+            points.forEach(p => {
+                 if (wMagSq < 1e-6) { // If w is zero, no hyperplane, no SVs in this context
+                     p.isSupportVector = false;
+                     return;
+                 }
+                // For Linear SVM, SVs are points on or within the margin (y_i * (w.x + b) <= 1 + epsilon)
+                // This includes misclassified points in soft margin as well.
+                const margin = p.class * (w.x * p.x + w.y * p.y + b);
+                p.isSupportVector = margin <= 1 + epsilon;
+            });
+        }
+
+
+        // --- Animation ---
+        let animationFrameCount = 0;
+        let prevW = { x: w.x, y: w.y };
+        let prevB = b;
+
+        function animateTraining() {
+            if (isAnimating) {
+                 cancelAnimationFrame(animationFrameId);
+            }
+
+            isAnimating = true;
+            animationFrameCount = 0;
+             prevW = { ...w };
+             prevB = b;
+
+
+            function frame() {
+                animationFrameCount++;
+
+                const result = trainSVM_iterative(trainingIterationsPerFrame);
+                drawSVMState();
+
+                 // Check for visual stability (changes less than a threshold)
+                 const wDiff = Math.sqrt(Math.pow(w.x - prevW.x, 2) + Math.pow(w.y - prevW.y, 2));
+                 const bDiff = Math.abs(b - prevB);
+                 const stabilityThreshold = 1e-4; // Sensitivity threshold for animation stopping
+
+                 prevW = { ...w };
+                 prevB = b;
+
+                 // Stop animation if changes are small or max frames reached
+                if (animationFrameCount < maxAnimationFrames && (wDiff > stabilityThreshold || bDiff > stabilityThreshold) ) {
+                    animationFrameId = requestAnimationFrame(frame);
+                } else {
+                     // Final draw after animation stops
+                     drawSVMState();
+                     isAnimating = false;
+                     animationFrameId = null;
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(frame); // Start the animation loop
+        }
+
+        // --- Event Handlers ---
+
+        // Canvas Click: Add point or remove point
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const px = event.clientX - rect.left;
+            const py = event.clientY - rect.top;
+            const conceptualPos = screenToConceptual(px, py);
+
+            // Check if clicking on an existing point to remove
+            let clickedPointIndex = -1;
+            const clickRadiusSq = Math.pow(8, 2); // Radius for click detection (pixels squared)
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const screenP = conceptualToScreen(p.x, p.y);
+                const distSq = Math.pow(screenP.px - px, 2) + Math.pow(screenP.py - py, 2);
+                 if (distSq <= clickRadiusSq) {
+                    clickedPointIndex = i;
+                    break;
+                }
+            }
+
+            if (clickedPointIndex !== -1) {
+                points.splice(clickedPointIndex, 1); // Remove point
+            } else {
+                // Add new point
+                points.push({
+                    x: conceptualPos.x,
+                    y: conceptualPos.y,
+                    class: currentAddingClass,
+                    isSupportVector: false
+                });
+            }
+
+            animateTraining(); // Retrain and animate
+        });
+
+        // Canvas Mouse Down: Start drag
+        canvas.addEventListener('mousedown', (event) => {
+             if (event.button !== 0) return; // Only left click
+
+             const rect = canvas.getBoundingClientRect();
+            const px = event.clientX - rect.left;
+            const py = event.clientY - rect.top;
+            const conceptualPos = screenToConceptual(px, py);
+
+             draggedPoint = null;
+             const dragRadiusSq = Math.pow(10, 2); // Slightly larger radius for easier dragging
+             // Find point under cursor
+             for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const screenP = conceptualToScreen(p.x, p.y);
+                const distSq = Math.pow(screenP.px - px, 2) + Math.pow(screenP.py - py, 2);
+                if (distSq <= dragRadiusSq) {
+                    draggedPoint = p;
+                    dragOffsetX = conceptualPos.x - p.x;
+                    dragOffsetY = conceptualPos.y - p.y;
+                    // Prevent text selection during drag
+                    canvas.style.cursor = 'grabbing';
+                    event.preventDefault();
+                    break;
+                }
+             }
+        });
+
+        // Canvas Mouse Move: Update dragged point position
+        canvas.addEventListener('mousemove', (event) => {
+            if (draggedPoint) {
+                const rect = canvas.getBoundingClientRect();
+                const px = event.clientX - rect.left;
+                const py = event.clientY - rect.top;
+                const conceptualPos = screenToConceptual(px, py);
+
+                draggedPoint.x = conceptualPos.x - dragOffsetX;
+                draggedPoint.y = conceptualPos.y - dragOffsetY;
+
+                 drawSVMState(); // Redraw immediately during drag for smooth feedback
+            } else {
+                // Optional: Change cursor on hover over points
+                const rect = canvas.getBoundingClientRect();
+                const px = event.clientX - rect.left;
+                const py = event.clientY - rect.top;
+                const hoverRadiusSq = Math.pow(8, 2);
+                 let cursorSet = false;
+                 for (let i = 0; i < points.length; i++) {
+                     const p = points[i];
+                     const screenP = conceptualToScreen(p.x, p.y);
+                     const distSq = Math.pow(screenP.px - px, 2) + Math.pow(screenP.py - py, 2);
+                     if (distSq <= hoverRadiusSq) {
+                         canvas.style.cursor = 'pointer';
+                         cursorSet = true;
+                         break;
+                     }
+                 }
+                 if (!cursorSet) {
+                     canvas.style.cursor = 'default';
+                 }
+            }
+        });
+
+        // Canvas Mouse Up: End drag, trigger retraining
+        canvas.addEventListener('mouseup', (event) => {
+            if (draggedPoint) {
+                 draggedPoint = null;
+                 dragOffsetX = 0;
+                 dragOffsetY = 0;
+                 canvas.style.cursor = 'default';
+                 animateTraining(); // Retrain and animate after drag
+            }
+        });
+
+         // Prevent context menu on right-click
+        canvas.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+        });
+
+
+        // Control Panel Event Listeners
+        class1Btn.addEventListener('click', () => {
+            currentAddingClass = 1;
+            class1Btn.classList.add('active');
+            classNeg1Btn.classList.remove('active');
+        });
+        classNeg1Btn.addEventListener('click', () => {
+            currentAddingClass = -1;
+            classNeg1Btn.classList.add('active');
+            class1Btn.classList.remove('active');
+        });
+
+        clearBtn.addEventListener('click', () => {
+            points = [];
+            w = { x: 0, y: 0 };
+            b = 0;
+            animateTraining(); // Clear visualization and train (which resets)
+        });
+
+        toggleMarginBtn.addEventListener('click', () => {
+            showMargin = !showMargin;
+            toggleMarginBtn.textContent = showMargin ? 'Hide Margin' : 'Show Margin';
+            toggleMarginBtn.classList.toggle('active', showMargin);
+            drawSVMState(); // Redraw immediately
+        });
+
+        toggleSVBtn.addEventListener('click', () => {
+            showSupportVectors = !showSupportVectors;
+            toggleSVBtn.textContent = showSupportVectors ? 'Hide Support Vectors' : 'Show Support Vectors';
+            toggleSVBtn.classList.toggle('active', showSupportVectors);
+            drawSVMState(); // Redraw immediately
+        });
+
+        hardMarginBtn.addEventListener('click', () => {
+            isSoftMargin = false;
+            hardMarginBtn.classList.add('active');
+            softMarginBtn.classList.remove('active');
+            cSliderGroup.style.display = 'none'; // Hide C slider
+            animateTraining(); // Retrain with Hard Margin
+        });
+        softMarginBtn.addEventListener('click', () => {
+            isSoftMargin = true;
+            softMarginBtn.classList.add('active');
+            hardMarginBtn.classList.remove('active');
+            cSliderGroup.style.display = 'block'; // Show C slider
+            C = parseFloat(cSlider.value); // Get current C value
+            animateTraining(); // Retrain with Soft Margin
+        });
+
+        cSlider.addEventListener('input', () => {
+            C = parseFloat(cSlider.value);
+            cValueSpan.textContent = C.toFixed(1);
+             // Don't train on every input event, only on mouseup/touchend for performance
+        });
+         cSlider.addEventListener('change', () => { // Use 'change' event for slider stops
+             C = parseFloat(cSlider.value); // Ensure C is updated
+             animateTraining(); // Trigger training animation
+         });
+
+
+        // --- Initialization ---
+
+        // Resize canvas when window resizes
+        function resizeCanvas() {
+            const vizArea = document.querySelector('.visualization-area');
+            canvas.width = vizArea.clientWidth;
+            canvas.height = vizArea.clientHeight;
+            drawSVMState(); // Redraw content on resize
+             if (points.length > 0) {
+                 animateTraining(); // Recalculate and animate if points exist
+             }
+        }
+
+        // Add initial points
+        function addInitialPoints() {
+             points = [
+                { x: -0.5, y: 0.5, class: 1, isSupportVector: false },
+                { x: -0.6, y: -0.6, class: 1, isSupportVector: false },
+                 { x: -0.1, y: 0.1, class: 1, isSupportVector: false }, // Added a point near origin
+                { x: 0.5, y: -0.5, class: -1, isSupportVector: false },
+                { x: 0.6, y: 0.6, class: -1, isSupportVector: false },
+                 { x: 0.1, y: -0.1, class: -1, isSupportVector: false } // Added a point near origin
+            ];
+        }
+
+        // Setup
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initial setup
+        resizeCanvas(); // Set initial canvas size
+        addInitialPoints(); // Add some points to start
+        animateTraining(); // Train the initial state
+
+        // Trigger initial C value display
+        cValueSpan.textContent = C.toFixed(1);
+
+    </script>
+</body>
+</html>

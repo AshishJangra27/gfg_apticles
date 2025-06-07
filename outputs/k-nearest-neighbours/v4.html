@@ -1,0 +1,561 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Ensure static viewport */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #222222;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: 40px;
+            background-color: #2f8d46; /* GFG Green */
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        main {
+            flex-grow: 1; /* Takes remaining height */
+            display: flex;
+            flex-direction: row;
+            overflow: hidden; /* Prevent main from spilling */
+        }
+
+        #plot-area {
+            flex-grow: 1; /* Takes remaining width */
+            position: relative; /* Needed for potential absolute positioning inside */
+            background-color: #f0f0f0; /* Light grey background for the plot */
+        }
+
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            background-color: #ffffff; /* Canvas background */
+        }
+
+        #controls-panel {
+            width: 250px; /* Fixed width */
+            background-color: #ffffff;
+            padding: 20px;
+            box-sizing: border-box;
+            border-left: 1px solid #eee;
+            flex-shrink: 0; /* Prevent shrinking */
+            overflow-y: auto; /* Allow scrolling if controls overflow */
+        }
+
+        #controls-panel h3 {
+            margin-top: 0;
+            color: #2f8d46;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        #k-value {
+            font-weight: normal;
+            margin-left: 5px;
+        }
+
+        #metric-selection label {
+            margin-right: 15px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        #bottom-bar {
+            height: 80px; /* Fixed height */
+            background-color: #ffffff;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            flex-shrink: 0; /* Prevent shrinking */
+            overflow-x: auto; /* Allow scrolling if step buttons overflow */
+        }
+
+        #step-visualizer button {
+            margin-right: 10px;
+            padding: 8px 15px;
+            border: 1px solid #2f8d46;
+            background-color: #ffffff;
+            color: #2f8d46;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        #step-visualizer button:hover {
+            background-color: #2f8d46;
+            color: #ffffff;
+        }
+         #step-visualizer button:active {
+            background-color: #1e5e2f; /* Darker green */
+        }
+
+        footer {
+            height: 30px;
+            background-color: #f0f0f0;
+            color: #555;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: #2f8d46;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Highlighting styles for steps - controlled by JS */
+        .highlight-k {
+            border: 2px solid orange !important; /* Example highlight */
+        }
+        .highlight-metric {
+             border: 2px solid orange !important; /* Example highlight */
+        }
+         .highlight-neighbors {
+            /* Handled by canvas drawing */
+        }
+         .highlight-prediction {
+             border: 2px solid orange !important; /* Example highlight */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        K-Nearest Neighbors Visualizer
+    </header>
+
+    <main>
+        <div id="plot-area">
+            <canvas id="knnCanvas"></canvas>
+        </div>
+
+        <div id="controls-panel">
+            <h3>Controls</h3>
+
+            <div class="control-group" id="k-control">
+                <label for="k-slider">Number of Neighbors (K): <span id="k-value">5</span></label>
+                <input type="range" id="k-slider" min="1" max="15" value="5">
+            </div>
+
+            <div class="control-group" id="metric-control">
+                <label>Distance Metric:</label>
+                <div id="metric-selection">
+                    <label><input type="radio" name="metric" value="euclidean" checked> Euclidean</label>
+                    <label><input type="radio" name="metric" value="manhattan"> Manhattan</label>
+                </div>
+            </div>
+
+             <!-- Add a div to display prediction explicitly -->
+             <div class="control-group" id="prediction-display">
+                <label>Predicted Class:</label>
+                <div id="predicted-class" style="font-size: 1.2em; font-weight: bold;">-</div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="bottom-bar">
+        <label style="font-weight: bold; margin-right: 15px;">Algorithm Steps:</label>
+        <div id="step-visualizer">
+            <button id="step-start">Start</button>
+            <button id="step-k">Step 1 (Choose K)</button>
+            <button id="step-distances">Step 2 (Calc Distances)</button>
+            <button id="step-neighbors">Step 3 (Find Neighbors)</button>
+            <button id="step-predict">Step 4 (Predict)</button>
+            <button id="step-reset">Reset</button>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <span>|</span>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kSlider = document.getElementById('k-slider');
+        const kValueSpan = document.getElementById('k-value');
+        const metricRadios = document.querySelectorAll('input[name="metric"]');
+        const predictedClassDiv = document.getElementById('predicted-class');
+        const stepButtons = document.querySelectorAll('#step-visualizer button');
+
+        const kControlDiv = document.getElementById('k-control');
+        const metricControlDiv = document.getElementById('metric-control');
+        const predictionDisplayDiv = document.getElementById('prediction-display');
+
+        let trainingData = [];
+        let testPoint = { x: 0, y: 0 };
+        let k = parseInt(kSlider.value);
+        let metric = 'euclidean';
+        let draggingTestPoint = false;
+        let nearestNeighbors = [];
+        let predictedClass = null;
+        let currentStep = null; // null, 'k', 'distances', 'neighbors', 'predict'
+
+        // --- Configuration ---
+        const canvasWidth = 600; // Matches CSS implicit size or can be set explicitly
+        const canvasHeight = 400; // Matches CSS implicit size or can be set explicitly
+        const pointRadius = 5;
+        const testPointRadius = 7;
+        const classColors = {
+            'A': '#ff6347', // Tomato red
+            'B': '#4682b4'  // Steel blue
+        };
+        const neighborHighlightColor = '#2f8d46'; // GFG Green
+        const lineColor = '#555';
+        const lineWidth = 1;
+
+        // --- Data Generation ---
+        function generateTrainingData(numPointsPerClass = 20) {
+             trainingData = [];
+             // Simple clustered data
+             for (let i = 0; i < numPointsPerClass; i++) {
+                 // Class A points (top-left / mid-right cluster)
+                 trainingData.push({
+                     x: Math.random() * canvasWidth * 0.4 + (i % 2 === 0 ? 0 : canvasWidth * 0.3),
+                     y: Math.random() * canvasHeight * 0.4 + (i % 2 === 0 ? 0 : canvasHeight * 0.3),
+                     class: 'A'
+                 });
+                 // Class B points (bottom-left / top-right cluster)
+                 trainingData.push({
+                     x: Math.random() * canvasWidth * 0.4 + (i % 2 === 0 ? canvasWidth * 0.6 : canvasWidth * 0.3),
+                     y: Math.random() * canvasHeight * 0.4 + (i % 2 === 0 ? canvasHeight * 0.6 : canvasHeight * 0),
+                     class: 'B'
+                 });
+             }
+        }
+
+        // --- Distance Calculation ---
+        function calculateDistance(p1, p2, metric) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            if (metric === 'euclidean') {
+                return Math.sqrt(dx * dx + dy * dy);
+            } else if (metric === 'manhattan') {
+                return Math.abs(dx) + Math.abs(dy);
+            }
+            // Add other metrics here if needed
+            return 0; // Should not happen
+        }
+
+        // --- KNN Core Logic ---
+        function findNearestNeighbors(point, data, k, metric) {
+            const distances = data.map(p => ({
+                point: p,
+                distance: calculateDistance(point, p, metric)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+
+            return distances.slice(0, k).map(d => d.point);
+        }
+
+        function predictClass(neighbors) {
+            if (neighbors.length === 0) return 'N/A';
+
+            const classCounts = {};
+            neighbors.forEach(p => {
+                classCounts[p.class] = (classCounts[p.class] || 0) + 1;
+            });
+
+            let maxCount = 0;
+            let predicted = null;
+            for (const className in classCounts) {
+                if (classCounts[className] > maxCount) {
+                    maxCount = classCounts[className];
+                    predicted = className;
+                } else if (classCounts[className] === maxCount) {
+                    // Tie-breaking: Could pick first class encountered, or random.
+                    // For simplicity, let's just stick with the first one found with max count.
+                }
+            }
+            return predicted;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw training points
+            trainingData.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, pointRadius, 0, Math.PI * 2);
+                ctx.fillStyle = classColors[p.class] || '#888';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // Determine neighbors and prediction if not specifically stepped
+             if (currentStep !== 'neighbors' && currentStep !== 'predict') {
+                nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, metric);
+                predictedClass = predictClass(nearestNeighbors);
+            } else if (currentStep === 'neighbors' || currentStep === 'predict') {
+                 // If on a step, use the calculated neighbors from that step's logic
+                 // (recalculate here for simplicity, could cache)
+                 nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, metric);
+                 predictedClass = predictClass(nearestNeighbors);
+             }
+
+
+            // Draw lines to nearest neighbors and highlight neighbors
+            if (currentStep !== 'distances') { // Don't show lines on distance step
+                 nearestNeighbors.forEach(p => {
+                    ctx.beginPath();
+                    ctx.moveTo(testPoint.x, testPoint.y);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.strokeStyle = lineColor;
+                    ctx.lineWidth = lineWidth;
+                    ctx.stroke();
+
+                    // Highlight neighbor points
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, pointRadius + 3, 0, Math.PI * 2); // Larger circle
+                    ctx.strokeStyle = neighborHighlightColor;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            }
+
+
+            // Draw test point
+            ctx.beginPath();
+            ctx.arc(testPoint.x, testPoint.y, testPointRadius, 0, Math.PI * 2);
+            ctx.fillStyle = predictedClass ? (classColors[predictedClass] || '#888') : '#555'; // Color based on prediction
+            ctx.fill();
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Display predicted class near test point (optional, or use the dedicated div)
+            if (currentStep !== 'neighbors' && currentStep !== 'distances' && predictedClass) {
+                 predictedClassDiv.textContent = predictedClass;
+                 predictedClassDiv.style.color = classColors[predictedClass] || '#222';
+                 // Optional: Draw text on canvas near test point
+                 // ctx.fillStyle = '#222';
+                 // ctx.font = '12px sans-serif';
+                 // ctx.fillText(`Predict: ${predictedClass}`, testPoint.x + 10, testPoint.y - 10);
+            } else {
+                 predictedClassDiv.textContent = '-';
+                 predictedClassDiv.style.color = '#222';
+            }
+
+
+            // Apply step-specific highlights
+            applyStepHighlights();
+        }
+
+        // --- Step Visualizer Logic ---
+        function applyStepHighlights() {
+            // Remove all highlights first
+            kControlDiv.classList.remove('highlight-k');
+            metricControlDiv.classList.remove('highlight-metric');
+            predictionDisplayDiv.classList.remove('highlight-prediction');
+             // Canvas highlights are handled in draw() based on currentStep
+
+
+            switch (currentStep) {
+                case 'k':
+                    kControlDiv.classList.add('highlight-k');
+                    break;
+                case 'distances':
+                    // Visual cue for distance calc is hard without libraries.
+                    // Maybe a temporary text or a brief pulse on ALL training points?
+                    // For now, just the step button highlights, and the draw() function
+                    // knows not to draw lines/neighbors on this step.
+                    break;
+                case 'neighbors':
+                    // Handled by drawing nearestNeighbors with highlights
+                     break;
+                case 'predict':
+                    predictionDisplayDiv.classList.add('highlight-prediction');
+                    // Handled by drawing test point in predicted color and updating text div
+                    break;
+                case 'start': // Fall through to default state
+                case 'reset': // Fall through to default state
+                default:
+                    // Default state: just show prediction based on current K/Metric/Point
+                    // No specific step highlights
+                     break;
+            }
+        }
+
+
+        function handleStepButtonClick(step) {
+             currentStep = step;
+             // Re-calculate neighbors and prediction for step-specific views if needed
+             if (step === 'neighbors' || step === 'predict') {
+                  nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, metric);
+                  predictedClass = predictClass(nearestNeighbors);
+             }
+
+            // Perform step-specific actions
+            switch (step) {
+                case 'start':
+                    // Reset test point position
+                     testPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+                    break;
+                case 'reset':
+                    // Reset to initial state (test point centered, default K/Metric)
+                    testPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+                    kSlider.value = 5;
+                    k = 5;
+                    kValueSpan.textContent = k;
+                    document.querySelector('input[name="metric"][value="euclidean"]').checked = true;
+                    metric = 'euclidean';
+                    nearestNeighbors = [];
+                    predictedClass = null;
+                    break;
+                // Other steps primarily trigger highlights via applyStepHighlights and drawing logic
+            }
+
+             draw(); // Redraw based on new step and state
+        }
+
+
+        // --- Event Listeners ---
+
+        // Resize canvas on initial load and window resize
+        function resizeCanvas() {
+            const plotArea = document.getElementById('plot-area');
+            canvas.width = plotArea.clientWidth;
+            canvas.height = plotArea.clientHeight;
+             // If testPoint was initialized before resize, reposition it
+             if (testPoint.x === 0 && testPoint.y === 0) {
+                  testPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+             } else {
+                // Optional: Scale test point position if layout was truly responsive.
+                // For this fixed layout, we just ensure it's centered initially.
+             }
+            draw(); // Redraw after resize
+        }
+
+        window.addEventListener('resize', resizeCanvas); // Add resize listener
+        // Call resizeCanvas initially to set canvas size
+        resizeCanvas();
+
+
+        // Test Point Dragging
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Check if click is on the test point
+            const distanceToTestPoint = calculateDistance({ x: mouseX, y: mouseY }, testPoint, 'euclidean');
+            if (distanceToTestPoint < testPointRadius + 5) { // Add some buffer
+                draggingTestPoint = true;
+                currentStep = null; // Exit step visualization on drag
+                 // Prevent text selection while dragging
+                 document.body.style.userSelect = 'none';
+                 document.body.style.cursor = 'grabbing';
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (draggingTestPoint) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                // Update test point position, clamp to canvas bounds
+                testPoint.x = Math.max(0, Math.min(mouseX, canvas.width));
+                testPoint.y = Math.max(0, Math.min(mouseY, canvas.height));
+
+                // Recalculate and redraw instantly
+                nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, metric);
+                predictedClass = predictClass(nearestNeighbors);
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            draggingTestPoint = false;
+             document.body.style.userSelect = 'auto';
+             document.body.style.cursor = 'default';
+        });
+
+         // Prevent context menu on right click dragging
+         canvas.addEventListener('contextmenu', (e) => {
+            if(draggingTestPoint) e.preventDefault();
+         });
+
+
+        // K Slider
+        kSlider.addEventListener('input', () => {
+            k = parseInt(kSlider.value);
+            kValueSpan.textContent = k;
+            // Recalculate and redraw
+            nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, metric);
+            predictedClass = predictClass(nearestNeighbors);
+             currentStep = null; // Exit step visualization on param change
+            draw();
+        });
+
+        // Metric Toggle
+        metricRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                metric = e.target.value;
+                // Recalculate and redraw
+                nearestNeighbors = findNearestNeighbors(testPoint, trainingData, k, metric);
+                predictedClass = predictClass(nearestNeighbors);
+                 currentStep = null; // Exit step visualization on param change
+                draw();
+            });
+        });
+
+        // Step Buttons
+        document.getElementById('step-start').addEventListener('click', () => handleStepButtonClick('start'));
+        document.getElementById('step-k').addEventListener('click', () => handleStepButtonClick('k'));
+        document.getElementById('step-distances').addEventListener('click', () => handleStepButtonClick('distances'));
+        document.getElementById('step-neighbors').addEventListener('click', () => handleStepButtonClick('neighbors'));
+        document.getElementById('step-predict').addEventListener('click', () => handleStepButtonClick('predict'));
+        document.getElementById('step-reset').addEventListener('click', () => handleStepButtonClick('reset'));
+
+
+        // --- Initialization ---
+        generateTrainingData();
+        // Initial position of the test point
+        testPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+        draw(); // Initial draw
+    </script>
+
+</body>
+</html>

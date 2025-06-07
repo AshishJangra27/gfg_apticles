@@ -1,0 +1,641 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Explorer</title>
+    <style>
+        /* Global Styles & GeeksforGeeks Theme */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Use min-height to ensure centered content */
+            background-color: #ffffff; /* White */
+            color: #222222; /* Dark Text */
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        .container {
+            width: 1000px; /* Fixed width */
+            height: 700px; /* Fixed height */
+            border: 1px solid #ccc; /* Optional border for clarity */
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff; /* Ensure container background is white */
+            position: relative; /* Needed for absolute footer */
+        }
+
+        /* Header */
+        .header {
+            height: 60px;
+            background-color: #2f8d46; /* GeeksforGeeks Green */
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .header span {
+            font-size: 0.6em;
+            opacity: 0.9;
+            font-weight: normal;
+        }
+
+        /* Main Content Area (excluding header and footer) */
+        .main-content {
+            flex-grow: 1; /* Fill remaining space */
+            display: flex;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            width: 250px; /* Fixed width */
+            padding: 20px;
+            border-right: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .control-panel label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .control-panel input[type="number"] {
+            width: calc(100% - 22px); /* Adjust for padding and border */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        .control-panel button {
+            width: 100%;
+            padding: 10px;
+            background-color: #2f8d46; /* GeeksforGeeks Green */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+
+        .control-panel button:hover:not(:disabled) {
+            background-color: #256e37; /* Darker green */
+        }
+
+        .control-panel button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* Visualizer Area */
+        .visualizer-area {
+            flex-grow: 1; /* Fill remaining space */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Center content vertically */
+            position: relative; /* For absolute positioning of elements */
+        }
+
+        .array-container {
+            display: flex;
+            margin-bottom: 40px; /* Space for pointers below */
+            position: relative; /* For highlight overlay */
+        }
+
+        .array-element {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #222222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 0 2px; /* Small gap between elements */
+            background-color: #ffffff;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            cursor: help; /* Indicate hover effect */
+        }
+
+        .array-element:hover::after {
+            content: attr(data-index); /* Show index on hover */
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            pointer-events: none; /* Don't interfere with mouse events */
+            z-index: 10;
+        }
+
+
+        .highlight-overlay {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background-color: rgba(47, 141, 70, 0.2); /* Light GeeksforGeeks green */
+            z-index: 1; /* Below array elements */
+            transition: left 0.4s ease, width 0.4s ease;
+            pointer-events: none; /* Don't block mouse events */
+        }
+
+        .pointer {
+            position: absolute;
+            top: 50px; /* Position below array elements */
+            width: 30px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: left 0.4s ease; /* Animate pointer movement */
+            z-index: 5; /* Above highlight */
+        }
+
+        .pointer.low { color: blue; }
+        .pointer.high { color: red; }
+        .pointer.mid { color: purple; }
+
+        .comparison-feedback {
+            margin-top: 20px;
+            height: 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #222222;
+            min-width: 100px; /* Reserve space */
+            text-align: center;
+        }
+
+        .result-display {
+            margin-top: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2f8d46; /* Green for found */
+            min-height: 30px; /* Reserve space */
+            text-align: center;
+        }
+
+        .result-display.not-found {
+            color: red;
+        }
+
+        .element-found {
+            background-color: #2f8d46 !important; /* Green for found element */
+            color: white;
+        }
+
+        .element-comparing {
+             box-shadow: 0 0 8px 2px rgba(255, 165, 0, 0.6); /* Orange glow */
+        }
+
+        /* State Indicators */
+        .state-indicators {
+            height: 50px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 1em;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .state-indicators div {
+            text-align: center;
+        }
+
+        .state-indicators span {
+            font-weight: bold;
+            color: #2f8d46;
+        }
+
+
+        /* Footer */
+        .footer {
+            height: 40px;
+            background-color: #222222; /* Dark background */
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%; /* Make footer span the full width of the container */
+            box-sizing: border-box; /* Include padding/border in width */
+        }
+
+        .footer a {
+            color: #2f8d46; /* GeeksforGeeks Green */
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            Binary Search Explorer
+            <span>Requires <strong>Sorted</strong> Array</span>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div>
+                    <label for="targetValue">Target Value:</label>
+                    <input type="number" id="targetValue" value="12">
+                </div>
+                <button id="startBtn">Start Search</button>
+                <button id="nextBtn" disabled>Next Step</button>
+                <button id="runBtn" disabled>Run Simulation</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+
+            <div class="visualizer-area">
+                <div class="array-container" id="arrayContainer">
+                    <!-- Array elements will be rendered here by JS -->
+                    <div class="highlight-overlay" id="highlightOverlay"></div>
+                </div>
+                <div class="pointer low" id="lowPointer">L</div>
+                <div class="pointer high" id="highPointer">H</div>
+                <div class="pointer mid" id="midPointer">M</div>
+
+                <div class="comparison-feedback" id="comparisonFeedback"></div>
+                <div class="result-display" id="resultDisplay"></div>
+            </div>
+        </div>
+
+        <div class="state-indicators">
+            <div>Low: <span id="lowState">-</span></div>
+            <div>High: <span id="highState">-</span></div>
+            <div>Mid: <span id="midState">-</span></div>
+            <div>Steps: <span id="stepCount">0</span></div>
+        </div>
+
+        <div class="footer">
+            <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+            |
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const ARRAY = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91, 95, 100]; // Fixed sorted array
+        const ANIMATION_DURATION = 400; // ms for transitions
+        const RUN_SIMULATION_SPEED = 800; // ms between steps when running
+
+        // --- State Variables ---
+        let low = 0;
+        let high = ARRAY.length - 1;
+        let mid = -1; // -1 indicates not calculated/started
+        let target = null;
+        let stepCount = 0;
+        let isSearching = false;
+        let simulationInterval = null;
+
+        // --- DOM Elements ---
+        const arrayContainer = document.getElementById('arrayContainer');
+        const highlightOverlay = document.getElementById('highlightOverlay');
+        const lowPointer = document.getElementById('lowPointer');
+        const highPointer = document.getElementById('highPointer');
+        const midPointer = document.getElementById('midPointer');
+        const targetValueInput = document.getElementById('targetValue');
+        const startBtn = document.getElementById('startBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const runBtn = document.getElementById('runBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const lowStateSpan = document.getElementById('lowState');
+        const highStateSpan = document.getElementById('highStateState');
+        const midStateSpan = document.getElementById('midState');
+        const stepCountSpan = document.getElementById('stepCount');
+        const comparisonFeedbackDiv = document.getElementById('comparisonFeedback');
+        const resultDisplayDiv = document.getElementById('resultDisplay');
+
+        // --- Helper Functions ---
+
+        // Calculate the left position for a pointer based on index
+        function getPointerLeftPosition(index) {
+            const elementWidth = 40; // array-element width
+            const margin = 2; // array-element margin
+            const containerPaddingLeft = parseInt(window.getComputedStyle(arrayContainer).paddingLeft, 10) || 0; // Account for container padding if any
+
+            // Calculate the left edge of the array container relative to its parent
+            const containerRect = arrayContainer.getBoundingClientRect();
+            const parentRect = arrayContainer.parentElement.getBoundingClientRect();
+            const containerLeftOffset = containerRect.left - parentRect.left;
+
+            // Calculate the center position of the element at the given index
+             // (index * (width + margin*2)) + width/2 + container's left offset
+            const elementCenterOffset = index * (elementWidth + margin * 2) + elementWidth / 2;
+
+            // Position the pointer slightly offset from the center
+            // Pointers have a width (e.g., 30px), so center the pointer element
+            const pointerWidth = 30; // pointer width
+            return containerLeftOffset + elementCenterOffset - (pointerWidth / 2) + 'px';
+        }
+
+        // Update the visual position of pointers
+        function updatePointerPositions() {
+            lowPointer.style.left = getPointerLeftPosition(low);
+            highPointer.style.left = getPointerLeftPosition(high);
+            if (mid !== -1) {
+                 midPointer.style.left = getPointerLeftPosition(mid);
+                 midPointer.style.display = 'block'; // Show mid pointer
+            } else {
+                 midPointer.style.display = 'none'; // Hide mid pointer
+            }
+        }
+
+        // Update the visual highlight overlay
+        function updateHighlightOverlay() {
+            if (!isSearching || low > high) {
+                 highlightOverlay.style.width = '0';
+                 highlightOverlay.style.left = '0';
+                 return;
+            }
+            const elementWidth = 40; // array-element width
+            const margin = 2; // array-element margin
+
+            // Calculate the left position of the 'low' element's left edge
+             const lowLeftEdge = low * (elementWidth + margin * 2);
+            // Calculate the right position of the 'high' element's right edge
+             const highRightEdge = (high + 1) * (elementWidth + margin * 2); // +1 because width is from start to end
+
+            const containerRect = arrayContainer.getBoundingClientRect();
+            const parentRect = arrayContainer.parentElement.getBoundingClientRect();
+            const containerLeftOffset = containerRect.left - parentRect.left;
+
+
+            highlightOverlay.style.left = containerLeftOffset + lowLeftEdge + 'px';
+            highlightOverlay.style.width = (highRightEdge - lowLeftEdge) + 'px';
+        }
+
+
+        // Render the array elements
+        function renderArray() {
+            arrayContainer.innerHTML = '<div class="highlight-overlay" id="highlightOverlay"></div>'; // Re-add highlight
+            const elements = ARRAY.map((value, index) => {
+                const div = document.createElement('div');
+                div.classList.add('array-element');
+                div.textContent = value;
+                div.dataset.index = index; // Store index for hover
+                return div;
+            });
+            elements.forEach(el => arrayContainer.appendChild(el));
+             // Re-get reference after re-rendering
+            highlightOverlay = document.getElementById('highlightOverlay');
+        }
+
+        // Update state indicators at the bottom
+        function updateStateIndicators() {
+            lowStateSpan.textContent = low <= high ? low : '-';
+            highStateSpan.textContent = low <= high ? high : '-';
+            midStateSpan.textContent = mid !== -1 ? mid : '-';
+            stepCountSpan.textContent = stepCount;
+        }
+
+        // Reset visual state
+        function resetVisuals() {
+            const elements = arrayContainer.querySelectorAll('.array-element');
+            elements.forEach(el => {
+                el.classList.remove('element-found', 'element-comparing');
+                el.style.opacity = '1'; // Ensure visibility
+            });
+            lowPointer.style.display = 'none';
+            highPointer.style.display = 'none';
+            midPointer.style.display = 'none';
+            highlightOverlay.style.width = '0';
+            comparisonFeedbackDiv.textContent = '';
+            resultDisplayDiv.textContent = '';
+            resultDisplayDiv.classList.remove('not-found');
+        }
+
+        // Manage button states
+        function updateButtonStates() {
+            const searchActive = isSearching && low <= high;
+            startBtn.disabled = isSearching;
+            nextBtn.disabled = !searchActive || simulationInterval !== null;
+            runBtn.disabled = !searchActive || simulationInterval !== null;
+            resetBtn.disabled = simulationInterval !== null && isSearching; // Prevent reset during simulation
+        }
+
+
+        // --- Algorithm Logic ---
+
+        function startSearch() {
+            target = parseInt(targetValueInput.value, 10);
+            if (isNaN(target)) {
+                comparisonFeedbackDiv.textContent = 'Please enter a valid number.';
+                return;
+            }
+
+            resetSimulation(false); // Reset state but keep current target value
+            low = 0;
+            high = ARRAY.length - 1;
+            mid = Math.floor((low + high) / 2);
+            stepCount = 0;
+            isSearching = true;
+            resultDisplayDiv.textContent = '';
+            resultDisplayDiv.classList.remove('not-found');
+            comparisonFeedbackDiv.textContent = '';
+
+            // Initial visualization
+            updatePointerPositions();
+            updateHighlightOverlay();
+            updateStateIndicators();
+            updateButtonStates();
+
+             // Highlight the initial mid element briefly
+            const elements = arrayContainer.querySelectorAll('.array-element');
+             if (mid >= 0 && mid < elements.length) {
+                 elements[mid].classList.add('element-comparing');
+             }
+             // Remove comparing class after a delay
+             setTimeout(() => {
+                 if (mid >= 0 && mid < elements.length) {
+                    elements[mid].classList.remove('element-comparing');
+                 }
+             }, ANIMATION_DURATION);
+
+        }
+
+        function nextStep() {
+            if (!isSearching || low > high) {
+                endSearch(false); // Not found
+                return;
+            }
+
+            stepCount++;
+            updateStateIndicators();
+            comparisonFeedbackDiv.textContent = ''; // Clear previous feedback
+
+            const elements = arrayContainer.querySelectorAll('.array-element');
+            const currentMidElement = elements[mid];
+
+            // Highlight the current mid element for comparison
+            currentMidElement.classList.add('element-comparing');
+
+
+            // Perform comparison after a brief delay to show the highlight
+            setTimeout(() => {
+                 currentMidElement.classList.remove('element-comparing'); // Remove highlight
+
+                 const midValue = ARRAY[mid];
+
+                 if (midValue === target) {
+                    comparisonFeedbackDiv.textContent = `${midValue} == ${target}. Found!`;
+                    currentMidElement.classList.add('element-found');
+                    endSearch(true); // Found
+                 } else if (midValue < target) {
+                    comparisonFeedbackDiv.textContent = `${midValue} < ${target}. Look Right.`;
+                    low = mid + 1;
+                    // Optional: Fade out elements in the left half
+                    for(let i = 0; i < mid; i++) {
+                       if (elements[i]) elements[i].style.opacity = '0.5';
+                    }
+                 } else { // midValue > target
+                    comparisonFeedbackDiv.textContent = `${midValue} > ${target}. Look Left.`;
+                    high = mid - 1;
+                    // Optional: Fade out elements in the right half
+                     for(let i = mid + 1; i < elements.length; i++) {
+                       if (elements[i]) elements[i].style.opacity = '0.5';
+                    }
+                 }
+
+                 // If still searching (not found/exhausted search space)
+                 if (low <= high) {
+                    mid = Math.floor((low + high) / 2);
+                    updatePointerPositions();
+                    updateHighlightOverlay();
+                    updateStateIndicators();
+                 } else {
+                     endSearch(false); // Not found if loop finishes
+                 }
+
+                 updateButtonStates();
+
+            }, ANIMATION_DURATION + 50); // Delay comparison feedback and pointer move
+        }
+
+        function runSimulation() {
+            if (simulationInterval) {
+                // Pause
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+                 // TODO: Change Run button text to 'Run Simulation' if implementing Pause
+                 updateButtonStates(); // Re-enable Next/Run
+            } else {
+                // Start Running
+                updateButtonStates(); // Disable Next/Run while running
+                simulationInterval = setInterval(() => {
+                    if (!isSearching || low > high) {
+                        clearInterval(simulationInterval);
+                        simulationInterval = null;
+                        updateButtonStates(); // Re-enable buttons after simulation stops
+                        return;
+                    }
+                    nextStep();
+                }, RUN_SIMULATION_SPEED);
+            }
+        }
+
+        function endSearch(found) {
+            isSearching = false;
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+
+            if (found) {
+                 resultDisplayDiv.textContent = `Target ${target} Found!`;
+                 resultDisplayDiv.classList.remove('not-found');
+            } else {
+                 resultDisplayDiv.textContent = `Target ${target} Not Found.`;
+                 resultDisplayDiv.classList.add('not-found');
+                 // Fade out all elements slightly if not found
+                 const elements = arrayContainer.querySelectorAll('.array-element');
+                 elements.forEach(el => el.style.opacity = '0.5');
+            }
+
+            // Ensure pointers/highlight reflect final state (low > high for not found)
+            updatePointerPositions();
+            updateHighlightOverlay();
+            updateStateIndicators(); // Will show '-' for low/high/mid if low > high
+
+            updateButtonStates(); // Disable Next/Run, Enable Start/Reset
+        }
+
+
+        function resetSimulation(resetTarget = true) {
+             if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+             }
+
+            low = 0;
+            high = ARRAY.length - 1;
+            mid = -1;
+            stepCount = 0;
+            isSearching = false;
+            if (resetTarget) targetValueInput.value = ''; // Clear input only if full reset
+
+            resetVisuals();
+            updateStateIndicators();
+            updateButtonStates();
+
+            // Ensure all elements are fully visible on reset
+             const elements = arrayContainer.querySelectorAll('.array-element');
+             elements.forEach(el => el.style.opacity = '1');
+
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderArray(); // Draw the initial array
+            resetVisuals(); // Hide pointers and highlight initially
+            updateStateIndicators(); // Show initial state
+            updateButtonStates(); // Set initial button states
+
+            // Add event listeners
+            startBtn.addEventListener('click', startSearch);
+            nextBtn.addEventListener('click', nextStep);
+            runBtn.addEventListener('click', runSimulation);
+            resetBtn.addEventListener('click', () => resetSimulation(true)); // Full reset
+        });
+
+    </script>
+
+</body>
+</html>

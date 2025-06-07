@@ -1,6 +1,8 @@
 import requests
 
-api_url = "http://127.0.0.1:8000/generate-webpage"
+# api_url = "http://127.0.0.1:8000/generate-webpage"
+
+api_url = 'https://gfg-apticles-final-728938563934.asia-south1.run.app/generate-webpage'
 
 payload = {
     "url": "https://www.geeksforgeeks.org/python-if-else/"

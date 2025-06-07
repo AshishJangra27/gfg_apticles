@@ -1,0 +1,883 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Depth-First Search Visualizer</title>
+    <style>
+        /* Basic Reset & Body Styles */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #222222; /* GFG Dark Text */
+            background-color: #ffffff; /* GFG White Background */
+            display: flex; /* Use flex column for overall layout */
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* Header Styles */
+        header {
+            background-color: #2f8d46; /* GFG Green */
+            color: #ffffff; /* White text */
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            flex-shrink: 0; /* Don't shrink header */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        /* Container for Main Content (Canvas + Controls) and State/Output */
+        .content-area {
+            flex-grow: 1; /* Fill remaining vertical space */
+            display: flex;
+            flex-direction: column; /* Stack main-content and state-output vertically */
+        }
+
+        /* Main Content (Canvas + Controls) */
+        .main-content {
+            flex-grow: 1; /* Allow main-content to take most space */
+            display: flex; /* Arrange canvas and controls horizontally */
+        }
+
+        .canvas-area {
+            flex-grow: 1; /* Canvas takes remaining horizontal space */
+            background-color: #ffffff; /* GFG White */
+            border-right: 1px solid #ddd;
+            position: relative; /* For drawing context */
+        }
+
+        canvas {
+             display: block;
+             width: 100%;
+             height: 100%;
+        }
+
+        /* Control Panel (Right Sidebar) */
+        .controls-area {
+            width: 280px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            overflow-y: auto;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .controls-area h3 {
+            margin-top: 0;
+            color: #2f8d46;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .control-group select,
+        .control-group input[type="range"],
+        .control-group button {
+            display: block; /* Make most controls block level */
+            width: 100%; /* Fill parent */
+            padding: 8px;
+            margin-bottom: 10px; /* Space between elements */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em; /* Make font size consistent */
+        }
+
+         .control-group .radio-group {
+             display: flex; /* Arrange radios horizontally */
+             gap: 15px;
+             margin-bottom: 10px;
+         }
+
+         .control-group .radio-group label {
+             display: flex; /* Align radio and text */
+             align-items: center;
+             width: auto; /* Auto width for flex items */
+             border: none; /* Remove border for radio labels */
+             padding: 0;
+             margin: 0;
+             font-weight: normal; /* Radio labels less bold */
+             font-size: 1em; /* Consistent font size */
+         }
+
+         .control-group .radio-group input[type="radio"] {
+             margin-right: 5px;
+             margin-bottom: 0;
+             width: auto;
+             padding: 0;
+             display: inline-block;
+         }
+
+
+        .control-group button {
+            background-color: #2f8d46;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        .control-group button:hover:not(:disabled) {
+            background-color: #256d36;
+        }
+
+        .control-group button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* State & Output Panel (Bottom) */
+        .state-output-area {
+            flex-shrink: 0; /* Don't shrink this area */
+            height: 120px; /* Give it a bit more height */
+            padding: 10px 20px;
+            background-color: #eef4ee; /* Light Green background */
+            border-top: 1px solid #ccc;
+            display: flex;
+            gap: 20px;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+
+        .output-section {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #ffffff;
+            overflow-y: auto; /* Scroll if content overflows */
+        }
+
+        .output-section h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: #2f8d46;
+            font-size: 1em;
+        }
+
+        .output-section p {
+            margin: 0;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        /* Footer Styles */
+        footer {
+            flex-shrink: 0; /* Don't shrink footer */
+            padding: 10px 20px;
+            background-color: #222222; /* Dark background */
+            color: #ffffff; /* White text */
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: #2f8d46; /* GFG Green for links */
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Canvas Drawing Colors (conceptual, used by JS) */
+        :root {
+            --node-default-fill: #ffffff;
+            --node-default-border: #222222;
+            --node-visiting-fill: #e0f7e0; /* Light green */
+            --node-visiting-border: #2f8d46; /* GFG Green */
+            --node-current-fill: #ffe066; /* Yellowish */
+            --node-current-border: #cc0000; /* Red */
+            --node-visited-fill: #2f8d46; /* GFG Green */
+            --node-visited-border: #2f8d46; /* GFG Green */
+            --node-selected-source-fill: #ffffff; /* White */
+            --node-selected-source-border: #ff4500; /* Orange-red */
+            --node-text-default: #222222; /* Dark */
+            --node-text-visited: #ffffff; /* White */
+
+            --edge-default: #cccccc; /* Light grey */
+            --edge-traversed: #2f8d46; /* GFG Green */
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        Depth-First Search Visualizer
+    </header>
+
+    <div class="content-area">
+        <div class="main-content">
+            <div class="canvas-area">
+                <canvas id="graphCanvas"></canvas>
+            </div>
+            <div class="controls-area">
+                <h3>Controls & Settings</h3>
+                <div class="control-group">
+                    <label for="graphSelector">Select Graph:</label>
+                    <select id="graphSelector">
+                        <option value="graph1">Simple Connected</option>
+                        <option value="graph2">Disconnected</option>
+                        <option value="graph3">Tree</option>
+                        <option value="graph4">Cyclic</option>
+                    </select>
+                </div>
+
+                 <div class="control-group">
+                    <label>Algorithm Mode:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="algorithmMode" value="fromSource" checked> From Source</label>
+                        <label><input type="radio" name="algorithmMode" value="complete"> Complete Traversal</label>
+                    </div>
+                </div>
+
+                 <div class="control-group" id="sourceNodeControl">
+                    <label for="sourceNodeSelector">Source Node:</label>
+                     <!-- Dropdown populated by JS -->
+                    <select id="sourceNodeSelector"></select>
+                     <p style="font-size:0.8em; margin-top: 5px; color: #555;">or click node on graph</p>
+                </div>
+
+                <div class="control-group">
+                    <button id="startButton">Start DFS</button>
+                    <button id="pauseButton" disabled>Pause</button>
+                    <button id="stepButton" disabled>Step</button>
+                    <button id="resetButton">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="speedSlider">Animation Speed:</label>
+                    <input type="range" id="speedSlider" min="1" max="100" value="50">
+                </div>
+            </div>
+        </div>
+
+        <div class="state-output-area">
+            <div class="output-section">
+                <h4>Visited Nodes</h4>
+                <p id="visitedNodesOutput">None yet.</p>
+            </div>
+            <div class="output-section">
+                <h4>Traversal Order</h4>
+                <p id="traversalOrderOutput">None yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // Get Canvas and Context
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Get Control Elements
+        const graphSelector = document.getElementById('graphSelector');
+        const algorithmModeRadios = document.querySelectorAll('input[name="algorithmMode"]');
+        const sourceNodeControl = document.getElementById('sourceNodeControl');
+        const sourceNodeSelector = document.getElementById('sourceNodeSelector');
+        const startButton = document.getElementById('startButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const stepButton = document.getElementById('stepButton');
+        const resetButton = document.getElementById('resetButton');
+        const speedSlider = document.getElementById('speedSlider');
+        const visitedNodesOutput = document.getElementById('visitedNodesOutput');
+        const traversalOrderOutput = document.getElementById('traversalOrderOutput');
+
+        // --- Graph Data Structure ---
+        let nodes = [];
+        let edges = [];
+        let adjacencyList = new Map();
+
+        // Node States (for visualization)
+        const NODE_STATE = {
+            UNVISITED: 'unvisited',
+            VISITING: 'visiting', // Node is on the stack, waiting to be popped
+            VISITED: 'visited', // Node has been fully processed
+            CURRENT: 'current' // Node being processed in the current step
+        };
+
+        // Edge States (for visualization) - Simplified
+        // Edges are drawn based on whether connected nodes are visited
+
+        // --- Algorithm State ---
+        let currentGraphId = 'graph1';
+        let algorithmMode = 'fromSource'; // 'fromSource' or 'complete'
+        let sourceNodeId = null;
+        let visited = new Set();
+        let traversalOrder = [];
+        let dfsStack = []; // For iterative DFS implementation (stores node IDs)
+        let algorithmState = 'IDLE'; // IDLE, RUNNING, PAUSED, FINISHED
+        let stepTimeoutId = null;
+
+        // Visual State (Simplified)
+        let currentlyProcessingNodeId = null; // The node currently being processed in a step
+
+        // --- Predefined Graphs ---
+        const graphs = {
+            graph1: { // Simple Connected
+                nodes: [
+                    { id: 'A', x: 150, y: 100 }, { id: 'B', x: 300, y: 100 },
+                    { id: 'C', x: 450, y: 100 }, { id: 'D', x: 300, y: 250 },
+                    { id: 'E', x: 150, y: 250 }, { id: 'F', x: 450, y: 250 }
+                ],
+                edges: [
+                    ['A', 'B'], ['A', 'E'], ['B', 'C'], ['B', 'D'],
+                    ['C', 'F'], ['D', 'E'], ['D', 'F'], ['E', 'F']
+                ]
+            },
+            graph2: { // Disconnected
+                 nodes: [
+                     { id: 'A', x: 150, y: 100 }, { id: 'B', x: 300, y: 100 },
+                     { id: 'C', x: 450, y: 100 },
+                     { id: 'D', x: 220, y: 250 }, { id: 'E', x: 380, y: 250 }
+                 ],
+                 edges: [
+                     ['A', 'B'], ['B', 'C'], // Component 1
+                     ['D', 'E'] // Component 2
+                 ]
+            },
+            graph3: { // Tree
+                 nodes: [
+                     { id: 'A', x: 300, y: 50 },
+                     { id: 'B', x: 150, y: 150 }, { id: 'C', x: 450, y: 150 },
+                     { id: 'D', x: 100, y: 250 }, { id: 'E', x: 200, y: 250 },
+                     { id: 'F', x: 400, y: 250 }, { id: 'G', x: 500, y: 250 }
+                 ],
+                 edges: [
+                     ['A', 'B'], ['A', 'C'],
+                     ['B', 'D'], ['B', 'E'],
+                     ['C', 'F'], ['C', 'G']
+                 ]
+            },
+            graph4: { // Cyclic
+                nodes: [
+                     { id: 'A', x: 300, y: 50 },
+                     { id: 'B', x: 150, y: 150 }, { id: 'C', x: 450, y: 150 },
+                     { id: 'D', x: 300, y: 250 },
+                     { id: 'E', x: 150, y: 250 }, { id: 'F', x: 450, y: 250 }
+                ],
+                edges: [
+                    ['A', 'B'], ['A', 'C'],
+                    ['B', 'D'], ['D', 'E'], ['E', 'B'], // Cycle B-D-E-B
+                    ['C', 'F'], ['F', 'D'] // Path C-F-D
+                ]
+            }
+        };
+
+        // --- Canvas Drawing Functions ---
+
+        // Resize canvas to fit its container
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            drawGraph(); // Redraw after resize
+        }
+
+        function drawNode(node, state = NODE_STATE.UNVISITED) {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+
+            let fillColor, strokeColor, textColor;
+            let lineWidth = 1;
+
+            switch (state) {
+                case 'selected-source': // Custom state for drawing selected source when idle
+                    fillColor = 'var(--node-selected-source-fill)';
+                    strokeColor = 'var(--node-selected-source-border)';
+                    textColor = 'var(--node-text-default)';
+                    lineWidth = 3;
+                    break;
+               case NODE_STATE.CURRENT: // Node being processed in the current step
+                  fillColor = 'var(--node-current-fill)';
+                  strokeColor = 'var(--node-current-border)';
+                  textColor = 'var(--node-text-default)';
+                  lineWidth = 3;
+                  break;
+               case NODE_STATE.VISITING: // Node is on the stack, waiting to be popped
+                  fillColor = 'var(--node-visiting-fill)';
+                  strokeColor = 'var(--node-visiting-border)';
+                  textColor = 'var(--node-text-default)';
+                  lineWidth = 2;
+                  break;
+               case NODE_STATE.VISITED: // Node has been fully processed
+                  fillColor = 'var(--node-visited-fill)';
+                  strokeColor = 'var(--node-visited-border)';
+                  textColor = 'var(--node-text-visited)';
+                  lineWidth = 1;
+                  break;
+               default: // UNVISITED
+                  fillColor = 'var(--node-default-fill)';
+                  strokeColor = 'var(--node-default-border)';
+                  textColor = 'var(--node-text-default)';
+                  lineWidth = 1;
+            }
+
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+
+            // Draw node ID text
+            ctx.fillStyle = textColor;
+            ctx.font = '14px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.id, node.x, node.y);
+        }
+
+        function drawEdge(node1, node2) { // Edge state simplified, no 'exploring' edge
+            ctx.beginPath();
+            ctx.moveTo(node1.x, node1.y);
+            ctx.lineTo(node2.x, node2.y);
+
+            let strokeColor = 'var(--edge-default)';
+            let lineWidth = 1;
+
+            // Simple edge coloring: Traversed if both nodes are visited
+            if (visited.has(node1.id) && visited.has(node2.id)) {
+                 strokeColor = 'var(--edge-traversed)'; // GFG Green
+                 lineWidth = 2;
+            }
+
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw edges first
+            edges.forEach(edge => {
+                const node1 = nodes.find(n => n.id === edge.u);
+                const node2 = nodes.find(n => n.id === edge.v);
+                if (node1 && node2) {
+                    drawEdge(node1, node2); // Use simplified drawEdge
+                }
+            });
+
+            // Draw nodes
+            nodes.forEach(node => {
+                let nodeState = NODE_STATE.UNVISITED;
+
+                if (node.id === sourceNodeId && algorithmState === 'IDLE' && !visited.has(node.id)) {
+                    nodeState = 'selected-source';
+                } else if (visited.has(node.id)) {
+                   nodeState = NODE_STATE.VISITED;
+                } else if (currentlyProcessingNodeId === node.id) {
+                    nodeState = NODE_STATE.CURRENT;
+                } else if (dfsStack.includes(node.id)) { // Check if node is currently on the stack
+                    nodeState = NODE_STATE.VISITING;
+                }
+
+                drawNode(node, nodeState);
+            });
+        }
+
+
+        // --- Graph Data Management ---
+
+        function loadGraph(graphId) {
+            currentGraphId = graphId;
+            const graph = graphs[graphId];
+            nodes = JSON.parse(JSON.stringify(graph.nodes)); // Deep copy nodes
+            edges = graph.edges.map(([u, v]) => ({ u, v })); // Copy edges
+            adjacencyList = new Map();
+
+            // Build adjacency list
+            nodes.forEach(node => adjacencyList.set(node.id, []));
+            graph.edges.forEach(([u, v]) => {
+                adjacencyList.get(u).push(v);
+                adjacencyList.get(v).push(u); // Assuming undirected graph
+            });
+
+            // Populate source node selector
+            sourceNodeSelector.innerHTML = ''; // Clear existing options
+            if (nodes.length > 0) {
+                nodes.forEach(node => {
+                    const option = document.createElement('option');
+                    option.value = node.id;
+                    option.textContent = node.id;
+                    sourceNodeSelector.appendChild(option);
+                });
+                 // Set default source node or reset selection
+                sourceNodeId = nodes[0].id;
+                sourceNodeSelector.value = sourceNodeId;
+            } else {
+                 sourceNodeId = null; // No nodes, no source
+            }
+
+            resetSimulation(); // Reset state whenever graph changes (which calls drawGraph)
+        }
+
+        // --- Simulation Control ---
+
+        function resetSimulationState() {
+            visited = new Set();
+            traversalOrder = [];
+            dfsStack = [];
+            currentlyProcessingNodeId = null; // Reset visual state
+
+            // Edge states are derived in drawGraph based on visited, no need to reset edge objects
+
+            updateOutputPanels();
+             // drawGraph is called by resetSimulation()
+        }
+
+        function resetSimulation() {
+            clearTimeout(stepTimeoutId);
+
+            visited = new Set();
+            traversalOrder = [];
+            dfsStack = [];
+            currentlyProcessingNodeId = null; // Reset visual state
+            algorithmState = 'IDLE';
+
+             // Reset edge states visually (drawGraph handles this based on visited)
+            // edges.forEach(edge => edge.state = EDGE_STATE.DEFAULT); // Not needed with simplified drawing
+
+            updateOutputPanels();
+            drawGraph();
+
+             // Ensure source node is still valid after reset if graph didn't change
+             if (sourceNodeId !== null && !nodes.find(n => n.id === sourceNodeId)) {
+                 // If previously selected source doesn't exist in current graph (e.g. graph reset without changing type)
+                 sourceNodeId = nodes.length > 0 ? nodes[0].id : null;
+                  if (sourceNodeId) sourceNodeSelector.value = sourceNodeId;
+             } else if (sourceNodeId === null && nodes.length > 0) {
+                 // If source was null (e.g. empty graph loaded), set default for new graph
+                 sourceNodeId = nodes[0].id;
+                 sourceNodeSelector.value = sourceNodeId;
+             }
+             // If sourceNodeId is valid and exists, keep it as is.
+
+
+            drawGraph(); // Redraw to show selected source highlight if idle
+        }
+
+        function startSimulation() {
+            if (algorithmState === 'RUNNING') return;
+
+            if (algorithmState === 'IDLE' || algorithmState === 'FINISHED') {
+                resetSimulationState(); // Clear algorithm state
+
+                // Initialize the stack based on mode
+                if (algorithmMode === 'fromSource') {
+                    if (!sourceNodeId || !nodes.find(n => n.id === sourceNodeId)) {
+                        alert("Please select a valid source node.");
+                        return;
+                    }
+                     // Push the source node onto the stack to start
+                     dfsStack.push(sourceNodeId);
+                     console.log("Initialized DFS from source:", sourceNodeId);
+                } else { // Complete Traversal
+                    // The runDFSIterative will find the first unvisited node if stack is empty.
+                    console.log("Initialized Complete DFS.");
+                }
+            }
+
+            algorithmState = 'RUNNING';
+            updateButtonStates();
+            runDFSIterative(); // Start the loop
+        }
+
+        function pauseSimulation() {
+           if (algorithmState === 'RUNNING') {
+                algorithmState = 'PAUSED';
+                updateButtonStates();
+                clearTimeout(stepTimeoutId); // Stop the scheduled next step
+           }
+        }
+
+        let stepCalledExplicitly = false;
+        function step() {
+             if (algorithmState === 'PAUSED' || algorithmState === 'IDLE' || algorithmState === 'FINISHED') {
+                 // Only allow stepping if paused or ready to start from idle/finished
+                 if (algorithmState === 'IDLE' || algorithmState === 'FINISHED') {
+                     // Initialize simulation state first
+                     resetSimulationState();
+                     // Initialize the stack based on mode (same as start)
+                     if (algorithmMode === 'fromSource') {
+                         if (!sourceNodeId || !nodes.find(n => n.id === sourceNodeId)) {
+                             alert("Please select a valid source node.");
+                             return;
+                         }
+                         dfsStack.push(sourceNodeId);
+                     } else {
+                          // runDFSIterative will find the first unvisited
+                     }
+                     algorithmState = 'PAUSED'; // Start in paused mode
+                 }
+
+                 stepCalledExplicitly = true; // Signal it's an explicit step
+                 runDFSIterative(); // Execute one step immediately
+             }
+            // If state is RUNNING, step button is disabled.
+        }
+
+
+        // --- DFS Algorithm Logic (Simpler Iterative) ---
+
+        function runDFSIterative() {
+             let currentDelay = 1000 / speedSlider.value;
+
+             if (algorithmState !== 'RUNNING' && !(algorithmState === 'PAUSED' && stepCalledExplicitly)) {
+                 stepCalledExplicitly = false; // Reset flag if not executing
+                 return;
+             }
+             stepCalledExplicitly = false; // Reset flag after checking
+
+             let stepPerformed = false; // Flag if a meaningful algorithm step occurred
+
+             // A 'step' in this simplified model is processing one node:
+             // Pop node (or find new component start), mark visited, add to order, push unvisited neighbors.
+
+             // We loop to find the next meaningful step within the same execution frame
+             // if in RUNNING mode, or execute just one if in PAUSED mode.
+             while (!stepPerformed && (algorithmState === 'RUNNING' || algorithmState === 'PAUSED')) {
+
+                 // At the start of looking for the next step, clear the processing highlight
+                 currentlyProcessingNodeId = null;
+
+                 let nodeIdToProcess = null;
+
+                 if (dfsStack.length > 0) {
+                     nodeIdToProcess = dfsStack.pop(); // Get node from stack
+                 } else {
+                     // Stack is empty. Check for new component in complete mode.
+                     if (algorithmMode === 'complete') {
+                         nodeIdToProcess = nodes.find(node => !visited.has(node.id))?.id || null; // Find first unvisited
+                         if (nodeIdToProcess) {
+                              // Found a new component start node. Update source viz temporarily.
+                             sourceNodeId = nodeIdToProcess; // Highlight the start of the new component run
+                         }
+                     }
+                 }
+
+                 if (nodeIdToProcess !== null) {
+                     if (!visited.has(nodeIdToProcess)) {
+                         // Found an unvisited node (either from stack or new component)
+                         visited.add(nodeIdToProcess); // Mark visited
+                         traversalOrder.push(nodeIdToProcess); // Add to traversal order
+                         currentlyProcessingNodeId = nodeIdToProcess; // Set for visualization
+
+                         // Push unvisited neighbors onto the stack
+                         // Sort neighbors alphabetically for consistent traversal order
+                         const neighbors = (adjacencyList.get(nodeIdToProcess) || []).sort();
+                         // Push in reverse order so they are popped in alphabetical order (standard iterative DFS behavior)
+                         for (let i = neighbors.length - 1; i >= 0; i--) {
+                             const neighborId = neighbors[i];
+                             if (!visited.has(neighborId)) {
+                                 dfsStack.push(neighborId); // Push unvisited neighbors
+                             }
+                         }
+
+                         stepPerformed = true; // A step was performed (processing a node)
+                         updateOutputPanels(); // Update UI after a step
+                         console.log(`STEP: Processed node ${nodeIdToProcess}. Added to order. Pushed unvisited neighbors.`);
+
+                     } else {
+                         // Node was already visited (e.g. popped again in a cycle or pushed redundantly). Skip it.
+                         console.log(`STEP: Skipping already visited node ${nodeIdToProcess} from stack/check.`);
+                         // Skipping a visited node still counts as a step check in paused mode, but not really in running mode.
+                         // For simplicity, let's count it as a step in both modes to ensure progress visually/logically.
+                         stepPerformed = true;
+                         currentlyProcessingNodeId = nodeIdToProcess; // Briefly show we checked this node?
+                         // Let's clear the current processing node immediately after skipping so it doesn't linger.
+                         // No, the drawGraph will run after the while loop. It needs currentlyProcessingNodeId to be set *during* the draw.
+                         // Let's keep it set for one frame then clear it at the start of the *next* step's `while` loop.
+                     }
+                 } else {
+                      // No node to process (stack empty and no unvisited in complete mode)
+                     algorithmState = 'FINISHED';
+                     currentlyProcessingNodeId = null;
+                     updateButtonStates(); // Update buttons before drawing final state
+                     drawGraph(); // Draw final state
+                     console.log("DFS Complete/Finished!");
+                     return; // Stop simulation
+                 }
+
+                 // If running fast (`algorithmState === 'RUNNING'`), continue the loop immediately to find the next step
+                 // within the same animation frame/setTimeout delay. This makes it run faster visually.
+                 // If paused (`algorithmState === 'PAUSED'`), the loop should only run once if a step was performed.
+                  if (algorithmState === 'PAUSED' && stepPerformed) {
+                      break; // Stop the while loop after one step if paused
+                  }
+             } // End while loop
+
+             // After executing one step (or finishing)
+             // Ensure the currentlyProcessingNodeId highlight is visible for this step
+             drawGraph(); // Redraw based on updated states (visited, currentlyProcessingNodeId, edge colors derived from visited)
+             updateButtonStates(); // Update buttons based on new state
+
+             if (algorithmState === 'RUNNING') {
+                 stepTimeoutId = setTimeout(runDFSIterative, currentDelay); // Schedule next step
+             }
+             // If PAUSED, the loop stops because stepPerformed is true.
+             // If FINISHED, return was called.
+         }
+
+
+        // Update button states logic
+        function updateButtonStates() {
+             const running = algorithmState === 'RUNNING';
+             const paused = algorithmState === 'PAUSED';
+             const idleOrFinished = algorithmState === 'IDLE' || algorithmState === 'FINISHED';
+             const simulationInProgress = !(idleOrFinished);
+
+             // Check if a valid source node is selected (needed for fromSource mode start/step)
+             const hasValidSource = sourceNodeId !== null && nodes.find(n => n.id === sourceNodeId);
+
+             // Condition for Start: Not running/paused AND (if fromSource, a valid source is selected OR if complete mode, graph is not empty)
+             const canStart = !running && !paused && ((algorithmMode === 'fromSource' && hasValidSource) || (algorithmMode === 'complete' && nodes.length > 0));
+             startButton.disabled = !canStart;
+
+             pauseButton.disabled = !running;
+
+             // Condition for Step: Paused OR Idle/Finished AND (stack is not empty OR (complete mode AND there are unvisited nodes))
+             const canStepWhenPaused = paused && (dfsStack.length > 0 || (algorithmMode === 'complete' && nodes.find(n => !visited.has(node.id))));
+             const canStepWhenIdle = idleOrFinished && ((algorithmMode === 'fromSource' && hasValidSource) || (algorithmMode === 'complete' && nodes.length > 0));
+
+             stepButton.disabled = !canStepWhenPaused && !canStepWhenIdle;
+
+
+             // Condition for Reset: Simulation is in progress OR visited nodes exist (something happened)
+             const canReset = simulationInProgress || visited.size > 0;
+             resetButton.disabled = !canReset;
+
+             graphSelector.disabled = simulationInProgress;
+             algorithmModeRadios.forEach(radio => radio.disabled = simulationInProgress);
+             sourceNodeSelector.disabled = simulationInProgress || algorithmMode !== 'fromSource';
+             sourceNodeControl.style.display = (algorithmMode === 'fromSource') ? 'block' : 'none'; // Ensure visibility matches mode
+
+             // Cursor changes based on interaction state
+             canvas.style.cursor = (idleOrFinished || paused) ? 'grab' : 'default';
+         }
+
+
+        // --- Canvas Interaction (Node Dragging & Source Selection Click) ---
+        let isDragging = false;
+        let draggedNode = null;
+        let dragOffsetX, dragOffsetY;
+
+        canvas.addEventListener('mousedown', (event) => {
+            // Only allow interaction if not running
+            if (algorithmState === 'RUNNING') return;
+
+            // Get mouse position relative to canvas
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            // Check if click is on a node
+            for (const node of nodes) {
+                const dist = Math.sqrt((mouseX - node.x)**2 + (mouseY - node.y)**2);
+                if (dist < NODE_RADIUS) {
+                    // Clicked on a node
+                    if (algorithmState === 'IDLE' || algorithmState === 'FINISHED') {
+                         // If idle or finished, allow selecting source node by clicking in 'fromSource' mode
+                         if (algorithmMode === 'fromSource') {
+                             sourceNodeId = node.id;
+                             sourceNodeSelector.value = node.id; // Update dropdown
+                             drawGraph(); // Redraw to highlight
+                             console.log("Selected source node:", sourceNodeId);
+                         }
+                         // Allow dragging
+                         isDragging = true;
+                         draggedNode = node;
+                         dragOffsetX = mouseX - node.x;
+                         dragOffsetY = mouseY - node.y;
+                         canvas.style.cursor = 'grabbing';
+                    } else if (algorithmState === 'PAUSED') {
+                         // Allow dragging while paused
+                         isDragging = true;
+                         draggedNode = node;
+                         dragOffsetX = mouseX - node.x;
+                         dragOffsetY = mouseY - node.y;
+                         canvas.style.cursor = 'grabbing';
+                    }
+
+                    break; // Stop checking nodes
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (isDragging && draggedNode) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+
+                // Update node position
+                draggedNode.x = mouseX - dragOffsetX;
+                draggedNode.y = mouseY - dragOffsetY;
+
+                // Redraw canvas
+                drawGraph();
+            } else {
+                 // Change cursor on hover over a node if interactive state
+                 const rect = canvas.getBoundingClientRect();
+                 const mouseX = event.clientX - rect.left;
+                 const mouseY = event.clientY - rect.top;
+                 let cursor = 'default';
+                 if (algorithmState === 'IDLE' || algorithmState === 'FINISHED' || algorithmState === 'PAUSED') {
+                     for (const node of nodes) {
+                         const dist = Math.sqrt((mouseX - node.x)**2 + (mouseY - node.y)**2);
+                         if (dist < NODE_RADIUS) {
+                             cursor = 'grab'; // Indicate draggable or clickable
+                             break;
+                         }
+                     }
+                 }
+                 canvas.style.cursor = cursor;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                draggedNode = null;
+                 canvas.style.cursor = 'default';
+                 // Redraw is handled by mousemove or the next simulation step if running
+            }
+        });
+
+         // Prevent context menu on right-click drag
+        canvas.addEventListener('contextmenu', (event) => {
+             if (isDragging) {
+                  event.preventDefault();
+             }
+        });
+
+
+       // --- Initial Load ---
+
+        // Initial setup
+        resizeCanvas(); // Set initial canvas size
+        loadGraph(graphSelector.value); // Load default graph, calls resetSimulation and drawGraph
+        // sourceNodeControl visibility and button states are handled by loadGraph -> resetSimulation -> updateButtonStates
+
+    </script>
+</body>
+</html>

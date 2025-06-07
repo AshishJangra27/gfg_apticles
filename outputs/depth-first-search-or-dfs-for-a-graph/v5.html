@@ -1,0 +1,951 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Depth First Search Explorer</title>
+    <style>
+        /* Global Styles & GFG Theme */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #ffffff;
+            color: #222222;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Make body fill the viewport height */
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        /* Layout Containers */
+        #header {
+            background-color: #2f8d46; /* GeeksforGeeks Green */
+            color: #ffffff;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0; /* Prevent shrinking */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+             gap: 10px; /* Space between header items when wrapped */
+        }
+
+        #header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        #main-content {
+            flex-grow: 1; /* Allow main content to take available space */
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls vertically */
+            padding: 10px 20px; /* Add some padding */
+            overflow: hidden; /* Prevent main content scroll */
+        }
+
+        #graph-area {
+            flex-grow: 1; /* Allow canvas area to grow */
+            position: relative; /* Needed for absolute positioning if we add tooltips etc. */
+            margin-bottom: 10px; /* Space between canvas and controls */
+            overflow: hidden; /* Ensure canvas doesn't exceed its area */
+        }
+
+        #graph-canvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%; /* Make canvas fill container width */
+            height: 100%; /* Make canvas fill container height */
+        }
+
+        #control-panel {
+            flex-shrink: 0; /* Prevent shrinking */
+            background-color: #f8f8f8; /* Light grey background */
+            padding: 10px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            gap: 10px; /* Space between sections */
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+
+         .controls-row > label {
+             white-space: nowrap; /* Prevent labels from breaking */
+         }
+
+        .state-display {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .state-node {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #fff; /* Default text color */
+            font-weight: bold;
+            background-color: #eee; /* Default unvisited */
+            transition: background-color 0.3s ease;
+            box-sizing: border-box; /* Include border in size */
+        }
+
+        .state-node.unvisited { background-color: #eee; color: #222; border-color: #ccc;}
+        .state-node.visiting { background-color: #ffcc00; color: #222; border-color: #ffaa00;} /* Orange/Yellow */
+        .state-node.visited { background-color: #2f8d46; color: #fff; border-color: #1a6e32;} /* GFG Green */
+
+        #visited-sequence {
+             /* Visually link sequence items to nodes */
+             display: flex;
+             flex-wrap: wrap;
+             gap: 5px;
+             min-height: 1.2em; /* Reserve space */
+             border: 1px solid #eee;
+             padding: 5px;
+             background-color: #fff;
+             flex-grow: 1; /* Take available space in the row */
+        }
+
+        #visited-sequence span {
+            background-color: #ddd;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+             white-space: nowrap; /* Prevent breaking */
+        }
+
+
+        #footer {
+            background-color: #222222; /* Dark background */
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            flex-shrink: 0; /* Prevent shrinking */
+            font-size: 0.9em;
+        }
+
+        #footer a {
+            color: #2f8d46; /* GFG Green links */
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        #footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* UI Elements */
+        button, select {
+            padding: 8px 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #eee;
+        }
+         button:active:not(:disabled) {
+            background-color: #ddd;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .mode-selector {
+            display: inline-flex; /* Keep buttons together */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+             overflow: hidden; /* Contain rounded corners */
+        }
+
+        .mode-selector button {
+             border: none; /* Remove individual borders */
+             border-radius: 0; /* Remove individual rounding */
+             padding: 8px 10px; /* Adjust padding */
+             background-color: #eee; /* Inactive color */
+             color: #222;
+        }
+         .mode-selector button:first-child { border-right: 1px solid #ccc; } /* Separator */
+         /* No last child border for simplicity */
+
+
+         .mode-selector button.active {
+            background-color: #fff; /* Active button uses white */
+            color: #2f8d46; /* GFG green text for active */
+            font-weight: bold;
+        }
+         /* Active button color for GFG theme might be GFG Green background */
+         /* Let's try the GFG Green background for active */
+         .mode-selector button.active {
+            background-color: #2f8d46; /* GFG Green */
+            color: #fff; /* White text */
+            font-weight: bold;
+        }
+         /* Ensure hover on inactive mode buttons works */
+         .mode-selector button:not(.active):hover {
+             background-color: #ddd;
+         }
+
+
+        label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+
+        #status-message {
+             margin-left: 10px;
+             color: #555;
+             font-size: 0.9em;
+             flex-grow: 1; /* Allows message to take space */
+             white-space: nowrap;
+             overflow: hidden;
+             text-overflow: ellipsis; /* Add ellipsis if too long */
+        }
+
+        /* Canvas Node & Edge Styles (handled by JS drawing but define visual states) */
+        /* JS will use these concepts: */
+        /* Node Colors: unvisited(#eee), visiting(#ffcc00), visited(#2f8d46) */
+        /* Edge Colors: default(#ccc), traversing(#ffcc00), part-of-path(#2f8d46), backtracking(#aaa) */
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <h1>Depth First Search Explorer</h1>
+        <div class="controls-row" style="margin-left: auto;"> <!-- Align controls to the right -->
+            <label for="graph-select">Graph:</label>
+            <select id="graph-select">
+                <option value="tree1">Example 1: Simple Tree</option>
+                <option value="cyclic1">Example 2: Cyclic Graph</option>
+                <option value="disconnected1">Example 3: Disconnected</option>
+            </select>
+             <div class="mode-selector">
+                <button id="mode-single-source" class="active">Single Source</button>
+                <button id="mode-complete">Complete Traversal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="graph-area">
+            <canvas id="graph-canvas"></canvas>
+        </div>
+        <div id="control-panel">
+            <div class="controls-row">
+                <button id="start-button">Start</button>
+                <button id="step-button">Step</button>
+                <button id="reset-button">Reset</button>
+                 <span id="status-message">Select a start node (Single Source mode)</span>
+            </div>
+             <div>
+                 <label>Visited State:</label>
+                 <div id="visited-state" class="state-display">
+                     <!-- Node state circles will be added here by JS -->
+                 </div>
+             </div>
+             <div class="controls-row" style="align-items: flex-start;"> <!-- Align label to top -->
+                  <label style="padding-top: 5px;">Visited Sequence:</label>
+                 <div id="visited-sequence">
+                      <!-- Visited node labels will be added here by JS -->
+                 </div>
+             </div>
+        </div>
+    </div>
+
+    <div id="footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </div>
+
+    <script>
+        // --- Graph Data ---
+        const graphs = {
+            tree1: {
+                nodes: [
+                    { id: 'A', x: 300, y: 50 },
+                    { id: 'B', x: 150, y: 150 },
+                    { id: 'C', x: 450, y: 150 },
+                    { id: 'D', x: 75, y: 250 },
+                    { id: 'E', x: 225, y: 250 },
+                    { id: 'F', x: 375, y: 250 },
+                    { id: 'G', x: 525, y: 250 },
+                ],
+                edges: [
+                    ['A', 'B'], ['A', 'C'],
+                    ['B', 'D'], ['B', 'E'],
+                    ['C', 'F'], ['C', 'G']
+                ],
+                directed: false // Simple tree, undirected
+            },
+             cyclic1: {
+                nodes: [
+                    { id: '0', x: 300, y: 50 },
+                    { id: '1', x: 150, y: 150 },
+                    { id: '2', x: 150, y: 300 },
+                    { id: '3', x: 450, y: 300 },
+                    { id: '4', x: 450, y: 150 },
+                ],
+                edges: [
+                    ['0', '1'], ['0', '4'],
+                    ['1', '2'], ['1', '3'], ['1', '4'], // Cycle 1-4-0-1, 1-3-4-1
+                    ['2', '3'], // Cycle 1-2-3-1
+                    ['3', '4'], // Cycle 2-3-4-1, 1-3-4-1
+                ],
+                directed: false
+             },
+             disconnected1: {
+                nodes: [
+                    { id: 'X', x: 100, y: 100 }, { id: 'Y', x: 200, y: 100 }, { id: 'Z', x: 150, y: 200 },
+                    { id: 'P', x: 400, y: 100 }, { id: 'Q', x: 500, y: 100 },
+                    { id: 'R', x: 450, y: 200 }, { id: 'S', x: 450, y: 300 },
+                ],
+                edges: [
+                    ['X', 'Y'], ['X', 'Z'], ['Y', 'Z'], // Component 1 (Triangle)
+                    ['P', 'Q'], ['P', 'R'], ['R', 'S'], // Component 2 (Line + Branch)
+                ],
+                 directed: false
+             }
+        };
+
+        // --- State Variables ---
+        let currentGraphKey = 'tree1';
+        let currentGraph = graphs[currentGraphKey];
+        let dfsMode = 'single-source'; // 'single-source' or 'complete'
+        let startNodeId = null; // User selected start node in single-source mode
+        let visited = new Map(); // Maps node ID to state: 'unvisited', 'visiting', 'visited'
+        let visitedSequence = []; // Array of node IDs in visit order
+        let simulationState = 'idle'; // 'idle', 'paused', 'running', 'finished'
+        let simulationStepDelay = 700; // Milliseconds between steps
+        let simulationInterval = null; // To hold the interval ID for 'running' state
+
+        // DFS State for stepping (using iterative DFS approach)
+        let dfsStack = []; // Stack for iterative DFS
+        let currentVisitingNodeId = null; // The node currently being processed (at the top of the recursive call stack conceptually)
+        let edgeStates = new Map(); // Maps edge string "node1-node2" to state: 'default', 'traversing', 'part-of-path', 'backtracking'
+        let nextNodesToVisit = new Map(); // Map: node ID -> array of unvisited neighbors (for tracking order in step)
+
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('graph-canvas');
+        const ctx = canvas.getContext('2d');
+        const graphSelect = document.getElementById('graph-select');
+        const modeSingleSourceBtn = document.getElementById('mode-single-source');
+        const modeCompleteBtn = document.getElementById('mode-complete');
+        const startButton = document.getElementById('start-button');
+        const stepButton = document.getElementById('step-button');
+        const resetButton = document.getElementById('reset-button');
+        const visitedStateDiv = document.getElementById('visited-state');
+        const visitedSequenceDiv = document.getElementById('visited-sequence');
+        const statusMessageSpan = document.getElementById('status-message');
+
+        // --- Constants for Drawing ---
+        const NODE_RADIUS = 18;
+        const EDGE_COLOR_DEFAULT = '#ccc';
+        const EDGE_COLOR_TRAVERSING = '#ffcc00'; // Orange/Yellow - Currently exploring this edge
+        const EDGE_COLOR_PATH = '#2f8d46'; // GFG Green - Edge is part of the final DFS tree/path
+        const EDGE_COLOR_BACKTRACKING = '#aaa'; // Greyish - Edge used to backtrack
+        const NODE_COLOR_UNVISITED = '#eee';
+        const NODE_COLOR_VISITING = '#ffcc00'; // Orange/Yellow - Currently on the DFS stack/recursion
+        const NODE_COLOR_VISITED = '#2f8d46'; // GFG Green - Fully processed
+        const NODE_BORDER_COLOR_DEFAULT = '#222';
+        const NODE_BORDER_COLOR_START = '#007bff'; // Blue for start node
+        const NODE_BORDER_COLOR_HIGHLIGHT = '#007bff'; // Blue for hover/click highlight (if implemented)
+        const NODE_TEXT_COLOR_UNVISITED = '#222';
+        const NODE_TEXT_COLOR_VISITED = '#fff'; // White
+
+        // --- Canvas Drawing Functions ---
+
+        function redrawCanvas() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw edges
+            currentGraph.edges.forEach(([uId, vId]) => {
+                const u = getNodeById(uId);
+                const v = getNodeById(vId);
+                if (!u || !v) return;
+
+                const edgeKey = getEdgeKey(uId, vId);
+                const state = edgeStates.get(edgeKey) || 'default';
+
+                ctx.beginPath();
+                ctx.moveTo(u.x, u.y);
+                ctx.lineTo(v.x, v.y);
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = EDGE_COLOR_DEFAULT;
+                 if (state === 'part-of-path') ctx.strokeStyle = EDGE_COLOR_PATH;
+                 else if (state === 'backtracking') ctx.strokeStyle = EDGE_COLOR_BACKTRACKING;
+                 else if (state === 'traversing') ctx.strokeStyle = EDGE_COLOR_TRAVERSING; // Draw traversing last to be on top
+
+
+                ctx.stroke();
+            });
+
+            // Draw nodes
+            currentGraph.nodes.forEach(node => {
+                const state = visited.get(node.id) || 'unvisited';
+                const isStartNode = (dfsMode === 'single-source' && startNodeId === node.id);
+                const isCurrentNode = (currentVisitingNodeId === node.id); // Node being processed right NOW in step
+
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+
+                // Fill
+                ctx.fillStyle = NODE_COLOR_UNVISITED;
+                if (state === 'visiting') { // Node is on the stack
+                     ctx.fillStyle = NODE_COLOR_VISITING;
+                } else if (state === 'visited') { // Node is finished
+                     ctx.fillStyle = NODE_COLOR_VISITED;
+                }
+
+                ctx.fill();
+
+                // Border
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = NODE_BORDER_COLOR_DEFAULT;
+                if(isStartNode && simulationState === 'idle') {
+                    ctx.strokeStyle = NODE_BORDER_COLOR_START; // Highlight start node before simulation
+                     ctx.lineWidth = 3;
+                } else {
+                     ctx.strokeStyle = NODE_BORDER_COLOR_DEFAULT;
+                     ctx.lineWidth = 2;
+                }
+                 ctx.stroke();
+
+                // Text (Node ID)
+                ctx.fillStyle = (state === 'visited' || state === 'visiting') ? NODE_TEXT_COLOR_VISITED : NODE_TEXT_COLOR_UNVISITED;
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.id, node.x, node.y);
+            });
+        }
+
+        // --- Helper Functions ---
+
+        // Get node by ID
+        function getNodeById(id) {
+            return currentGraph.nodes.find(node => node.id === id);
+        }
+
+        // Get connected node IDs for a given node
+        function getNeighbors(nodeId) {
+            const neighbors = [];
+            currentGraph.edges.forEach(([u, v]) => {
+                if (u === nodeId) neighbors.push(v);
+                else if (v === nodeId) neighbors.push(u); // Undirected graph assumption
+            });
+             // Sort neighbors by ID for predictable traversal order
+            neighbors.sort();
+            return neighbors;
+        }
+
+         // Helper to get a consistent key for an edge regardless of direction
+         function getEdgeKey(uId, vId) {
+             return uId < vId ? `${uId}-${vId}` : `${vId}-${uId}`;
+         }
+
+        // Calculate distance between two points
+        function dist(p1, p2) {
+            return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+        }
+
+         // Check if a point (mx, my) is inside a node circle
+        function isPointInNode(mx, my, node) {
+             const nodePos = getNodeById(node.id); // Use current position
+             return dist({x: mx, y: my}, nodePos) <= NODE_RADIUS;
+        }
+
+        // --- UI Update Functions ---
+
+        function updateVisitedStateDisplay() {
+            visitedStateDiv.innerHTML = ''; // Clear current state
+            currentGraph.nodes.forEach(node => {
+                const nodeStateDiv = document.createElement('div');
+                nodeStateDiv.classList.add('state-node');
+                nodeStateDiv.textContent = node.id;
+                const state = visited.get(node.id) || 'unvisited';
+                nodeStateDiv.classList.add(state);
+                 // Optional: Add hover to link state node to canvas node
+                 // nodeStateDiv.dataset.nodeId = node.id; // Use data attribute
+                 // nodeStateDiv.addEventListener('mouseover', highlightCanvasNode);
+                 // nodeStateDiv.addEventListener('mouseout', unhighlightCanvasNode);
+                visitedStateDiv.appendChild(nodeStateDiv);
+            });
+        }
+
+        function updateVisitedSequenceDisplay() {
+            visitedSequenceDiv.innerHTML = ''; // Clear current sequence
+            visitedSequence.forEach(nodeId => {
+                const span = document.createElement('span');
+                span.textContent = nodeId;
+                visitedSequenceDiv.appendChild(span);
+            });
+        }
+
+        function updateStatusMessage(message) {
+            statusMessageSpan.textContent = message;
+        }
+
+        function updateButtonStates() {
+             const isIdle = simulationState === 'idle';
+             const isRunning = simulationState === 'running';
+             const isPaused = simulationState === 'paused';
+             const isFinished = simulationState === 'finished';
+
+             startButton.disabled = !(isIdle || isPaused); // Enable if idle or paused (to start/resume)
+             stepButton.disabled = !(isIdle || isPaused); // Enable if idle or paused (to start/step)
+             resetButton.disabled = isIdle; // Enable only when not idle
+
+             graphSelect.disabled = isRunning || isPaused;
+             modeSingleSourceBtn.disabled = isRunning || isPaused;
+             modeCompleteBtn.disabled = isRunning || isPaused;
+
+             // Specific states
+             if (isIdle) {
+                 if (dfsMode === 'single-source') {
+                     startButton.disabled = !startNodeId;
+                     stepButton.disabled = !startNodeId;
+                     updateStatusMessage(startNodeId ? `Ready from node ${startNodeId}` : 'Select a start node');
+                 } else { // Complete mode
+                     startButton.disabled = false;
+                     stepButton.disabled = false;
+                     updateStatusMessage('Ready for complete traversal');
+                 }
+             } else if (isRunning) {
+                 startButton.textContent = 'Pause';
+                 updateStatusMessage('Running...');
+             } else if (isPaused) {
+                 startButton.textContent = 'Resume';
+                 updateStatusMessage('Paused.');
+             } else if (isFinished) {
+                 startButton.textContent = 'Start Again';
+                 startButton.disabled = false; // Allow starting again
+                 stepButton.disabled = true;
+                 updateStatusMessage('Traversal finished.');
+             }
+
+             // Restore Start button text if not running/paused
+             if (!isRunning && !isPaused && !isFinished) {
+                 startButton.textContent = 'Start';
+             }
+        }
+
+
+        // --- Simulation Control ---
+
+        function resetSimulation() {
+            // Clear any running intervals
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+
+            visited.clear();
+            visitedSequence = [];
+            simulationState = 'idle';
+            dfsStack = [];
+            currentVisitingNodeId = null;
+            edgeStates.clear();
+            nextNodesToVisit.clear(); // Clear exploration state
+            // Note: startNodeId is NOT reset here if in single-source mode,
+            // allowing the user to re-run from the same node easily.
+            // It is reset only when changing graph or mode.
+
+            currentGraph.nodes.forEach(node => visited.set(node.id, 'unvisited'));
+            updateVisitedStateDisplay();
+            updateVisitedSequenceDisplay();
+            updateButtonStates();
+            redrawCanvas();
+             if (dfsMode === 'single-source' && startNodeId) {
+                  updateStatusMessage(`Reset. Ready from node ${startNodeId}.`);
+             } else if (dfsMode === 'single-source') {
+                  updateStatusMessage('Reset. Select a start node.');
+             } else { // Complete mode
+                  updateStatusMessage('Reset. Ready for complete traversal.');
+             }
+
+        }
+
+        function loadGraph(graphKey) {
+            if (simulationState !== 'idle') {
+                // Should not happen as button is disabled, but as safeguard
+                return;
+            }
+            currentGraphKey = graphKey;
+            currentGraph = graphs[currentGraphKey];
+            startNodeId = null; // Reset start node when changing graph
+            resetSimulation(); // Reset whenever graph changes
+             // Adjust canvas size to fit container - needed on initial load and potentially on resize
+            resizeCanvas();
+        }
+
+        function startSimulation() {
+            if (simulationState === 'finished') {
+                 resetSimulation(); // Start fresh if finished
+            }
+
+            if (simulationState === 'idle') {
+                if (dfsMode === 'single-source' && !startNodeId) {
+                    updateStatusMessage('Please select a start node first.');
+                    return;
+                }
+                 // Initialize DFS stack/state for the first step
+                 const initialNodeId = dfsMode === 'single-source' ? startNodeId : currentGraph.nodes.find(node => visited.get(node.id) === 'unvisited')?.id;
+
+                 if (!initialNodeId) {
+                     updateStatusMessage('All nodes visited or no nodes in graph.');
+                     simulationState = 'finished';
+                     updateButtonStates();
+                     return;
+                 }
+
+                 dfsStack.push(initialNodeId);
+                 visited.set(initialNodeId, 'visiting');
+                 currentVisitingNodeId = initialNodeId; // This is the first node we will process
+                 updateStatusMessage(`Starting DFS from ${initialNodeId}`);
+
+                 simulationState = 'running';
+                 updateButtonStates();
+                 redrawCanvas(); // Draw initial state
+                 updateVisitedStateDisplay();
+
+                 // Start the step interval
+                 simulationInterval = setInterval(executeStep, simulationStepDelay);
+
+            } else if (simulationState === 'paused') {
+                simulationState = 'running';
+                updateButtonStates();
+                 updateStatusMessage('Resuming...');
+                // Resume the step interval
+                 simulationInterval = setInterval(executeStep, simulationStepDelay);
+            }
+        }
+
+        function pauseSimulation() {
+             if (simulationState === 'running') {
+                 simulationState = 'paused';
+                 updateButtonStates();
+                 updateStatusMessage('Paused.');
+                 // Clear the step interval
+                 if (simulationInterval) {
+                     clearInterval(simulationInterval);
+                     simulationInterval = null;
+                 }
+             }
+        }
+
+        function stepSimulation() {
+             // If idle, initialize the first step
+             if (simulationState === 'idle') {
+                if (dfsMode === 'single-source' && !startNodeId) {
+                     updateStatusMessage('Please select a start node first.');
+                     return;
+                 }
+                const initialNodeId = dfsMode === 'single-source' ? startNodeId : currentGraph.nodes.find(node => visited.get(node.id) === 'unvisited')?.id;
+
+                 if (!initialNodeId) {
+                     updateStatusMessage('All nodes visited or no nodes in graph.');
+                     simulationState = 'finished';
+                     updateButtonStates();
+                     return;
+                 }
+
+                dfsStack.push(initialNodeId);
+                visited.set(initialNodeId, 'visiting');
+                currentVisitingNodeId = initialNodeId; // This is the first node to process
+                updateStatusMessage(`Starting DFS from ${initialNodeId}`);
+
+                simulationState = 'paused'; // Enter paused state after init
+                updateButtonStates();
+                redrawCanvas(); // Draw initial state
+                updateVisitedStateDisplay();
+                return; // Initialization done, next click will execute a step
+             }
+
+            // If already paused or finished (needs reset+init first)
+            if (simulationState === 'paused') {
+                 executeStep(); // Execute one step
+                 updateButtonStates(); // Update buttons based on new state (might become finished)
+                 redrawCanvas();
+                 updateVisitedStateDisplay();
+                 updateVisitedSequenceDisplay();
+            } else if (simulationState === 'finished') {
+                 // Clicking step after finished resets and initializes the first step
+                 resetSimulation();
+                 // Then call stepSimulation again to do the init logic
+                 stepSimulation();
+            }
+
+        }
+
+        // Execute a single logical step of the DFS algorithm (for iterative step-by-step)
+        function executeStep() {
+             // Clear any previous edge traversal highlighting
+            edgeStates.forEach((state, key) => {
+                 if (state === 'traversing') {
+                      // If the node was just popped, the edge used to get there is now part of the path
+                      // If the node wasn't popped, the traversal state is ending for some other reason (e.g., finished neighbors)
+                       const [u,v] = key.split('-');
+                       // Mark the edge as part-of-path if the source node is now visited
+                       if (visited.get(u) === 'visited' || visited.get(v) === 'visited') {
+                            edgeStates.set(key, 'part-of-path');
+                       } else {
+                           // Should not happen in correct flow, but revert if needed?
+                           // edgeStates.delete(key); // Or set back to default/backtracking?
+                       }
+                 }
+            });
+
+
+            if (dfsStack.length === 0) {
+                // Stack is empty. The current component is fully traversed.
+                 currentVisitingNodeId = null; // No node currently being processed from the stack
+
+                // Check if there are any unvisited nodes left for complete traversal mode.
+                if (dfsMode === 'complete') {
+                    const nextStartNode = currentGraph.nodes.find(node => visited.get(node.id) === 'unvisited');
+                    if (nextStartNode) {
+                        // Start DFS from a new unvisited node (new component)
+                        dfsStack.push(nextStartNode.id);
+                        visited.set(nextStartNode.id, 'visiting');
+                        currentVisitingNodeId = nextStartNode.id; // This is the node to process next
+                         updateStatusMessage(`Starting DFS from new component: ${nextStartNode.id}`);
+                         // No node was just finished, so no node to mark visited sequence yet.
+                         // The next step execution will process nextStartNode.id
+                         redrawCanvas(); // Redraw to show new visiting node
+                         updateVisitedStateDisplay();
+                         return; // Step finished: initialized new component start
+                    }
+                }
+                // No more nodes to visit in this component or graph
+                simulationState = 'finished';
+                currentVisitingNodeId = null; // Ensure no node is marked 'visiting' on canvas
+                 updateStatusMessage('Traversal finished.');
+                updateButtonStates();
+                updateVisitedStateDisplay(); // Ensure all nodes are marked visited if applicable
+                redrawCanvas();
+                // Clear interval if running
+                if (simulationInterval) {
+                     clearInterval(simulationInterval);
+                     simulationInterval = null;
+                 }
+                return; // Step finished: traversal ended
+            }
+
+            // --- Core Iterative DFS Step ---
+
+            // The node at the top of the stack is the one we are conceptually "at"
+            const topNodeId = dfsStack[dfsStack.length - 1];
+            currentVisitingNodeId = topNodeId; // Highlight this node on canvas
+
+            updateStatusMessage(`Exploring from node: ${topNodeId}`);
+
+            // Find the *next* unvisited neighbor to visit from the top node
+            let neighbors = nextNodesToVisit.get(topNodeId);
+            if (!neighbors) {
+                 // First time processing this node, get its neighbors
+                 neighbors = getNeighbors(topNodeId).filter(neighborId => visited.get(neighborId) === 'unvisited');
+                 // Store remaining unvisited neighbors for subsequent steps from this node
+                 nextNodesToVisit.set(topNodeId, neighbors);
+            }
+
+            let nextNeighborId = null;
+            while (neighbors.length > 0) {
+                 const potentialNeighborId = neighbors.shift(); // Get the next neighbor to try
+                 const neighborState = visited.get(potentialNeighborId);
+
+                 if (neighborState === 'unvisited') {
+                     nextNeighborId = potentialNeighborId;
+                     break; // Found the next unvisited neighbor to push
+                 }
+                 // If neighbor is not unvisited, just discard it from the list for this node.
+            }
+
+            if (nextNeighborId) {
+                // We found an unvisited neighbor, push it onto the stack
+                dfsStack.push(nextNeighborId);
+                visited.set(nextNeighborId, 'visiting');
+                 currentVisitingNodeId = nextNeighborId; // This is now the node being processed
+                const edgeKey = getEdgeKey(topNodeId, nextNeighborId);
+                edgeStates.set(edgeKey, 'traversing'); // Mark edge being traversed
+                 updateStatusMessage(`Exploring from ${topNodeId} to ${nextNeighborId}`);
+
+            } else {
+                // No unvisited neighbors left from the current top node.
+                // Pop the current node, it's fully explored from. Mark as 'visited'.
+                const finishedNodeId = dfsStack.pop();
+
+                if (visited.get(finishedNodeId) === 'visiting') { // Only mark as visited if it was visiting
+                     visited.set(finishedNodeId, 'visited');
+                     visitedSequence.push(finishedNodeId);
+                     updateStatusMessage(`Finished exploring from ${finishedNodeId}. Backtracking.`);
+
+                    // Mark edges leading FROM this node that are part of the path
+                    const finishedNodeNeighbors = getNeighbors(finishedNodeId);
+                    finishedNodeNeighbors.forEach(neighborId => {
+                        const edgeKey = getEdgeKey(finishedNodeId, neighborId);
+                         // If the neighbor was visited *before* finishedNodeId was popped,
+                         // this edge is either a cross-edge or a back-edge. Mark as backtracking or path?
+                         // Simplification: If neighbor is visited, this edge is part of the overall path or a back edge.
+                         // Let's just mark used edges as 'part-of-path' when source node is finished.
+                         // Edges marked 'traversing' leading *to* finishedNodeId should become 'part-of-path' in the next redraw step.
+                         // Edges from finishedNodeId to already 'visited' neighbors become 'backtracking' or 'part-of-path'.
+                         // Let's stick to 'part-of-path' for edges used in the DFS tree, and 'backtracking' for back edges.
+                         // An edge (u, v) is a back edge if v is an ancestor of u in the DFS tree (i.e., v is 'visiting' when exploring from u).
+                         // In this iterative simplified state, let's just mark edge (finishedNodeId, neighborId) as part-of-path if neighbor is visited.
+                          if (visited.get(neighborId) === 'visited') {
+                                // Check if neighbor was added to sequence *before* finishedNodeId. Tricky.
+                                // Simpler: If neighbor is visited, mark as 'part-of-path'.
+                                // This isn't perfect for back-edges visualization but keeps state simple.
+                                edgeStates.set(edgeKey, 'part-of-path');
+                          }
+                           // Edges to nodes still on the stack (visiting) or unvisited will be handled when those nodes are processed.
+                    });
+                }
+
+                nextNodesToVisit.delete(finishedNodeId); // This node is done
+
+
+                 // After popping, the new top of the stack (if any) is the next node to potentially explore from
+                currentVisitingNodeId = dfsStack.length > 0 ? dfsStack[dfsStack.length - 1] : null;
+
+
+                // If the stack is now empty after popping, the component is done.
+                 if (dfsStack.length === 0) {
+                     currentVisitingNodeId = null; // No node being processed
+
+                     // Check for next component if in complete mode
+                     const nextStartNode = dfsMode === 'complete' ? currentGraph.nodes.find(node => visited.get(node.id) === 'unvisited') : null;
+                     if (nextStartNode) {
+                          // The next step will handle starting the new component.
+                         updateStatusMessage(`Component finished. Looking for next...`);
+                     } else {
+                          // Entire traversal is finished
+                          simulationState = 'finished';
+                          updateStatusMessage('Traversal finished.');
+                          // Clear interval if running
+                          if (simulationInterval) {
+                              clearInterval(simulationInterval);
+                              simulationInterval = null;
+                          }
+                     }
+                 }
+            }
+
+             // Redraw and update UI after the step
+             redrawCanvas();
+             updateVisitedStateDisplay();
+             updateVisitedSequenceDisplay();
+
+             // Update button states only after the step is fully processed
+             updateButtonStates();
+        }
+
+
+         // Function to handle auto-stepping when 'Start' is clicked
+         // (Now combined into startSimulation and using setInterval)
+
+
+        // --- Event Handlers ---
+
+        function handleCanvasClick(event) {
+            if (simulationState !== 'idle' || dfsMode !== 'single-source') return; // Only allow clicking nodes when idle and in single source mode
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            // Check if click is on a node
+            for (const node of currentGraph.nodes) {
+                if (isPointInNode(mouseX, mouseY, node)) {
+                     startNodeId = node.id;
+                     updateStatusMessage(`Start node selected: ${startNodeId}`);
+                     updateButtonStates(); // Enable Start/Step
+                     redrawCanvas(); // Highlight the selected start node
+                    break; // Found the clicked node
+                }
+            }
+        }
+
+        function handleGraphSelectChange(event) {
+            loadGraph(event.target.value);
+        }
+
+        function handleModeChange(event) {
+            if (simulationState !== 'idle') return; // Don't change mode during simulation
+
+            if (event.target === modeSingleSourceBtn && dfsMode !== 'single-source') {
+                dfsMode = 'single-source';
+                modeSingleSourceBtn.classList.add('active');
+                modeCompleteBtn.classList.remove('active');
+                resetSimulation(); // Reset when changing mode
+                 updateStatusMessage('Select a start node');
+            } else if (event.target === modeCompleteBtn && dfsMode !== 'complete') {
+                dfsMode = 'complete';
+                modeCompleteBtn.classList.add('active');
+                modeSingleSourceBtn.classList.remove('active');
+                resetSimulation(); // Reset when changing mode
+                 updateStatusMessage('Ready for complete traversal');
+            }
+        }
+
+        // Resize canvas to fit its container
+        function resizeCanvas() {
+            const graphArea = document.getElementById('graph-area');
+            // Set internal canvas size based on the actual rendered size of its container
+            canvas.width = graphArea.clientWidth;
+            canvas.height = graphArea.clientHeight;
+             // Redraw content after resize
+            redrawCanvas();
+        }
+
+        // --- Initialization ---
+
+        function init() {
+            // Set initial canvas size
+            resizeCanvas();
+
+            // Load the default graph and reset simulation state
+            loadGraph(currentGraphKey);
+
+            // Add event listeners
+            canvas.addEventListener('click', handleCanvasClick);
+            graphSelect.addEventListener('change', handleGraphSelectChange);
+            modeSingleSourceBtn.addEventListener('click', handleModeChange);
+            modeCompleteBtn.addEventListener('click', handleModeChange);
+            startButton.addEventListener('click', startSimulation);
+            stepButton.addEventListener('click', stepSimulation);
+            resetButton.addEventListener('click', resetSimulation);
+
+             // Handle window resize
+            window.addEventListener('resize', resizeCanvas);
+
+            // Initial state updates
+            updateButtonStates();
+        }
+
+        // Run initialization when the DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+
+</body>
+</html>

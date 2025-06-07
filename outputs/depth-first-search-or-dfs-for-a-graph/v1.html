@@ -1,0 +1,646 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depth-First Search Explorer</title>
+    <style>
+        :root {
+            --background-color: #ffffff;
+            --primary-color: #2f8d46;
+            --primary-dark-color: #256d36; /* Slightly darker for buttons */
+            --text-color: #222222;
+            --visited-color: #a0d9b0; /* Lighter green */
+            --node-border-color: #666;
+            --edge-color: #ccc;
+            --current-node-highlight: yellow;
+            --current-edge-highlight: orange;
+            --backtrack-highlight: #f0f0f0; /* Light grey */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: grid;
+            grid-template-rows: auto 1fr auto; /* Header, Content, Footer */
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 1.4em;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1; /* Ensure it's above content */
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 300px 1fr; /* Sidebar width, Main content fills rest */
+            overflow: hidden; /* Prevent scrolling on the main grid area */
+        }
+
+        aside {
+            background-color: #f8f8f8; /* Slightly off-white */
+            padding: 20px;
+            overflow-y: auto; /* Allow sidebar content to scroll if needed */
+            border-right: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .controls button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+
+        .controls button:hover:not(:disabled) {
+            background-color: var(--primary-dark-color);
+        }
+
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .display-area {
+            margin-top: 20px;
+            flex-grow: 1; /* Pushes footer down */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .display-area h4 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .status, .input-graph, .output-sequence {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--background-color);
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+
+        .status {
+             font-weight: bold;
+             min-height: 1.2em;
+        }
+
+        .input-graph pre {
+            margin: 0;
+            white-space: pre-wrap; /* Wrap long lines */
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .output-sequence .node-id {
+            display: inline-block;
+            margin-right: 5px;
+            padding: 3px 6px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .visualization-area {
+            position: relative; /* Needed for potential absolute positioning if not using SVG */
+            overflow: hidden; /* Hide anything outside the SVG */
+            background-color: var(--background-color);
+        }
+
+        .graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .graph-node circle {
+            fill: var(--background-color);
+            stroke: var(--node-border-color);
+            stroke-width: 2;
+            transition: fill 0.3s ease, stroke 0.3s ease, r 0.3s ease;
+        }
+
+        .graph-node text {
+            fill: var(--text-color);
+            font-size: 14px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none; /* Don't block mouse events for circle */
+        }
+
+        .graph-edge line {
+            stroke: var(--edge-color);
+            stroke-width: 2;
+            transition: stroke 0.3s ease, stroke-width 0.3s ease;
+        }
+
+        /* State styles */
+        .graph-node.visited circle {
+            fill: var(--visited-color);
+        }
+
+        .graph-node.current circle {
+             stroke: var(--current-node-highlight);
+             stroke-width: 3;
+        }
+
+         .graph-edge.highlight {
+             stroke: var(--current-edge-highlight);
+             stroke-width: 3;
+         }
+
+        /* Backtrack style - subtle */
+        .graph-node.backtracked circle {
+             stroke: var(--backtrack-highlight);
+             stroke-width: 3;
+        }
+
+
+        footer {
+            background-color: var(--primary-dark-color);
+            color: var(--background-color);
+            text-align: center;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1; /* Ensure it's above content */
+        }
+
+        footer a {
+            color: var(--background-color);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        Depth-First Search Explorer
+    </header>
+
+    <main>
+        <aside>
+            <div class="controls">
+                <button id="startButton">Start DFS</button>
+                <button id="nextButton" disabled>Next Step</button>
+                <button id="runButton" disabled>Run Full Speed</button>
+                <button id="resetButton" disabled>Reset Graph</button>
+            </div>
+
+            <div class="display-area">
+                <h4>Status</h4>
+                <div id="status" class="status">Ready</div>
+
+                <h4>Input Graph (Adjacency List)</h4>
+                <div class="input-graph">
+                    <pre id="inputGraphDisplay"></pre>
+                </div>
+
+                <h4>Output Sequence</h4>
+                <div id="outputSequence" class="output-sequence"></div>
+            </div>
+        </aside>
+
+        <section class="visualization-area">
+            <svg class="graph-svg" id="graphSVG"></svg>
+        </section>
+    </main>
+
+    <footer>
+        Built for learners | <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> | <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // Graph data (Adjacency List) - Hardcoded example
+        const ADJACENCY_LIST = [
+            [1, 2],     // 0
+            [0, 2],     // 1
+            [0, 1, 3, 4], // 2
+            [2],        // 3
+            [2]         // 4
+        ];
+        const NUM_NODES = ADJACENCY_LIST.length;
+
+        // Node positions (Hardcoded for this specific graph)
+        const NODE_POSITIONS = [
+            { x: 150, y: 150 }, // 0
+            { x: 300, y: 150 }, // 1
+            { x: 450, y: 300 }, // 2
+            { x: 600, y: 150 }, // 3
+            { x: 750, y: 150 }  // 4
+        ];
+
+        const NODE_RADIUS = 20;
+        const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+        // DOM Elements
+        const startButton = document.getElementById('startButton');
+        const nextButton = document.getElementById('nextButton');
+        const runButton = document.getElementById('runButton');
+        const resetButton = document.getElementById('resetButton');
+        const statusDisplay = document.getElementById('status');
+        const inputGraphDisplay = document.getElementById('inputGraphDisplay');
+        const outputSequenceDisplay = document.getElementById('outputSequence');
+        const graphSVG = document.getElementById('graphSVG');
+
+        // Algorithm State
+        let visited = new Set();
+        let output = [];
+        let algorithmTrace = []; // Pre-calculated sequence of visualization events
+        let traceStepIndex = 0;
+        let animationInterval = null; // For 'Run Full Speed'
+
+        // --- Visualization Functions ---
+
+        function getNodeCoords(nodeId) {
+            return NODE_POSITIONS[nodeId];
+        }
+
+        function getEdgeId(u, v) {
+             return `edge-${Math.min(u, v)}-${Math.max(u, v)}`;
+        }
+
+        function drawGraph() {
+            graphSVG.innerHTML = ''; // Clear previous graph
+
+            // Draw Edges
+            const drawnEdges = new Set();
+            ADJACENCY_LIST.forEach((neighbors, u) => {
+                neighbors.forEach(v => {
+                    // Draw each edge only once (e.g., u-v only, not v-u)
+                    const edgeId = getEdgeId(u, v);
+                    if (!drawnEdges.has(edgeId)) {
+                        const p1 = getNodeCoords(u);
+                        const p2 = getNodeCoords(v);
+
+                        const line = document.createElementNS(SVG_NAMESPACE, 'line');
+                        line.setAttribute('id', edgeId);
+                        line.setAttribute('x1', p1.x);
+                        line.setAttribute('y1', p1.y);
+                        line.setAttribute('x2', p2.x);
+                        line.setAttribute('y2', p2.y);
+                        line.classList.add('graph-edge');
+                        graphSVG.appendChild(line);
+                        drawnEdges.add(edgeId);
+                    }
+                });
+            });
+
+            // Draw Nodes (draw after edges so they are on top)
+            NODE_POSITIONS.forEach((pos, i) => {
+                const group = document.createElementNS(SVG_NAMESPACE, 'g');
+                group.setAttribute('id', `node-${i}`);
+                group.classList.add('graph-node');
+
+                const circle = document.createElementNS(SVG_NAMESPACE, 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', NODE_RADIUS);
+                group.appendChild(circle);
+
+                const text = document.createElementNS(SVG_NAMESPACE, 'text');
+                text.setAttribute('x', pos.x);
+                text.setAttribute('y', pos.y);
+                text.textContent = i;
+                 // Basic hover effect for node info - requires JS listeners
+                 // For minimalism, let's skip complex hover tooltip here and rely on CSS classes only.
+                 // group.addEventListener('mouseover', () => statusDisplay.textContent = `Node ${i}: Visited ${visited.has(i)}`);
+                 // group.addEventListener('mouseout', () => updateStatus());
+
+                group.appendChild(text);
+                graphSVG.appendChild(group);
+            });
+        }
+
+        function updateNodeVisual(nodeId, statusClasses) {
+             const nodeElement = graphSVG.getElementById(`node-${nodeId}`);
+             if (nodeElement) {
+                 // Clear specific state classes before adding new ones
+                 nodeElement.classList.remove('visited', 'current', 'backtracked');
+                 nodeElement.classList.add(...statusClasses);
+             }
+        }
+
+         function updateEdgeVisual(u, v, isHighlight) {
+             const edgeElement = graphSVG.getElementById(getEdgeId(u, v));
+             if (edgeElement) {
+                 edgeElement.classList.toggle('highlight', isHighlight);
+             }
+         }
+
+        function updateOutputDisplay() {
+            outputSequenceDisplay.innerHTML = '';
+            output.forEach(nodeId => {
+                const span = document.createElement('span');
+                span.classList.add('node-id');
+                span.textContent = nodeId;
+                outputSequenceDisplay.appendChild(span);
+            });
+        }
+
+        function updateStatus(message = "") {
+            statusDisplay.textContent = message || "Ready";
+        }
+
+        // --- Algorithm Logic ---
+
+        // Function to generate the DFS trace (sequence of visual events)
+        function generateDFSTrace(startNode) {
+            const trace = [];
+            const visitedSet = new Set(); // Use a local set for trace generation
+
+            // Recursive DFS helper
+            function dfs(u, parent = null) {
+                 trace.push(['highlight_node', u]); // Indicate we are at this node
+                 trace.push(['explore_node', u]); // Log the exploration step
+
+                if (!visitedSet.has(u)) {
+                    visitedSet.add(u);
+                    trace.push(['mark_visited', u]); // Mark visited visually/conceptually
+                    trace.push(['add_to_output', u]); // Add to output sequence
+
+                    // Sort neighbors to ensure deterministic visualization trace
+                    const neighbors = ADJACENCY_LIST[u].slice().sort((a, b) => a - b);
+
+                    for (const v of neighbors) {
+                        trace.push(['consider_neighbor', u, v]); // Highlight edge being considered
+                        if (!visitedSet.has(v)) {
+                            trace.push(['descend', u, v]); // Indicate traversing down
+                            dfs(v, u); // Recurse
+                            trace.push(['ascend', v, u]); // Indicate returning up
+                        } else {
+                            trace.push(['skip_neighbor', v]); // Indicate skipping visited neighbor
+                        }
+                    }
+                } else {
+                     // If node is already visited when we arrive (e.g., from a different path in an undirected graph cycle)
+                     // We still "explore" it by popping/arriving, but don't re-visit.
+                     trace.push(['already_visited', u]); // Indicate already visited
+                }
+
+                trace.push(['finish_node', u]); // Done processing this node's neighbors
+                trace.push(['unhighlight_node', u]); // Remove highlight
+            }
+
+            // Start DFS from the specified node
+            if (startNode < NUM_NODES) {
+                 // Initial state before starting
+                 trace.push(['reset_all']); // Event to reset state visuals
+                 trace.push(['initial_start', startNode]); // Initial event
+                 dfs(startNode);
+            }
+
+            trace.push(['finish']); // End of algorithm
+
+            return trace;
+        }
+
+
+        // Apply a single step from the trace
+        function applyTraceStep(step) {
+            const [action, ...params] = step;
+            let statusMessage = '';
+            let isFinished = false;
+
+            // Clear temporary highlights from the previous step
+            graphSVG.querySelectorAll('.graph-edge.highlight').forEach(edge => edge.classList.remove('highlight'));
+            graphSVG.querySelectorAll('.graph-node.backtracked').forEach(node => node.classList.remove('backtracked')); // Clear backtrack highlights
+
+            switch (action) {
+                 case 'reset_all':
+                     visited = new Set();
+                     output = [];
+                     updateOutputDisplay();
+                     // Reset node/edge styles
+                     graphSVG.querySelectorAll('.graph-node circle').forEach(circle => circle.parentElement.classList.remove('visited', 'current', 'backtracked'));
+                     graphSVG.querySelectorAll('.graph-edge line').forEach(line => line.classList.remove('highlight'));
+                     statusMessage = 'Graph reset. Ready to start.';
+                     break;
+                 case 'initial_start':
+                     const startNodeId = params[0];
+                     statusMessage = `Starting DFS from node ${startNodeId}`;
+                     break;
+                case 'explore_node':
+                    const nodeId = params[0];
+                     statusMessage = `Exploring node ${nodeId}`;
+                     updateNodeVisual(nodeId, ['current']); // Highlight current node
+                    break;
+                 case 'mark_visited':
+                     const visitNodeId = params[0];
+                     if (!visited.has(visitNodeId)) {
+                         visited.add(visitNodeId);
+                         statusMessage = `Marking node ${visitNodeId} as visited`;
+                         updateNodeVisual(visitNodeId, ['visited', 'current']); // Keep current highlight
+                     } else {
+                         statusMessage = `Node ${visitNodeId} was already visited`;
+                         updateNodeVisual(visitNodeId, ['visited', 'current']);
+                     }
+                    break;
+                 case 'add_to_output':
+                     const outputNodeId = params[0];
+                      // Only add if it was just visited in the 'mark_visited' step
+                     if(output[output.length - 1] !== outputNodeId) { // Prevent duplicates on 'already_visited'
+                        output.push(outputNodeId);
+                        updateOutputDisplay();
+                         statusMessage = `Adding node ${outputNodeId} to output sequence`;
+                     } else {
+                        statusMessage = `Node ${outputNodeId} already in output`;
+                     }
+                    break;
+                 case 'already_visited':
+                     const alreadyNodeId = params[0];
+                     statusMessage = `Arrived at node ${alreadyNodeId} (already visited)`;
+                     updateNodeVisual(alreadyNodeId, ['visited', 'current']);
+                     break;
+                case 'consider_neighbor':
+                    const u = params[0];
+                    const v = params[1];
+                    statusMessage = `Considering neighbor ${v} from node ${u}`;
+                    updateEdgeVisual(u, v, true); // Highlight edge being considered
+                    break;
+                 case 'descend':
+                     const d_u = params[0];
+                     const d_v = params[1];
+                     statusMessage = `Descending from ${d_u} to unvisited neighbor ${d_v}`;
+                     // Keep edge highlighted, maybe dim u?
+                     // updateNodeVisual(d_u, ['visited']); // Unhighlight previous node
+                     // Handled by 'unhighlight_node' event later
+                     break;
+                case 'skip_neighbor':
+                    const skipNodeId = params[0];
+                    statusMessage = `Neighbor ${skipNodeId} is visited, skipping.`;
+                    // Edge highlight removed at start of next step
+                    break;
+                 case 'ascend':
+                     const a_from = params[0];
+                     const a_to = params[1];
+                     statusMessage = `Backtracking from ${a_from} to ${a_to}`;
+                     updateNodeVisual(a_from, ['visited']); // Ensure previous node is just 'visited'
+                     updateNodeVisual(a_to, ['current', 'backtracked']); // Highlight node we return to
+                    break;
+                case 'finish_node':
+                     const finishNodeId = params[0];
+                     statusMessage = `Finished exploring neighbors of node ${finishNodeId}`;
+                     // Node highlight removed by 'unhighlight_node'
+                     break;
+                 case 'unhighlight_node':
+                    const unhighlightNodeId = params[0];
+                    const nodeElement = graphSVG.getElementById(`node-${unhighlightNodeId}`);
+                    if(nodeElement) {
+                         nodeElement.classList.remove('current');
+                    }
+                    // Keep 'visited' or 'backtracked' as appropriate
+                    break;
+                case 'finish':
+                    statusMessage = 'DFS Complete!';
+                    isFinished = true;
+                    break;
+                default:
+                    statusMessage = `Unknown step: ${action}`;
+                    break;
+            }
+
+             updateStatus(`Step ${traceStepIndex + 1}/${algorithmTrace.length}: ${statusMessage}`);
+
+             // Manage buttons
+             if (isFinished) {
+                 clearInterval(animationInterval);
+                 animationInterval = null;
+                 startButton.disabled = true;
+                 nextButton.disabled = true;
+                 runButton.disabled = true;
+                 resetButton.disabled = false;
+             } else {
+                startButton.disabled = true; // Can't start again mid-run
+                resetButton.disabled = false; // Can reset anytime
+                if (animationInterval === null) { // Only if not in 'Run' mode
+                     nextButton.disabled = false;
+                     runButton.disabled = false;
+                 }
+             }
+        }
+
+
+        // --- Control Button Handlers ---
+
+        function startDFS() {
+            if (algorithmTrace.length === 0) {
+                 algorithmTrace = generateDFSTrace(0); // Generate trace starting from node 0
+            }
+            traceStepIndex = -1; // Start before the first step
+            nextStep(); // Execute the first step (which should be reset_all or initial_start)
+
+            startButton.disabled = true;
+            nextButton.disabled = false;
+            runButton.disabled = false;
+            resetButton.disabled = false;
+        }
+
+        function nextStep() {
+             if (traceStepIndex < algorithmTrace.length - 1) {
+                 traceStepIndex++;
+                 applyTraceStep(algorithmTrace[traceStepIndex]);
+             } else {
+                 // Already at the end
+                 clearInterval(animationInterval);
+                 animationInterval = null;
+                 updateStatus("DFS Complete! Click Reset to run again.");
+                 nextButton.disabled = true;
+                 runButton.disabled = true;
+                 startButton.disabled = true;
+                 resetButton.disabled = false;
+             }
+        }
+
+        function runFullSpeed() {
+             if (animationInterval !== null) return; // Already running
+
+             startButton.disabled = true;
+             nextButton.disabled = true;
+             runButton.disabled = true;
+             resetButton.disabled = false;
+
+             animationInterval = setInterval(() => {
+                 if (traceStepIndex < algorithmTrace.length - 1) {
+                     nextStep();
+                 } else {
+                     // Algorithm finished while running
+                     clearInterval(animationInterval);
+                     animationInterval = null;
+                     runButton.disabled = true; // Ensure run button stays disabled
+                     nextButton.disabled = true; // Ensure next button stays disabled
+                     startButton.disabled = true;
+                     resetButton.disabled = false;
+                 }
+             }, 500); // Adjust speed (milliseconds)
+        }
+
+        function resetGraph() {
+            clearInterval(animationInterval);
+            animationInterval = null;
+            visited = new Set();
+            output = [];
+            algorithmTrace = []; // Clear trace
+            traceStepIndex = 0; // Reset index
+            updateStatus("Ready");
+            updateOutputDisplay();
+            drawGraph(); // Redraw to reset all visual states
+            startButton.disabled = false;
+            nextButton.disabled = true;
+            runButton.disabled = true;
+            resetButton.disabled = true;
+        }
+
+        // --- Initial Setup ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Display the input graph
+            inputGraphDisplay.textContent = JSON.stringify(ADJACENCY_LIST, null, 2);
+
+            // Draw the initial graph
+            drawGraph();
+
+            // Set initial button states
+            startButton.disabled = false;
+            nextButton.disabled = true;
+            runButton.disabled = true;
+            resetButton.disabled = true;
+
+            // Add event listeners
+            startButton.addEventListener('click', startDFS);
+            nextButton.addEventListener('click', nextStep);
+            runButton.addEventListener('click', runFullSpeed);
+            resetButton.addEventListener('click', resetGraph);
+        });
+
+    </script>
+</body>
+</html>

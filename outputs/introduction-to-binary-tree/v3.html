@@ -1,0 +1,320 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept Extractor & Visualizer</title>
+    <style>
+        :root {
+            --color-background: #ffffff;
+            --color-primary: #2f8d46;
+            --color-text: #222222;
+            --color-border: #cccccc;
+            --color-hover-subtle: #f0f0f0;
+            --color-active-subtle: #e0e0e0;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Fixed viewport */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--color-primary);
+            color: var(--color-background);
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .container {
+            flex-grow: 1;
+            display: flex;
+            overflow: hidden; /* Prevent container from scrolling */
+        }
+
+        .control-panel {
+            width: 200px; /* Fixed width sidebar */
+            background-color: var(--color-background);
+            border-right: 1px solid var(--color-border);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+            overflow-y: auto; /* Allow sidebar to scroll if needed, but main area is fixed */
+        }
+
+        .control-panel button {
+            padding: 10px;
+            background-color: var(--color-primary);
+            color: var(--color-background);
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, opacity 0.3s ease;
+        }
+
+        .control-panel button:hover {
+            background-color: #277a3c; /* Darker green */
+        }
+
+        .control-panel button:active {
+            background-color: #1e6430; /* Even darker green */
+        }
+
+        .control-panel button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .display-area {
+            flex-grow: 1;
+            background-color: var(--color-background);
+            padding: 15px;
+            overflow: hidden; /* Prevent main area from scrolling */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* For positioning processing indicator */
+            transition: background-color 0.3s ease; /* For subtle hover */
+        }
+
+        .initial-source {
+            white-space: pre-wrap; /* Respect formatting */
+            font-family: monospace;
+            font-size: 0.9em;
+            color: var(--color-text);
+            padding: 15px;
+            border: 1px solid var(--color-border);
+            background-color: #f9f9f9;
+            width: 95%; /* Limit width slightly */
+            height: 95%;
+            overflow: auto; /* Allow source view to scroll if large */
+        }
+
+        .processing {
+            font-size: 1.5em;
+            color: var(--color-text);
+            opacity: 0.8;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+            100% { opacity: 0.8; }
+        }
+
+        .no-data-found {
+            font-size: 4em;
+            color: var(--color-text);
+            opacity: 0.6;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 200px; /* Make it a defined interactive area */
+            height: 200px;
+            border: 2px dashed var(--color-border);
+            cursor: pointer; /* Indicate interactivity */
+            transition: all 0.1s ease-out; /* Smooth subtle effects */
+            user-select: none; /* Prevent text selection */
+        }
+
+        .no-data-found:hover {
+            background-color: var(--color-hover-subtle);
+            border-color: var(--color-primary);
+        }
+
+        .no-data-found:active {
+             background-color: var(--color-active-subtle);
+             transform: scale(0.98); /* Subtle push effect */
+        }
+
+        footer {
+            background-color: var(--color-text);
+            color: var(--color-background);
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        footer a {
+            color: var(--color-background);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        Concept Extractor & Visualizer
+    </header>
+
+    <div class="container">
+        <div class="control-panel">
+            <button id="analyzeButton">Analyze Source</button>
+            <button id="generateButton">Generate Visual</button>
+            <!-- Other potential controls would go here -->
+        </div>
+        <div id="displayArea" class="display-area">
+            <div id="initialSource" class="initial-source">
+                🧾 **Design Brief**:
+                ```markdown
+### 🧱 Section Breakdown & UI Layout
+
+*   **Header (Top Bar)**: A simple title indicating the purpose, e.g., "Concept Extractor & Visualizer".
+*   **Control Panel (Left Sidebar)**: Contains interactive elements (buttons) to initiate analysis or transformation actions on the input.
+*   **Display Area (Main Center)**: This is the primary output zone.
+    *   **Initial State**: Visually represents the input source material (the provided markdown). This could be styled as raw data or code blocks.
+    *   **Post-Interaction State**: Shows the result of the attempted extraction/visualization – which in this case, will be a representation of "no data found" or "no concepts detected".
+*   **Fixed Viewport**: The layout is designed to fit within a standard screen without scrolling.
+
+### 🕹️ Interactivity Mapping
+
+*   **Interactive Element 1: "Analyze Source" Button**
+    *   **User Interaction**: Clicks the "Analyze Source" button in the Control Panel.
+    *   **Screen Change**:
+        1.  The Display Area clears or shows a brief animation (e.g., spinning icon, progress bar graphic) indicating processing.
+        2.  After a short delay, the Display Area transitions to a visual state representing the *absence* of concepts. This could be:
+            *   An empty graph/chart template.
+            *   A broken node-diagram.
+            *   A symbolic icon like "∅" or a question mark within a data container.
+            *   A grid that remains stubbornly empty when interaction is attempted within it (see next point).
+    *   **Type of Interaction**: Simple Button Click.
+
+*   **Interactive Element 2: "Generate Visual" Button** (Assuming different potential outputs)
+    *   **User Interaction**: Clicks the "Generate Visual" button (maybe implies generating a diagram, graph, etc.).
+    *   **Screen Change**:
+        1.  Processing animation in the Display Area.
+        2.  Transitions to a visual representation of a failed or empty visualization. E.g., axes on a graph with no data points, an empty set of connected nodes, or a visual alert indicating "No Visualizable Data".
+    *   **Type of Interaction**: Simple Button Click.
+
+*   **Interactive Element 3: Hover/Click on the "No Data" State (Subtle)**
+    *   **User Interaction**: Mouses over or clicks on the empty/symbolic state displayed in the Display Area after analysis.
+    *   **Screen Change**: Very subtle feedback. Could be:
+        *   A faint ripple or pulse effect on the empty area.
+        *   A slight change in a background pattern.
+        *   *Crucially, no text explanation appears*. The interaction simply reinforces the unresponsive nature of the "result".
+    *   **Type of Interaction**: Hover, Click (non-state-changing).
+
+### 🧠 Learning Objective Behind Each Interaction
+
+*   **Intent (Analyze Source / Generate Visual)**: To allow the learner to *attempt* to extract meaningful conceptual content from the source material and visually experience the *failure* to do so. This demonstrates the nature of the input content itself.
+*   **Outcome**: The learner understands that the source material provided lacks the technical substance required for standard concept extraction or visualization, directly experienced by the absence of expected output.
+
+*   **Intent (Hover/Click on No Data)**: To reinforce the concept that the result *is* emptiness or lack of data, by making the visual representation of "no data" feel solid but unresponsive to further attempts to interact *with the data itself* (because there is none).
+*   **Outcome**: Confirms the learner's observation that the analysis yielded nothing actionable or explorable.
+
+### 🧪 Cognitive Flow & Learner Progression
+
+*   The learner starts with the source material represented visually in the main area.
+*   Progression is action-driven: The learner initiates a process using the controls.
+*   The result of the action is observed in the main display area.
+*   The flow is non-linear and exploratory; the learner can click the available buttons in any order, always arriving at a visual state representing the input's emptiness. The focus is on understanding the *input's limitation* through interaction, not progressing through concepts.
+
+### ✨ Subtle Engagement Elements
+
+*   **Processing Animations**: Brief, non-intrusive animations (spinners, bars) provide visual feedback that an action is occurring after a button click.
+*   **Transition Effects**: Smooth visual transitions when the Display Area changes from the initial state to the "no data" state.
+*   **Subtle Empty State Feedback**: As mentioned in Interactivity 3, minimal visual response on hover/click of the "no data" state to make it feel like a concrete, albeit empty, result container.
+*   **Button State**: Buttons could subtly dim or change style while processing is indicated.
+                ```
+            </div>
+
+            <!-- Hidden initially -->
+            <div id="processingIndicator" class="processing" style="display: none;">
+                Processing...
+            </div>
+
+            <!-- Hidden initially -->
+            <div id="noDataFound" class="no-data-found" style="display: none;">
+                ∅
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const analyzeButton = document.getElementById('analyzeButton');
+        const generateButton = document.getElementById('generateButton');
+        const displayArea = document.getElementById('displayArea');
+        const initialSource = document.getElementById('initialSource');
+        const processingIndicator = document.getElementById('processingIndicator');
+        const noDataFound = document.getElementById('noDataFound');
+
+        // Function to show processing state
+        function showProcessing() {
+            initialSource.style.display = 'none';
+            noDataFound.style.display = 'none';
+            processingIndicator.style.display = 'block';
+            analyzeButton.disabled = true;
+            generateButton.disabled = true;
+        }
+
+        // Function to show "no data found" state
+        function showNoData() {
+            initialSource.style.display = 'none';
+            processingIndicator.style.display = 'none';
+            noDataFound.style.display = 'flex'; /* Use flex for centering content */
+            analyzeButton.disabled = false;
+            generateButton.disabled = false;
+        }
+
+        // Function to show initial source state
+        function showInitialSource() {
+            processingIndicator.style.display = 'none';
+            noDataFound.style.display = 'none';
+            initialSource.style.display = 'block';
+            analyzeButton.disabled = false;
+            generateButton.disabled = false;
+        }
+
+        // Simulate analysis/generation process
+        function simulateProcess(action) {
+            showProcessing();
+            setTimeout(showNoData, 1500); // Simulate 1.5 seconds processing time
+        }
+
+        // Event listeners for buttons
+        analyzeButton.addEventListener('click', () => {
+            simulateProcess('analyze');
+        });
+
+        generateButton.addEventListener('click', () => {
+            simulateProcess('generate');
+        });
+
+        // Subtle hover/click feedback for the "no data found" state
+        // CSS handles hover/active styles directly, no JS needed for simple class/pseudo-class changes.
+        // The CSS transitions provide the subtle effect.
+
+        // Initial display state
+        showInitialSource();
+
+    </script>
+
+</body>
+</html>

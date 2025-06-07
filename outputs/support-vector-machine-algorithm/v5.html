@@ -1,0 +1,1321 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Support Vector Machines</title>
+    <style>
+        /* GeeksforGeeks Theme */
+        :root {
+            --bg-color: #ffffff;
+            --primary-color: #2f8d46;
+            --text-color: #222222;
+            --secondary-text-color: #555555;
+            --border-color: #dddddd;
+            --class1-color: #007bff; /* Blue */
+            --class2-color: #dc3545; /* Red */
+            --margin-color: rgba(47, 141, 70, 0.1); /* Primary with opacity */
+            --sv-highlight-color: #ffc107; /* Yellow */
+            --slack-color: #ff6347; /* Tomato Red */
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        header {
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 1.4em;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .container {
+            flex-grow: 1;
+            display: flex;
+            overflow: hidden; /* Prevent internal scrolling in flex items */
+        }
+
+        .main-area {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden; /* Important for canvas drawing */
+            background-color: #f9f9f9; /* Slightly off-white for contrast */
+            border-right: 1px solid var(--border-color);
+        }
+
+        #svmCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .control-panel {
+            width: 280px;
+            padding: 20px;
+            background-color: var(--bg-color);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto; /* Allow controls to scroll if they exceed height */
+            flex-shrink: 0;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 1.1em;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .control-group button,
+        .control-group select {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+        }
+
+        .control-group button:hover,
+        .control-group select:hover {
+            background-color: #287d3e; /* Darker shade */
+        }
+
+         .control-group button:disabled {
+             background-color: #cccccc;
+             cursor: not-allowed;
+         }
+
+        .control-group select {
+             appearance: none; /* Remove default arrow */
+             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22white%22%20d%3D%22M287%2C114.7L159.5%2C242.2c-4.5%2C4.5-11.8%2C4.5-16.3%2C0L5.4%2C114.7c-4.5-4.5-4.5-11.8%2C0-16.3l16.1-16.1c4.5-4.5%2C11.8-4.5%2C16.3%2C0L143.4%2C163.3c4.6%2C4.6%2C12%2C4.6%2C16.6%2C0l105-105.5c4.5-4.5%2C11.8-4.5%2C16.3%2C0l16.1%2C16.1C291.5%2C102.9%2C291.5%2C110.2%2C287%2C114.7z%22%2F%3E%3C%2Fsvg%3E');
+             background-repeat: no-repeat;
+             background-position: right 10px center;
+             background-size: 12px;
+             padding-right: 30px; /* Make space for the arrow */
+         }
+
+
+        .control-group .toggle-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-group .toggle-group button {
+            flex-grow: 1;
+            background-color: #eee;
+            color: var(--text-color);
+        }
+
+        .control-group .toggle-group button.active {
+             background-color: var(--primary-color);
+             color: white;
+        }
+
+        .info-panel {
+            background-color: var(--bg-color);
+            padding: 10px 20px;
+            font-size: 0.9em;
+            border-top: 1px solid var(--border-color);
+            color: var(--secondary-text-color);
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .info-panel span {
+            margin: 0 10px;
+        }
+
+        footer {
+            background-color: #f1f1f1; /* Lighter grey */
+            color: var(--secondary-text-color);
+            text-align: center;
+            padding: 10px 20px;
+            font-size: 0.8em;
+            flex-shrink: 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin: 0 8px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Tooltip Styles (Minimal) */
+        [title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            background: #555;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            bottom: 100%; /* Position above element */
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            z-index: 10;
+            margin-bottom: 5px; /* Space between element and tooltip */
+        }
+
+         [title]:hover {
+             position: relative; /* Needed for positioning the pseudo-element */
+             cursor: help;
+         }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        Explore Support Vector Machines
+    </header>
+
+    <div class="container">
+        <div class="main-area">
+            <canvas id="svmCanvas"></canvas>
+        </div>
+
+        <div class="control-panel">
+            <div class="control-group">
+                <h3>Data Controls</h3>
+                <label>Click on canvas to add points:</label>
+                <div class="toggle-group">
+                    <button id="addClass1Btn" class="active">Add Class 1 (Blue)</button>
+                    <button id="addClass2Btn">Add Class 2 (Red)</button>
+                </div>
+                <button id="resetDataBtn">Reset Data</button>
+            </div>
+
+            <div class="control-group">
+                <h3>SVM Parameters</h3>
+                <label for="cSlider" title="Regularization parameter. Higher C = less misclassification tolerance.">C: <span id="cValue">1</span></label>
+                <input type="range" id="cSlider" min="0.1" max="10" value="1" step="0.1">
+
+                <label>Margin Type:</label>
+                 <div class="toggle-group">
+                     <button id="hardMarginBtn" class="active">Hard Margin</button>
+                     <button id="softMarginBtn">Soft Margin</button>
+                 </div>
+
+                <label for="kernelSelect" title="Select kernel type for non-linear separation.">Kernel Type:</label>
+                <select id="kernelSelect">
+                    <option value="linear">Linear</option>
+                    <option value="rbf">RBF (Demo)</option>
+                    <option value="poly">Polynomial (Demo)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>Optimization Action</h3>
+                <!-- Removed the "Find Optimal" button as a solver is not feasible.
+                     The visualization updates reactively to data and parameter changes. -->
+                <p style="font-size:0.9em; color: var(--secondary-text-color);">
+                    (Visualization updates as you add data, change parameters, or drag the boundary.)
+                 </p>
+                <button id="resetViewBtn">Reset View (Boundary)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <span id="infoKernel">Kernel: Linear</span>
+        <span id="infoMarginType">Margin: Hard</span>
+        <span id="infoSupportVectors">Support Vectors: 0</span>
+        <span id="infoMarginSize">Margin Size: N/A</span>
+        <span id="infoWValue">||w||: N/A</span>
+    </div>
+
+    <footer>
+        <p>Built for learning |
+            <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+            <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+        </p>
+    </footer>
+
+    <script>
+        // --- Canvas Setup ---
+        const canvas = document.getElementById('svmCanvas');
+        const ctx = canvas.getContext('2d');
+        let canvasWidth, canvasHeight;
+
+        // Data coordinates range (e.g., -5 to 5)
+        const dataRange = { x: [-5, 5], y: [-5, 5] };
+        const pointRadius = 5; // Radius in data units
+        const canvasPointRadius = 6; // Radius in canvas pixels for drawing
+
+        // --- SVM State ---
+        let dataPoints = [];
+        let currentC = 1;
+        let isSoftMargin = false;
+        let currentKernel = 'linear'; // 'linear', 'rbf', 'poly'
+        let addingClass = 1; // 1 for blue, -1 for red
+
+        // Manual Boundary State for Linear Kernel (simulating w and b)
+        // The line is defined by w.x + b = 0
+        // w is perpendicular to the line. We can represent the line by its angle and distance from origin
+        // OR by two points, OR by slope and intercept. Let's use slope (m) and y-intercept (b_intercept)
+        // For w.x + b = 0, w = (w_x, w_y), line is w_x * x + w_y * y + b = 0
+        // If we use slope/intercept y = mx + c, then mx - y + c = 0. So w = (m, -1), b = c.
+        // A normal vector (w) is easier to visualize. Let's represent the line by a normal vector `w_vec` and offset `b_offset`.
+        // w_vec is {x, y}, b_offset is a scalar. Initially, let's have a vertical line x=0 (w_vec={1,0}, b_offset=0).
+        let w_vec = { x: 1, y: 0 }; // Normal vector, not necessarily unit length
+        let b_offset = 0; // The 'b' term
+
+        // Drag state for manual boundary manipulation
+        let isDraggingBoundary = false;
+        let isDraggingMargin = false;
+        let dragOffsetX, dragOffsetY; // Offset from mouse to the line for dragging
+        let dragHandle = null; // 'boundary', 'margin1', 'margin2'
+
+        // RBF/Poly demo state
+        const demoRBFData = [
+             { x: 0, y: 0, class: -1 }, { x: 0.5, y: 0, class: -1 }, { x: 0, y: 0.5, class: -1 },
+             { x: -0.5, y: 0, class: -1 }, { x: 0, y: -0.5, class: -1 }, { x: 0.3, y: 0.3, class: -1 },
+             { x: -0.3, y: 0.3, class: -1 }, { x: 0.3, y: -0.3, class: -1 }, { x: -0.3, y: -0.3, class: -1 },
+             { x: 2, y: 2, class: 1 }, { x: 2.5, y: 2, class: 1 }, { x: 2, y: 2.5, class: 1 },
+             { x: -2, y: 2, class: 1 }, { x: -2.5, y: 2, class: 1 }, { x: -2, y: 2.5, class: 1 },
+             { x: 2, y: -2, class: 1 }, { x: 2.5, y: -2, class: 1 }, { x: 2, y: -2.5, class: 1 },
+             { x: -2, y: -2, class: 1 }, { x: -2.5, y: -2, class: 1 }, { x: -2, y: -2.5, class: 1 },
+        ];
+        const demoPolyData = [
+             { x: -3, y: -3, class: -1 }, { x: -2, y: -2, class: -1 }, { x: -1, y: -1, class: -1 },
+             { x: 1, y: 1, class: 1 }, { x: 2, y: 2, class: 1 }, { x: 3, y: 3, class: 1 },
+             { x: -3, y: 3, class: -1 }, { x: -2, y: 2, class: -1 }, { x: -1, y: 1, class: -1 },
+             { x: 1, y: -1, class: 1 }, { x: 2, y: -2, class: 1 }, { x: 3, y: -3, class: 1 },
+        ];
+
+
+        // --- UI Elements ---
+        const addClass1Btn = document.getElementById('addClass1Btn');
+        const addClass2Btn = document.getElementById('addClass2Btn');
+        const resetDataBtn = document.getElementById('resetDataBtn');
+        const cSlider = document.getElementById('cSlider');
+        const cValueSpan = document.getElementById('cValue');
+        const hardMarginBtn = document.getElementById('hardMarginBtn');
+        const softMarginBtn = document.getElementById('softMarginBtn');
+        const kernelSelect = document.getElementById('kernelSelect');
+        const resetViewBtn = document.getElementById('resetViewBtn'); // Button to reset the linear boundary visualization
+
+        // Info Panel Elements
+        const infoKernel = document.getElementById('infoKernel');
+        const infoMarginType = document.getElementById('infoMarginType');
+        const infoSupportVectors = document.getElementById('infoSupportVectors');
+        const infoMarginSize = document.getElementById('infoMarginSize');
+        const infoWValue = document.getElementById('infoWValue');
+
+
+        // --- Coordinate Transformation ---
+        function dataToCanvas(point) {
+            const x = (point.x - dataRange.x[0]) / (dataRange.x[1] - dataRange.x[0]) * canvasWidth;
+            const y = canvasHeight - ((point.y - dataRange.y[0]) / (dataRange.y[1] - dataRange.y[0]) * canvasHeight); // Invert Y
+            return { x, y };
+        }
+
+        function canvasToData(point) {
+            const x = (point.x / canvasWidth) * (dataRange.x[1] - dataRange.x[0]) + dataRange.x[0];
+            const y = (1 - (point.y / canvasHeight)) * (dataRange.y[1] - dataRange.y[0]) + dataRange.y[0]; // Invert Y
+            return { x, y };
+        }
+
+        // --- Drawing Functions ---
+        function drawPoint(point, isHighlighted = false, isSlack = false) {
+            const p = dataToCanvas(point);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, canvasPointRadius + (isHighlighted ? 2 : 0), 0, Math.PI * 2);
+            ctx.fillStyle = point.class === 1 ? 'var(--class1-color)' : 'var(--class2-color)';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = isHighlighted ? 'var(--sv-highlight-color)' : var(--text-color);
+            ctx.stroke();
+
+             if (isSlack) {
+                 ctx.beginPath();
+                 ctx.arc(p.x, p.y, canvasPointRadius + 4, 0, Math.PI * 2);
+                 ctx.strokeStyle = 'var(--slack-color)';
+                 ctx.lineWidth = 2;
+                 ctx.stroke();
+             }
+        }
+
+        function drawLinearBoundary(w, b, lineColor, lineWidth, lineDash = []) {
+            // Draw the line w.x + b = 0
+            // Need two points on the line within the canvas view
+            let p1 = null, p2 = null;
+
+            // Check intersections with canvas edges
+            const x0 = dataRange.x[0];
+            const x1 = dataRange.x[1];
+            const y0 = dataRange.y[0];
+            const y1 = dataRange.y[1];
+
+            // Equation: w.x * x + w.y * y + b = 0
+            // If w.y is not zero: y = (-w.x * x - b) / w.y
+            // If w.x is not zero: x = (-w.y * y - b) / w.x
+
+            if (Math.abs(w.y) > 1e-6) { // Avoid division by zero
+                // Intersection with x = x0
+                let y_x0 = (-w.x * x0 - b) / w.y;
+                if (y_x0 >= y0 && y_x0 <= y1) p1 = { x: x0, y: y_x0 };
+
+                // Intersection with x = x1
+                let y_x1 = (-w.x * x1 - b) / w.y;
+                if (y_x1 >= y0 && y_x1 <= y1 && (!p1 || Math.abs(y_x1 - y_x0) > 1e-6 * (y1-y0))) p2 = { x: x1, y: y_x1 }; // Add second point if distinct
+
+                // If we don't have 2 points yet, check intersections with y edges
+                if (!p2 && Math.abs(w.x) > 1e-6) {
+                     // Intersection with y = y0
+                     let x_y0 = (-w.y * y0 - b) / w.x;
+                     if (x_y0 >= x0 && x_y0 <= x1 && (!p1 || Math.abs(x_y0 - p1.x) > 1e-6 * (x1-x0))) {
+                         if (!p1) p1 = { x: x_y0, y: y0 };
+                         else p2 = { x: x_y0, y: y0 };
+                     }
+                      // Intersection with y = y1
+                     let x_y1 = (-w.y * y1 - b) / w.x;
+                     if (x_y1 >= x0 && x_y1 <= x1 && (!p1 || Math.abs(x_y1 - p1.x) > 1e-6 * (x1-x0)) && (!p2 || Math.abs(x_y1 - p2.x) > 1e-6 * (x1-x0))) {
+                         if (!p1) p1 = { x: x_y1, y: y1 };
+                         else p2 = { x: x_y1, y: y1 };
+                     }
+                }
+
+            } else if (Math.abs(w.x) > 1e-6) { // Vertical line: x = -b / w.x
+                 let x_const = -b / w.x;
+                 if (x_const >= x0 && x_const <= x1) {
+                     p1 = { x: x_const, y: y0 };
+                     p2 = { x: x_const, y: y1 };
+                 }
+            }
+
+            if (!p1 || !p2) {
+                 // Could not find two distinct points on the canvas.
+                 // This might happen if the line is outside the data range or fully horizontal/vertical
+                 // very close to the edge. For simplicity, let's draw a horizontal/vertical line if needed.
+                 // Or just draw nothing if it's truly off-screen. Let's draw nothing.
+                 return;
+            }
+
+
+            const cp1 = dataToCanvas(p1);
+            const cp2 = dataToCanvas(p2);
+
+            ctx.beginPath();
+            ctx.setLineDash(lineDash);
+            ctx.moveTo(cp1.x, cp1.y);
+            ctx.lineTo(cp2.x, cp2.y);
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+        }
+
+        function drawLinearMargin(w, b) {
+            // Draw margin lines: w.x + b = 1 and w.x + b = -1
+            // The distance from w.x + b = 0 to w.x + b = k is |k| / ||w||
+            // So the margin is 2 / ||w||
+            // The two margin planes are parallel to the boundary
+            const norm_w = Math.sqrt(w.x * w.x + w.y * w.y);
+            if (norm_w < 1e-6) return; // Avoid division by zero or near zero
+
+            // Margin lines are w.x + b = 1 and w.x + b = -1
+            drawLinearBoundary(w, b - 1, 'var(--primary-color)', 1, [5, 5]);
+            drawLinearBoundary(w, b + 1, 'var(--primary-color)', 1, [5, 5]);
+
+            // Draw margin area (This is tricky with arbitrary w, b - will simplify for now)
+            // A perfect fill requires calculating the intersection points and drawing a polygon.
+            // For simplicity, let's skip the shaded margin area fill for now and rely on dashed lines.
+            // Implementing the shaded area correctly for all w, b orientations is complex pure JS geometry.
+            // Refinement: Draw a wide line with opacity for the margin?
+            // Need to calculate points offset from the boundary.
+            // Let's draw the boundary with a thick, semi-transparent stroke for the margin area.
+            // This requires recalculating the center line with a specific width.
+            // The width of the margin region *in data units* is 2/||w||.
+            // Need to convert this data unit width to canvas pixels.
+            // Distance in data space: 2 / ||w||
+            // Distance in canvas space: (2 / ||w||) * (canvasWidth / (dataRange.x[1] - dataRange.x[0])) -- this is complex, depends on orientation
+            // A simpler approach: Draw the margin lines. That's visually clear enough for the concept.
+        }
+
+        function drawWVector(w, b) {
+            const norm_w = Math.sqrt(w.x * w.x + w.y * w.y);
+            if (norm_w < 1e-6) return;
+
+            // Find a point on the boundary w.x + b = 0
+            let p0;
+            if (Math.abs(w.x) > Math.abs(w.y)) { // Steeper in x means closer to vertical
+                 p0 = { x: -b / w.x, y: 0 }; // Intersect with y=0
+                 if (p0.x < dataRange.x[0] || p0.x > dataRange.x[1]) p0 = { x: dataRange.x[0], y: (-w.x * dataRange.x[0] - b) / w.y }; // Intersect with x=x0
+            } else { // Steeper in y means closer to horizontal
+                 p0 = { x: 0, y: -b / w.y }; // Intersect with x=0
+                 if (p0.y < dataRange.y[0] || p0.y > dataRange.y[1]) p0 = { x: (-w.y * dataRange.y[0] - b) / w.x, y: dataRange.y[0] }; // Intersect with y=y0
+            }
+             // Ensure p0 is roughly centered in the view if possible
+             if (p0.x < dataRange.x[0] || p0.x > dataRange.x[1] || p0.y < dataRange.y[0] || p0.y > dataRange.y[1]) {
+                 // If the simple intersection point is outside, find a central point on the line within view
+                 let centerData = { x: (dataRange.x[0] + dataRange.x[1]) / 2, y: (dataRange.y[0] + dataRange.y[1]) / 2 };
+                 let proj = -(w.x * centerData.x + w.y * centerData.y + b) / (w.x * w.x + w.y * w.y); // Projection of center onto the line
+                 p0 = { x: centerData.x + proj * w.x, y: centerData.y + proj * w.y };
+             }
+
+
+            const cp0 = dataToCanvas(p0);
+
+            // Scale w vector for visualization - perhaps make its length related to margin?
+            // ||w|| relates inversely to margin. Let's draw a vector of fixed canvas pixel length in the direction of w.
+            const vectorLengthPx = 40;
+            const angle = Math.atan2(-w.y, -w.x); // Angle of the normal vector direction, inverted Y for canvas
+
+            const cp1 = {
+                x: cp0.x + vectorLengthPx * Math.cos(angle),
+                y: cp0.y + vectorLengthPx * Math.sin(angle)
+            };
+
+            // Draw vector line
+            ctx.beginPath();
+            ctx.moveTo(cp0.x, cp0.y);
+            ctx.lineTo(cp1.x, cp1.y);
+            ctx.strokeStyle = '#555'; // Dark grey for vector
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw arrowhead
+            const headLength = 10;
+            ctx.beginPath();
+            ctx.moveTo(cp1.x, cp1.y);
+            ctx.lineTo(cp1.x - headLength * Math.cos(angle - Math.PI / 6), cp1.y - headLength * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(cp1.x - headLength * Math.cos(angle + Math.PI / 6), cp1.y - headLength * Math.sin(angle + Math.PI / 6));
+            ctx.fillStyle = '#555';
+            ctx.fill();
+        }
+
+        function drawRbfBoundary(centerX, centerY, radius) {
+            // Draw a circle boundary
+            const centerCanvas = dataToCanvas({ x: centerX, y: centerY });
+            // Convert radius from data units to canvas units (approximate average scale)
+            const scale = (canvasWidth / (dataRange.x[1] - dataRange.x[0]) + canvasHeight / (dataRange.y[1] - dataRange.y[0])) / 2;
+            const radiusCanvas = radius * scale;
+
+            ctx.beginPath();
+            ctx.arc(centerCanvas.x, centerCanvas.y, radiusCanvas, 0, Math.PI * 2);
+            ctx.strokeStyle = var(--primary-color);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function drawPolyBoundary() {
+             // Draw a curved boundary for the poly demo
+             // For the demoPolyData, a boundary like y = x or y = -x with some curve might work.
+             // Let's simplify and just draw a shape that fits the data separation visually, e.g., two diagonal lines.
+             const p1 = dataToCanvas({ x: dataRange.x[0], y: dataRange.y[0] });
+             const p2 = dataToCanvas({ x: dataRange.x[1], y: dataRange.y[1] });
+             const p3 = dataToCanvas({ x: dataRange.x[0], y: dataRange.y[1] });
+             const p4 = dataToCanvas({ x: dataRange.x[1], y: dataRange.y[0] });
+
+             ctx.strokeStyle = var(--primary-color);
+             ctx.lineWidth = 2;
+
+             ctx.beginPath();
+             ctx.moveTo(p1.x, p1.y);
+             ctx.lineTo(p2.x, p2.y);
+             ctx.stroke();
+
+             ctx.beginPath();
+             ctx.moveTo(p3.x, p3.y);
+             ctx.lineTo(p4.x, p4.y);
+             ctx.stroke();
+
+             // This isn't a single boundary, but illustrates a non-linear separation visually.
+             // A proper polynomial boundary would be a single curve. This is a simplification.
+        }
+
+
+        function updateInfoPanel() {
+             infoKernel.textContent = `Kernel: ${currentKernel.charAt(0).toUpperCase() + currentKernel.slice(1)}`;
+             infoMarginType.textContent = `Margin: ${isSoftMargin ? 'Soft' : 'Hard'}`;
+
+             let svCount = 0;
+             let marginSize = 'N/A';
+             let wNorm = 'N/A';
+
+             if (currentKernel === 'linear') {
+                 // Calculate margin width for linear case based on current w, b
+                 const norm_w = Math.sqrt(w_vec.x * w_vec.x + w_vec.y * w_vec.y);
+                 if (norm_w > 1e-6) {
+                      marginSize = (2 / norm_w).toFixed(2);
+                      wNorm = norm_w.toFixed(2);
+
+                     // Count points on or within margin as potential SVs
+                     svCount = dataPoints.filter(p => {
+                         const distance = Math.abs(w_vec.x * p.x + w_vec.y * p.y + b_offset) / norm_w;
+                         // Points are potential SVs if their functional margin is <= 1 (distance <= 1/||w||)
+                         return distance <= (1 / norm_w) + 1e-6; // Add small epsilon for floating point
+                     }).length;
+
+                      // In soft margin, misclassified points or points with slack also contribute to SV count
+                     if (isSoftMargin) {
+                          svCount = dataPoints.filter(p => {
+                             const functionalMargin = p.class * (w_vec.x * p.x + w_vec.y * p.y + b_offset);
+                              return functionalMargin <= 1 + 1e-6; // Points inside margin or misclassified (zeta > 0)
+                          }).length;
+                     }
+
+
+                 } else {
+                     marginSize = 'Infinite'; // w is zero or near zero
+                 }
+             } else {
+                 // For demo kernels, SV count is harder to define without a solver.
+                 // Let's just count all data points for simplicity in demo mode, or leave at 0/N/A.
+                 // Let's count points that are *not* clearly separated by the demo boundary.
+                  if (currentKernel === 'rbf') {
+                       svCount = demoRBFData.length; // All points in demo data are involved in a real RBF SVM
+                  } else if (currentKernel === 'poly') {
+                       svCount = demoPolyData.length; // All points in demo data are involved in a real Poly SVM
+                  }
+                  // Margin size and ||w|| are not directly visualizable in the original space for non-linear kernels.
+                  marginSize = 'N/A (Kernel)';
+                  wNorm = 'N/A (Kernel)';
+             }
+
+
+             infoSupportVectors.textContent = `Support Vectors: ${svCount}`;
+             infoMarginSize.textContent = `Margin Size: ${marginSize}`;
+             infoWValue.textContent = `||w||: ${wNorm}`;
+        }
+
+
+        function drawSlack(w, b) {
+             if (!isSoftMargin) return;
+              const norm_w = Math.sqrt(w.x * w.x + w.y * w_vec.y);
+              if (norm_w < 1e-6) return;
+
+             dataPoints.forEach(p => {
+                 const functionalMargin = p.class * (w.x * p.x + w.y * p.y + b);
+                 const slack = Math.max(0, 1 - functionalMargin); // Hinge loss related (zeta)
+
+                 if (slack > 1e-6) { // If slack is greater than zero (point is inside margin or misclassified)
+                     const pCanvas = dataToCanvas(p);
+                     ctx.beginPath();
+                     ctx.arc(pCanvas.x, pCanvas.y, canvasPointRadius + 4, 0, Math.PI * 2);
+                     ctx.strokeStyle = 'var(--slack-color)';
+                     ctx.lineWidth = 2 + Math.min(3, slack * currentC * 0.5); // Visual thickness related to C and slack
+                     ctx.stroke();
+
+                     // Optionally, draw a line to the correct margin boundary / hyperplane
+                     // This is geometrically complex to draw correctly for arbitrary w, b, and point
+                     // For simplicity, the circle outline is enough visual indicator of penalty/slack.
+                 }
+             });
+        }
+
+        // --- Main Drawing Function ---
+        function draw() {
+            if (!canvasWidth || !canvasHeight) return;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.fillStyle = '#f9f9f9'; // Background color
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // Draw Axes (optional, for better orientation)
+            const origin = dataToCanvas({ x: 0, y: 0 });
+            ctx.strokeStyle = var(--border-color);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, origin.y);
+            ctx.lineTo(canvasWidth, origin.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(origin.x, 0);
+            ctx.lineTo(origin.x, canvasHeight);
+            ctx.stroke();
+
+            if (currentKernel === 'linear') {
+                // Draw Margin
+                drawLinearMargin(w_vec, b_offset);
+
+                // Draw Boundary
+                drawLinearBoundary(w_vec, b_offset, var(--primary-color), 2);
+
+                // Draw w vector
+                drawWVector(w_vec, b_offset);
+
+                // Draw Slack Visualisation (if soft margin)
+                drawSlack(w_vec, b_offset);
+
+                // Draw Data Points (Highlighting SVs)
+                const norm_w = Math.sqrt(w_vec.x * w_vec.x + w_vec.y * w_vec.y);
+                 dataPoints.forEach(p => {
+                     let isSV = false;
+                     if (norm_w > 1e-6) {
+                         const functionalMargin = p.class * (w_vec.x * p.x + w_vec.y * p_vec.y + b_offset);
+                         if (isSoftMargin) {
+                             // In soft margin, SVs are points with functional margin <= 1 (zeta >= 0)
+                             isSV = functionalMargin <= 1 + 1e-6;
+                         } else {
+                             // In hard margin, SVs are points with functional margin === 1
+                             isSV = Math.abs(functionalMargin - 1) < 1e-6;
+                         }
+                     }
+                     drawPoint(p, isSV);
+                 });
+
+            } else if (currentKernel === 'rbf') {
+                // Draw RBF Demo Boundary (predefined circle for demo data)
+                drawRbfBoundary(0, 0, 1.5); // Example circle center and radius for demoRBFData
+
+                // Draw Data Points (use demo data and highlight based on demo boundary)
+                 demoRBFData.forEach(p => {
+                      // Highlight points near the boundary for demo purposes? Or just draw normally.
+                      // Let's just draw them normally as SVs in kernel methods aren't just 'near' the boundary visually.
+                      drawPoint(p, false); // No SV highlighting in kernel demo without a solver
+                 });
+                 // Draw Slack Visualisation (if soft margin, based on demo boundary classification)
+                 if (isSoftMargin) {
+                     const demoKernelSlack = (point) => {
+                         const distance_sq = point.x*point.x + point.y*point.y; // Distance from origin
+                         const margin_violation = Math.abs(Math.sqrt(distance_sq) - 1.5); // How far from the circle boundary (radius 1.5)
+                         // This is a simplified "slack" for the visual demo
+                         return margin_violation > 0.2 ? margin_violation : 0; // Consider points >0.2 units from boundary as having slack
+                     };
+                     demoRBFData.forEach(p => {
+                          if (demoKernelSlack(p) > 1e-6) {
+                              drawSlack(w_vec, b_offset); // Re-use drawSlack drawing but based on demo calculation
+                              const pCanvas = dataToCanvas(p);
+                               ctx.beginPath();
+                               ctx.arc(pCanvas.x, pCanvas.y, canvasPointRadius + 4, 0, Math.PI * 2);
+                               ctx.strokeStyle = 'var(--slack-color)';
+                               ctx.lineWidth = 2 + Math.min(3, demoKernelSlack(p) * currentC * 0.5);
+                               ctx.stroke();
+                          }
+                     });
+                 }
+
+
+            } else if (currentKernel === 'poly') {
+                // Draw Poly Demo Boundary (predefined diagonal lines for demo data)
+                drawPolyBoundary();
+
+                // Draw Data Points (use demo data)
+                 demoPolyData.forEach(p => {
+                     drawPoint(p, false); // No SV highlighting in kernel demo
+                 });
+                 // Draw Slack Visualisation (if soft margin, based on demo boundary classification)
+                 if (isSoftMargin) {
+                     const demoKernelSlack = (point) => {
+                         // For poly demo, points near y=x or y=-x might be margin violators
+                         // Simplified: any point not in the "correct" quadrant based on the simplified boundary lines
+                         const correct_quadrant = (point.x * point.y >= 0); // Points in Q1/Q3 should be one class, Q2/Q4 the other
+                         const is_misclassified = (point.class === 1 && !correct_quadrant) || (point.class === -1 && correct_quadrant);
+                          return is_misclassified ? 1 : 0; // Simple 0 or 1 slack indicator
+                     };
+                     demoPolyData.forEach(p => {
+                          if (demoKernelSlack(p) > 0.5) { // Check for slack > 0
+                              const pCanvas = dataToCanvas(p);
+                               ctx.beginPath();
+                               ctx.arc(pCanvas.x, pCanvas.y, canvasPointRadius + 4, 0, Math.PI * 2);
+                               ctx.strokeStyle = 'var(--slack-color)';
+                               ctx.lineWidth = 2 + Math.min(3, 1 * currentC * 0.5); // Fixed slack visual size for simplicity
+                               ctx.stroke();
+                          }
+                     });
+                 }
+            }
+
+
+            updateInfoPanel();
+        }
+
+        // --- Event Handlers ---
+
+        // Resize Canvas
+        function resizeCanvas() {
+            const mainArea = document.querySelector('.main-area');
+            canvasWidth = mainArea.clientWidth;
+            canvasHeight = mainArea.clientHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            draw(); // Redraw everything after resize
+        }
+
+        // Add/Move Points
+        canvas.addEventListener('click', (event) => {
+             if (currentKernel !== 'linear') return; // Only allow adding data in linear mode
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const clickedDataPoint = canvasToData({ x: mouseX, y: mouseY });
+
+             // Check if clicking near an existing point to start drag instead of adding
+             let clickedPointIndex = -1;
+             for (let i = 0; i < dataPoints.length; i++) {
+                  const p = dataPoints[i];
+                  const pCanvas = dataToCanvas(p);
+                  const dist = Math.sqrt((mouseX - pCanvas.x)**2 + (mouseY - pCanvas.y)**2);
+                   if (dist < canvasPointRadius * 2) { // Clicked within a radius
+                       clickedPointIndex = i;
+                       break;
+                   }
+             }
+
+             if (clickedPointIndex !== -1) {
+                 // Start drag on mousedown instead of click
+                 // We'll handle dragging in mousedown/mousemove/mouseup
+             } else {
+                 // Add new point
+                 dataPoints.push({ x: clickedDataPoint.x, y: clickedDataPoint.y, class: addingClass });
+                 draw();
+             }
+        });
+
+        let draggedPointIndex = -1;
+        canvas.addEventListener('mousedown', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const clickedCanvasPoint = { x: mouseX, y: mouseY };
+
+             if (currentKernel === 'linear') {
+                 // Check if clicking near an existing point
+                 draggedPointIndex = -1;
+                 for (let i = 0; i < dataPoints.length; i++) {
+                      const p = dataPoints[i];
+                      const pCanvas = dataToCanvas(p);
+                      const dist = Math.sqrt((mouseX - pCanvas.x)**2 + (mouseY - pCanvas.y)**2);
+                       if (dist < canvasPointRadius * 2) {
+                           draggedPointIndex = i;
+                           break;
+                       }
+                 }
+
+                 if (draggedPointIndex !== -1) {
+                     // Start dragging a point
+                     const draggedDataPoint = dataPoints[draggedPointIndex];
+                     const draggedCanvasPoint = dataToCanvas(draggedDataPoint);
+                     dragOffsetX = mouseX - draggedCanvasPoint.x;
+                     dragOffsetY = mouseY - draggedCanvasPoint.y;
+                     canvas.style.cursor = 'grabbing';
+                     return; // Don't check for boundary drag
+                 }
+
+                 // Check if clicking near the boundary or margin lines for dragging
+                 const norm_w = Math.sqrt(w_vec.x * w_vec.x + w_vec.y * w_vec.y);
+                 if (norm_w > 1e-6) {
+                     const clickData = canvasToData(clickedCanvasPoint);
+                      const distanceToBoundary = Math.abs(w_vec.x * clickData.x + w_vec.y * clickData.y + b_offset) / norm_w;
+                      const distanceToMargin1 = Math.abs(w_vec.x * clickData.x + w_vec.y * clickData.y + b_offset - 1) / norm_w;
+                      const distanceToMargin2 = Math.abs(w_vec.x * clickData.x + w_vec.y * clickData.y + b_offset + 1) / norm_w;
+
+                      // Tolerance in data units (approximate, depends on zoom/scale)
+                      const tolerance = 0.2; // Allow clicks within 0.2 data units
+
+                      if (distanceToBoundary < tolerance) {
+                          isDraggingBoundary = true;
+                          dragHandle = 'boundary';
+                           // Calculate offset relative to the line geometry, not mouse position
+                           // Need the projection of the click point onto the line
+                           let lineEq = w_vec.x * clickData.x + w_vec.y * clickData.y + b_offset; // should be near 0
+                           // Store the click position relative to the *current* boundary position/orientation
+                           // This is complex. A simpler drag: just store the *initial* w,b and mouse pos
+                           // and update w,b based on mouse movement *relative* to the initial state.
+                           const initial_w = { ...w_vec };
+                           const initial_b = b_offset;
+                           const initial_mouse_data = clickData;
+
+                           // Let's simplify: Dragging changes `b_offset` or rotates `w_vec`.
+                           // Dragging perpendicular to the line changes `b_offset`.
+                           // Dragging parallel to the line allows rotation (changing w_vec).
+                           // Let's allow dragging perpendicular to the line (changing `b_offset`) and
+                           // dragging one of the margin lines to change `||w||` and implicitly rotate `w_vec`.
+
+                            // Simple drag: Assume dragging changes b_offset (shift line perp to w)
+                            // Dragging changes b_offset: new_b = initial_b - (mouse_data - initial_mouse_data).dot(w_vec) / ||w||^2 * ||w|| ?
+                            // No, simpler: A drag perpendicular to the line changes `b_offset`.
+                            // The value `w.x * x + w.y * y + b` determines which side a point is on.
+                            // Dragging the line shifts this value for a given point.
+                            // Initial functional value at mouse: f0 = w.x*x_mouse + w.y*y_mouse + b
+                            // New functional value at mouse: f1 = w.x*x_mouse + w.y*y_mouse + new_b
+                            // f1 - f0 = new_b - b. So new_b = b + (f1 - f0).
+                            // How does mouse movement map to f1-f0? Mouse move changes (x, y).
+                            // Change in functional value = w.x * dx + w.y * dy.
+                            // new_b = b_offset + (w_vec.x * (clickData.x - initial_mouse_data.x) + w_vec.y * (clickData.y - initial_mouse_data.y))
+
+                            // Let's try dragging the boundary line directly:
+                            // Calculate initial value at click point: val0 = w_vec.x * clickData.x + w_vec.y * clickData.y + b_offset;
+                            // When mouse moves to new_clickData, we want the line to pass through there relative to the old line.
+                            // new_w.x * new_clickData.x + new_w.y * new_clickData.y + new_b = 0
+                            // If we only change b: w.x * new_clickData.x + w.y * new_clickData.y + new_b = 0.
+                            // new_b = - (w.x * new_clickData.x + w.y * new_clickData.y).
+                            // This allows dragging the line parallel to itself.
+                            dragOffsetX = clickData.x; // Store initial click data position
+                            dragOffsetY = clickData.y;
+                            canvas.style.cursor = 'grabbing';
+
+
+                      } else if (distanceToMargin1 < tolerance) {
+                          isDraggingMargin = true;
+                          dragHandle = 'margin1'; // w.x + b = 1
+                          dragOffsetX = clickData.x;
+                          dragOffsetY = clickData.y;
+                          canvas.style.cursor = 'grabbing';
+                      } else if (distanceToMargin2 < tolerance) {
+                          isDraggingMargin = true;
+                          dragHandle = 'margin2'; // w.x + b = -1
+                          dragOffsetX = clickData.x;
+                          dragOffsetY = clickData.y;
+                          canvas.style.cursor = 'grabbing';
+                      }
+                 }
+            }
+        });
+
+
+        canvas.addEventListener('mousemove', (event) => {
+             const rect = canvas.getBoundingClientRect();
+             const mouseX = event.clientX - rect.left;
+             const mouseY = event.clientY - rect.top;
+             const mouseData = canvasToData({ x: mouseX, y: mouseY });
+
+             if (draggedPointIndex !== -1) {
+                 // Dragging a point
+                 // Calculate new position based on initial offset
+                 const newCanvasX = mouseX - dragOffsetX;
+                 const newCanvasY = mouseY - dragOffsetY;
+                 const newDataPoint = canvasToData({ x: newCanvasX, y: newCanvasY });
+
+                 // Clamp to data range limits
+                 newDataPoint.x = Math.max(dataRange.x[0], Math.min(dataRange.x[1], newDataPoint.x));
+                 newDataPoint.y = Math.max(dataRange.y[0], Math.min(dataRange.y[1], newDataPoint.y));
+
+                 dataPoints[draggedPointIndex].x = newDataPoint.x;
+                 dataPoints[draggedPointIndex].y = newDataPoint.y;
+
+                 draw();
+             } else if (isDraggingBoundary && currentKernel === 'linear') {
+                 // Dragging the boundary line (changes b_offset)
+                 // Calculate the change in the functional value at the mouse position
+                 // delta_f = w_vec.x * (mouseData.x - dragOffsetX) + w_vec.y * (mouseData.y - dragOffsetY);
+                 // If we want the line to pass through mouseData relative to its old position at dragOffsetX, dragOffsetY
+                 // The new line has equation w_vec.x * x + w_vec.y * y + new_b = 0
+                 // If mouseData is (x', y'), we want w_vec.x * x' + w_vec.y * y' + new_b = 0 + initial_offset_at_mouse
+                 // initial_offset_at_mouse = w_vec.x * dragOffsetX + w_vec.y * dragOffsetY + b_offset
+                 // new_b = initial_offset_at_mouse - (w_vec.x * mouseData.x + w_vec.y * mouseData.y)
+                 b_offset = (w_vec.x * dragOffsetX + w_vec.y * dragOffsetY + b_offset) - (w_vec.x * mouseData.x + w_vec.y * mouseData.y);
+
+                 draw();
+             } else if (isDraggingMargin && currentKernel === 'linear') {
+                 // Dragging a margin line (changes ||w|| and potentially rotates w_vec)
+                 // This is complex to do robustly with simple drag.
+                 // Let's simplify: Dragging a margin line only changes ||w||, keeping w_vec direction fixed.
+                 // The margin lines are w.x + b = 1 and w.x + b = -1.
+                 // The distance from the origin (0,0) to the boundary is -b / ||w|| (along the w direction).
+                 // The distance to the +1 margin is (1-b)/||w||, and to the -1 margin is (-1-b)/||w||.
+                 // If we drag the +1 margin to pass through mouseData: w.x * mouseData.x + w.y * mouseData.y + b = 1 (target value).
+                 // If we only change ||w|| (i.e. scale w_vec), let w_vec = alpha * w_original.
+                 // alpha * w_original.x * mouseData.x + alpha * w_original.y * mouseData.y + b = 1
+                 // alpha * (w_original.x * mouseData.x + w_original.y * mouseData.y) = 1 - b
+                 // alpha = (1 - b) / (w_original.x * mouseData.x + w_original.y * mouseData.y)
+                 // This doesn't seem right. The margin is 1/||w|| away from the boundary w.x+b=0.
+                 // Let's calculate the distance from the *current* boundary line w_vec.x*x + w_vec.y*y + b_offset = 0 to the mouse position.
+                 const norm_w = Math.sqrt(w_vec.x * w_vec.x + w_vec.y * w_vec.y);
+                 if (norm_w < 1e-6) return;
+                 const distance = (w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset) / norm_w; // Signed distance from boundary
+
+                 let targetSignedDistance;
+                 if (dragHandle === 'margin1') targetSignedDistance = 1 / norm_w; // Target distance for w.x+b=1
+                 else targetSignedDistance = -1 / norm_w; // Target distance for w.x+b=-1
+
+                 // How does the mouse distance relate to changing ||w||?
+                 // The margin line w.x+b=k is at signed distance k/||w|| from the boundary.
+                 // If we drag the margin line to pass through `mouseData`, its signed distance becomes `distance`.
+                 // So we want `k/||w|| = distance`.
+                 // If dragHandle is 'margin1', k=1. We want `1/||w|| = distance`. New ||w|| = 1 / distance.
+                 // If dragHandle is 'margin2', k=-1. We want `-1/||w|| = distance`. New ||w|| = -1 / distance.
+                 // Note: distance will be negative for points on the w-side of the boundary for margin2.
+                 // Need to handle division by zero if mouse is on the boundary itself.
+
+                 let targetNormW;
+                 if (dragHandle === 'margin1') { // Target is the +1 margin
+                      if (distance > 1e-3) targetNormW = 1 / distance; // Recalculate ||w||
+                      else targetNormW = norm_w; // Avoid infinite ||w|| if dragging onto boundary
+                 } else { // Target is the -1 margin
+                      if (distance < -1e-3) targetNormW = -1 / distance; // Note: distance is negative, targetNormW should be positive
+                      else targetNormW = norm_w; // Avoid infinite ||w|| if dragging onto boundary
+                 }
+
+                 // Scale w_vec to have the new targetNormW
+                 if (norm_w > 1e-6) {
+                      const scaleFactor = targetNormW / norm_w;
+                      w_vec.x *= scaleFactor;
+                      w_vec.y *= scaleFactor;
+                 } else if (targetNormW > 1e-6) {
+                      // w was zero, now it's not. Needs an initial direction.
+                      // This case is tricky. Maybe clicking near origin when w is zero?
+                      // Let's reset w to a default non-zero value if it starts at zero and user drags margin.
+                       if (norm_w < 1e-6 && targetNormW > 1e-6) {
+                           w_vec = { x: 1, y: 0 }; // Reset to horizontal boundary initial state
+                            const newNormW = Math.sqrt(w_vec.x * w_vec.x + w_vec.y * w_vec.y);
+                             const scaleFactor = targetNormW / newNormW;
+                             w_vec.x *= scaleFactor;
+                             w_vec.y *= scaleFactor;
+                             // Also need to adjust b_offset so the boundary stays put relative to the mouse drag point?
+                             // This gets complex. Let's keep w_vec direction fixed and only change its magnitude.
+                             // This means the orientation of the lines is fixed by the *first* drag of the margin.
+                             // Or even simpler: The user *cannot* rotate the boundary or change w_vec direction manually, only b_offset and ||w||.
+                             // To change ||w||, drag the margin lines.
+                             // To change b_offset, drag the center boundary line.
+                             // To change w_vec direction, use the "Reset View" button to get a default, then drag.
+
+                             // Let's fix w_vec direction on the *first* drag.
+                             // Okay, new approach: w_vec direction is fixed by the user when they *initially drag* the boundary or margin.
+                             // Or maybe fix w_vec direction to be (1,0) or (0,1) or (1,1) and only let them change b_offset and ||w||.
+                             // Simplest: User can drag the *boundary line* (changes b_offset) and drag *one margin line* (changes ||w||).
+                             // The direction of w_vec is fixed (e.g., always vertical or horizontal, or fixed initial angle).
+                             // This prevents rotation. Let's fix w_vec direction to {1, 0} initially (vertical line x=-b)
+                             // and let the user drag the line horizontally (change b_offset) and drag the margin lines
+                             // horizontally to change ||w_vec.x|| (which is ||w||).
+                             // Initial: w_vec = {1, 0}, b_offset = 0. Line is x = 0. Margin x = 1, x = -1. ||w|| = 1. Margin size = 2.
+
+                             // Redoing margin drag based on fixed w_vec direction {1,0}
+                             // Margin line w.x + b = k is x + b = k, or x = k - b.
+                             // Distance from boundary (x=-b) to margin (x=k-b) is |(k-b) - (-b)| = |k|.
+                             // The margin is 1/||w||. So k = +/-1. The margin lines are at x = 1/||w|| - b and x = -1/||w|| - b.
+                             // The functional value at mouseData is w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset
+                             // If w_vec = {1, 0}, this is mouseData.x + b_offset.
+                             // We want the margin line w.x + b = k (i.e. x + b = k) to pass through mouseData.x.
+                             // mouseData.x + b_offset = k.
+                             // If dragHandle is 'margin1', k=1. mouseData.x + b_offset = 1. The margin line is x = 1 - b_offset.
+                             // If we drag this line to position X_margin_canvas, the corresponding data X_margin_data = canvasToData({x: X_margin_canvas, y: mouseY}).x.
+                             // We want the margin line x = 1 - b_offset to pass through X_margin_data.
+                             // X_margin_data = 1 - b_offset. This doesn't help change ||w||.
+
+                             // Let's reconsider. w_vec is perpendicular to the boundary. Dragging the boundary changes b.
+                             // Dragging the margin lines changes ||w|| and keeps b/||w|| constant? No, changes ||w|| and w.
+                             // Okay, let's make w_vec direction *rotatable* but fix its origin on the boundary.
+                             // Dragging the boundary rotates w_vec around the drag point.
+                             // Dragging the margin lines changes the *length* of w_vec while keeping its direction fixed.
+
+                             // New Plan for Linear Drag:
+                             // 1. Drag Boundary: Click and drag the boundary line. This rotates the line (changes w_vec direction) around the initial click point. b_offset updates based on the rotation.
+                             // 2. Drag Margin: Click and drag a margin line. This moves the margin parallel to the boundary, changing ||w|| (and scaling w_vec), while keeping w_vec direction and b_offset/||w|| (the distance from origin to boundary) fixed.
+
+                             if (dragHandle === 'margin1') { // Dragging +1 margin
+                                  // Current functional value at mouse: f = w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset
+                                  // We want the new functional value to be 1.
+                                  // This means (new_w_vec).dot(mouseData) + new_b_offset = 1.
+                                  // If we only scale w_vec (direction fixed, b_offset scaled proportionally):
+                                  // alpha * w_vec_orig.dot(mouseData) + alpha * b_offset_orig = 1
+                                  // alpha = 1 / (w_vec_orig.dot(mouseData) + b_offset_orig)
+                                  // This doesn't seem right geometrically.
+
+                                  // Let's stick to the simplest interpretation: Dragging the margin line changes the *distance* from the boundary line.
+                                  // The distance from w.x+b=0 to w.x+b=1 is 1/||w||.
+                                  // If we drag the +1 margin line to pass through `mouseData`, the distance from `mouseData` to the *current* boundary `w_vec.x*x+w_vec.y*y+b_offset=0` should become the new `1/||w||`.
+                                  // Signed distance from mouseData to boundary: d = (w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset) / norm_w
+                                  // If dragging margin1 (+1), we want new_1/||w|| = d. So new_||w|| = 1 / d. (Requires d > 0)
+                                  // If dragging margin2 (-1), we want new_-1/||w|| = d. So new_||w|| = -1 / d. (Requires d < 0)
+
+                                   const signedDistance = (w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset) / norm_w;
+
+                                   let newNormW;
+                                   if (dragHandle === 'margin1') {
+                                       if (signedDistance > 0.1) newNormW = 1 / signedDistance;
+                                       else newNormW = norm_w; // Avoid instability
+                                   } else { // dragHandle === 'margin2'
+                                        if (signedDistance < -0.1) newNormW = -1 / signedDistance; // signedDistance is negative
+                                       else newNormW = norm_w; // Avoid instability
+                                   }
+
+                                  // Scale w_vec magnitude while keeping direction and b proportionally scaled?
+                                  // If w' = alpha * w and b' = alpha * b, then w'.x + b' = alpha(w.x + b).
+                                  // The boundary alpha(w.x+b)=0 is the same as w.x+b=0. This doesn't change the boundary position.
+                                  // We need to change ||w|| while keeping the boundary fixed (or changing b).
+                                  // Let's keep the boundary fixed (fixed w_vec direction and fixed b_offset), and only change ||w||.
+                                  // This means the margin lines move closer/further from the FIXED boundary.
+                                  // The margin lines are w_vec.x*x + w_vec.y*y + b_offset = +/- scale. Margin is 2*scale/||w_vec||.
+                                  // This also doesn't match the standard SVM form w.x + b = +/-1.
+
+                                  // Back to the standard form: w.x + b = 0, w.x + b = +/-1. Margin is 2/||w||.
+                                  // If we drag the +1 margin to pass through mouseData, then w_vec.dot(mouseData) + b_offset = 1.
+                                  // If we drag the -1 margin to pass through mouseData, then w_vec.dot(mouseData) + b_offset = -1.
+                                  // This gives an equation relating mouseData to w_vec and b_offset.
+                                  // If we fix the direction of w_vec (say, by initial boundary drag) and only change its magnitude and b_offset?
+                                  // Let w_vec = alpha * u_vec, where u_vec is a unit vector in fixed direction.
+                                  // alpha * u_vec.dot(mouseData) + b_offset = k (where k is 1 or -1).
+                                  // This gives one equation with two unknowns (alpha and b_offset). Need another constraint.
+                                  // The other constraint is that the boundary w_vec.dot(x) + b_offset = 0 must also be consistent.
+                                  // This is too complex for manual drag while maintaining geometric accuracy of w, b, and margins simultaneously without solving.
+
+                                  // Let's simplify the manual margin drag:
+                                  // User drags the +1 margin line. Find the signed distance from the FIXED boundary (w_vec.x*x+w_vec.y*y+b_offset=0) to the mouse cursor.
+                                  // Let this distance be `d_mouse`. We want the new distance from boundary to +1 margin to be `d_mouse`.
+                                  // The distance is 1/||w||. So we set new_||w|| = 1 / d_mouse.
+                                  // We keep the direction of w_vec fixed. Scale w_vec: w_vec = w_vec * (new_||w|| / current_||w||).
+                                  // This changes ||w||, which changes the margin size 2/||w||. The boundary w.x+b=0 shifts unless b is also scaled.
+                                  // To keep the boundary fixed: if w -> alpha * w, then b must also go to alpha * b.
+                                  // Let's fix the w_vec direction by the very first boundary drag.
+                                  // Initial State: w_vec = {1, 0}, b_offset = 0.
+                                  // Drag Boundary: changes b_offset. w_vec is fixed.
+                                  // Drag Margin: changes ||w_vec||. b_offset is scaled proportionally.
+                                  // Initial: w0, b0. Line w0.x+b0=0. Margins w0.x+b0=+/-1. ||w0||, Margin = 2/||w0||.
+                                  // Drag Boundary: w=w0, b=b_new. Line w0.x+b_new=0. Margins w0.x+b_new=+/-1. ||w0||, Margin = 2/||w0||. Only b changes.
+                                  // Drag Margin (from w0, b0): w = alpha * w0, b = alpha * b0. Line alpha(w0.x+b0)=0 is same as w0.x+b0=0 (boundary is fixed).
+                                  // Margins alpha(w0.x+b0)=+/-1. This is w0.x+b0 = +/- 1/alpha.
+                                  // This means the margin lines are defined by distance 1/alpha from the fixed boundary.
+                                  // 1/alpha is the new 1/||w||. So the new ||w|| is alpha * ||w0||.
+                                  // The distance from the boundary w0.x+b0=0 to a point mouseData is (w0.x*mouseData.x + w0.y*mouseData.y + b0) / ||w0||.
+                                  // We want this distance to be the new 1/alpha (for the +1 margin drag).
+                                  // So 1/alpha = (w0.dot(mouseData) + b0) / ||w0||.
+                                  // alpha = ||w0|| / (w0.dot(mouseData) + b0).
+                                  // New w_vec = alpha * w0, New b_offset = alpha * b0.
+
+                                  if (!window._initial_w_vec || !window._initial_b_offset) {
+                                       // This should not happen if drag started correctly, but as fallback
+                                       window._initial_w_vec = { ...w_vec };
+                                       window._initial_b_offset = b_offset;
+                                  }
+                                   const initial_w_norm = Math.sqrt(window._initial_w_vec.x**2 + window._initial_w_vec.y**2);
+                                   const functional_value_at_mouse = window._initial_w_vec.x * mouseData.x + window._initial_w_vec.y * mouseData.y + window._initial_b_offset;
+
+                                  let alpha;
+                                  if (dragHandle === 'margin1') { // Dragging +1 margin (target functional value 1)
+                                      if (functional_value_at_mouse > 1e-3) alpha = 1 / functional_value_at_mouse;
+                                      else alpha = 1; // Avoid instability or infinite ||w||
+                                  } else { // Dragging -1 margin (target functional value -1)
+                                       if (functional_value_at_mouse < -1e-3) alpha = -1 / functional_value_at_mouse; // functional_value is negative
+                                      else alpha = 1; // Avoid instability
+                                  }
+
+                                  // Clamp alpha to prevent extreme ||w|| values
+                                   alpha = Math.max(0.1, Math.min(100, alpha)); // Allow ||w|| between 0.1*||w0|| and 100*||w0||
+
+                                   w_vec.x = alpha * window._initial_w_vec.x;
+                                   w_vec.y = alpha * window._initial_w_vec.y;
+                                   b_offset = alpha * window._initial_b_offset;
+
+                                  draw();
+
+                             } else if (isDraggingBoundary && currentKernel === 'linear') {
+                                 // Dragging Boundary (rotates w_vec around drag start point, changes b_offset)
+                                 // This is even more complex than proportional scaling.
+                                 // Let's revert to the simplest manual linear boundary manipulation:
+                                 // The user can drag the boundary line *parallel* to itself (changes b_offset),
+                                 // AND they can drag *one of the margin lines* to change the margin width (and implicitly ||w||).
+                                 // The direction of w_vec will be fixed by the first drag action, or by the "Reset View" button.
+
+                                 // If dragging boundary, only change b_offset. w_vec is fixed direction.
+                                 // Current position of the line is w_vec.dot(x) + b_offset = 0.
+                                 // Mouse is at mouseData.
+                                 // We want the new line w_vec.dot(x) + b_new = 0 to pass through mouseData, maintaining orientation.
+                                 // If w_vec direction is fixed {wx, wy},
+                                 // The line passing through mouseData perpendicular to w_vec is wx*x + wy*y = wx*mouseData.x + wy*mouseData.y.
+                                 // So, the new b_offset should be -(wx*mouseData.x + wy*mouseData.y).
+                                 b_offset = -(w_vec.x * mouseData.x + w_vec.y * mouseData.y);
+                                 draw();
+                             }
+
+                             // Update cursor over elements
+                             if (!isDraggingBoundary && !isDraggingMargin && draggedPointIndex === -1) {
+                                 canvas.style.cursor = 'default';
+                                  if (currentKernel === 'linear') {
+                                      const norm_w = Math.sqrt(w_vec.x * w_vec.x + w_vec.y * w_vec.y);
+                                      if (norm_w > 1e-6) {
+                                           const distanceToBoundary = Math.abs(w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset) / norm_w;
+                                           const distanceToMargin1 = Math.abs(w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset - 1) / norm_w;
+                                           const distanceToMargin2 = Math.abs(w_vec.x * mouseData.x + w_vec.y * mouseData.y + b_offset + 1) / norm_w;
+                                           const tolerance = 0.3; // Visual tolerance
+                                            if (distanceToBoundary < tolerance || distanceToMargin1 < tolerance || distanceToMargin2 < tolerance) {
+                                                canvas.style.cursor = 'grab';
+                                           }
+                                      }
+                                  }
+
+                                  // Check for point hover (for future highlighting, currently handled in draw)
+                                   // No explicit hover state needed for drawing, just check distance in draw loop.
+                             }
+
+
+        });
+
+        canvas.addEventListener('mouseup', (event) => {
+             if (draggedPointIndex !== -1) {
+                 draggedPointIndex = -1;
+                 dragOffsetX = undefined;
+                 dragOffsetY = undefined;
+                  canvas.style.cursor = 'default';
+             }
+              if (isDraggingBoundary || isDraggingMargin) {
+                   isDraggingBoundary = false;
+                   isDraggingMargin = false;
+                   dragHandle = null;
+                   canvas.style.cursor = 'default';
+                    // Store the state after drag ends to potentially allow margin drag after boundary drag etc.
+                    window._initial_w_vec = { ...w_vec };
+                    window._initial_b_offset = b_offset;
+
+              }
+        });
+
+        // Prevent default context menu on right click
+        canvas.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+        });
+
+
+        // Control Panel Listeners
+        addClass1Btn.addEventListener('click', () => {
+             addClass1Btn.classList.add('active');
+             addClass2Btn.classList.remove('active');
+            addingClass = 1;
+        });
+
+        addClass2Btn.addEventListener('click', () => {
+             addClass2Btn.classList.add('active');
+             addClass1Btn.classList.remove('active');
+            addingClass = -1;
+        });
+
+        resetDataBtn.addEventListener('click', () => {
+            dataPoints = [];
+            // Optional: Add back a default dataset? Let's keep it empty.
+            draw();
+        });
+
+        cSlider.addEventListener('input', () => {
+            currentC = parseFloat(cSlider.value);
+            cValueSpan.textContent = currentC;
+            draw(); // Redraw to show C's effect on slack visualization
+        });
+
+        hardMarginBtn.addEventListener('click', () => {
+             hardMarginBtn.classList.add('active');
+             softMarginBtn.classList.remove('active');
+            isSoftMargin = false;
+            draw();
+        });
+
+        softMarginBtn.addEventListener('click', () => {
+             softMarginBtn.classList.add('active');
+             hardMarginBtn.classList.remove('active');
+            isSoftMargin = true;
+            draw();
+        });
+
+        kernelSelect.addEventListener('change', (event) => {
+            currentKernel = event.target.value;
+            // Clear current data points when switching to kernel demos
+            dataPoints = []; // Always reset data when changing kernel mode
+
+            if (currentKernel === 'rbf') {
+                dataPoints = [...demoRBFData];
+                // Disable data controls in demo modes
+                addClass1Btn.disabled = true;
+                addClass2Btn.disabled = true;
+                resetDataBtn.disabled = true;
+                 resetViewBtn.disabled = true; // No boundary reset in kernel mode
+            } else if (currentKernel === 'poly') {
+                 dataPoints = [...demoPolyData];
+                 // Disable data controls
+                 addClass1Btn.disabled = true;
+                 addClass2Btn.disabled = true;
+                 resetDataBtn.disabled = true;
+                 resetViewBtn.disabled = true; // No boundary reset in kernel mode
+            } else { // linear
+                 // Re-enable data controls
+                 addClass1Btn.disabled = false;
+                 addClass2Btn.disabled = false;
+                 resetDataBtn.disabled = false;
+                 resetViewBtn.disabled = false; // Enable boundary reset in linear mode
+                 // Reset linear boundary view when returning from kernel mode
+                 resetLinearView();
+            }
+
+            draw(); // Redraw with new kernel/data
+        });
+
+         resetViewBtn.addEventListener('click', () => {
+             if (currentKernel === 'linear') {
+                  resetLinearView();
+                  draw();
+             }
+         });
+
+        function resetLinearView() {
+             // Reset w and b to a default central vertical line
+             w_vec = { x: 1, y: 0 };
+             b_offset = 0;
+             window._initial_w_vec = { ...w_vec }; // Store initial state for margin drag
+             window._initial_b_offset = b_offset;
+             canvas.style.cursor = 'default'; // Reset cursor state
+             draggedPointIndex = -1;
+             isDraggingBoundary = false;
+             isDraggingMargin = false;
+             dragHandle = null;
+        }
+
+
+        // --- Initial Setup ---
+        function initialize() {
+            resizeCanvas(); // Set initial size and draw
+            window.addEventListener('resize', resizeCanvas);
+
+             // Add a default initial dataset
+             dataPoints = [
+                  { x: -2, y: -2, class: -1 },
+                  { x: -1, y: -1, class: -1 },
+                  { x: 1, y: 1, class: 1 },
+                  { x: 2, y: 2, class: 1 },
+                  { x: -2, y: 2, class: -1 },
+                  { x: 2, y: -2, class: 1 },
+             ];
+             resetLinearView(); // Set initial boundary state
+
+            draw(); // Initial draw
+        }
+
+        initialize(); // Run initialization
+
+    </script>
+
+</body>
+</html>

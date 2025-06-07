@@ -1,0 +1,1045 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>K-Nearest Neighbors Explorer</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* GeeksforGeeks Theme */
+        :root {
+            --gfg-white: #ffffff;
+            --gfg-green: #2f8d46;
+            --gfg-text-dark: #222222;
+            --gfg-light-grey: #f0f0f0;
+            --gfg-red: #ff0000; /* For highlights/errors */
+            --gfg-blue: #0000ff; /* For classification class B */
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--gfg-white);
+            color: var(--gfg-text-dark);
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Full viewport height */
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        header {
+            background-color: var(--gfg-green);
+            color: var(--gfg-white);
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0; /* Don't shrink header */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1; /* Ensure header is above main content */
+        }
+
+        main {
+            flex-grow: 1; /* Take remaining height */
+            display: flex;
+            padding: 10px;
+            gap: 10px; /* Space between main sections */
+            overflow: hidden; /* Hide potential internal overflow */
+        }
+
+        #knn-simulation {
+            flex-grow: 2; /* Core simulation is larger */
+            border: 1px solid var(--gfg-text-dark);
+            background-color: var(--gfg-white);
+            cursor: crosshair; /* Indicate clickable area */
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+
+        #sidebar {
+            flex-grow: 1; /* Sidebar takes remaining space */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px; /* Limit sidebar width */
+             /* overflow-y: auto; /* Allow scrolling in sidebar if needed */
+             /* Disabled overflow-y to enforce static/no-scroll page */
+        }
+
+        .control-panel, .viz-section {
+            border: 1px solid var(--gfg-text-dark);
+            padding: 10px;
+            background-color: var(--gfg-light-grey);
+            box-shadow: 0 0 5px rgba(0,0,0,0.08);
+             flex-shrink: 0; /* Prevent panels from shrinking */
+        }
+
+        .control-panel h3, .viz-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--gfg-green);
+            border-bottom: 1px solid var(--gfg-green);
+            padding-bottom: 5px;
+        }
+
+        .controls, .viz-controls {
+            display: flex;
+            flex-wrap: wrap; /* Allow controls to wrap */
+            gap: 8px;
+            align-items: center;
+        }
+
+        .controls label, .viz-controls label {
+            font-weight: bold;
+        }
+
+        .controls input[type="range"] {
+             flex-grow: 1; /* Slider takes available space */
+             min-width: 80px; /* Prevent slider from becoming too small */
+        }
+
+        button {
+            background-color: var(--gfg-green);
+            color: var(--gfg-white);
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: color-mix(in srgb, var(--gfg-green) 80%, black);
+        }
+
+        button.active {
+            background-color: var(--gfg-text-dark); /* Highlight active button */
+        }
+
+        .viz-canvas {
+             border: 1px solid var(--gfg-text-dark);
+             background-color: var(--gfg-white);
+             margin-top: 10px;
+             flex-grow: 1; /* Allow canvas to grow within its section */
+             min-height: 50px; /* Minimum size */
+        }
+
+        #distance-viz.viz-canvas {
+             /* Specific height or flex basis if needed */
+             flex-basis: 45%; /* Example: take 45% of available space in sidebar */
+        }
+         #k-effect-viz.viz-canvas {
+             flex-basis: 45%; /* Example: take 45% of available space in sidebar */
+         }
+         .viz-section {
+              display: flex;
+              flex-direction: column;
+         }
+
+
+        footer {
+            background-color: var(--gfg-green);
+            color: var(--gfg-white);
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 0.9em;
+            flex-shrink: 0; /* Don't shrink footer */
+            position: fixed; /* Fix at bottom */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10; /* Ensure it's on top */
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+        }
+
+        footer a {
+            color: var(--gfg-white);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        K-Nearest Neighbors Explorer
+    </header>
+
+    <main>
+        <canvas id="knn-simulation"></canvas>
+
+        <div id="sidebar">
+            <div class="control-panel">
+                <h3>Controls</h3>
+                <div class="controls">
+                    <label for="mode-select">Mode:</label>
+                    <button id="mode-classification" class="active">Classification</button>
+                    <button id="mode-regression">Regression</button>
+
+                    <label for="k-slider">K:</label>
+                    <input type="range" id="k-slider" min="1" max="20" value="3">
+                    <span id="k-value">3</span>
+
+                    <label for="metric-select">Metric:</label>
+                    <button id="metric-euclidean" class="active">Euclidean</button>
+                    <button id="metric-manhattan">Manhattan</button>
+                </div>
+            </div>
+
+            <div class="viz-section">
+                <h3>Distance Metric Visualizer</h3>
+                <div class="viz-controls">
+                     <p style="margin-bottom: 8px;">Click two points below to measure distance.</p>
+                     <button id="distance-viz-metric-euclidean" class="active">Euclidean</button>
+                     <button id="distance-viz-metric-manhattan">Manhattan</button>
+                     <button id="distance-clear-points">Clear Points</button>
+                </div>
+                <canvas id="distance-viz" class="viz-canvas"></canvas>
+            </div>
+
+            <div class="viz-section">
+                <h3>Effect of K (Error Plot)</h3>
+                 <p style="margin-bottom: 8px;">Hover or click on points below.</p>
+                <canvas id="k-effect-viz" class="viz-canvas"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Created by Ashish Jangra |
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Configuration ---
+        const POINT_RADIUS = 5;
+        const HIGHLIGHT_RADIUS_TRAINING = 7;
+        const LINE_COLOR_DEFAULT = '#cccccc';
+        const LINE_COLOR_HIGHLIGHT = var(--gfg-red); // Red for highlighted neighbors
+        const NEW_POINT_COLOR = var(--gfg-dark); // Black
+        const CLASS_A_COLOR = var(--gfg-green);
+        const CLASS_B_COLOR = var(--gfg-blue);
+
+        const GFG_GREEN = '#2f8d46';
+        const GFG_DARK = '#222222';
+        const GFG_WHITE = '#ffffff';
+        const GFG_RED = '#ff0000';
+        const GFG_BLUE = '#0000ff';
+
+
+        const TRAINING_DATA_COUNT = 40; // More data for better visualization
+        const MAX_K_SLIDER = 20; // Max K value for the slider
+        const MAX_K_EFFECT_PLOT = Math.min(MAX_K_SLIDER, TRAINING_DATA_COUNT - 1); // Max K for error plot
+
+        // --- State Variables ---
+        let trainingData = [];
+        let addedPoints = []; // Array of points added by user clicks
+        let currentK = 3;
+        let currentMetric = 'euclidean'; // 'euclidean' or 'manhattan'
+        let currentMode = 'classification'; // 'classification' or 'regression'
+
+        let distVizPoints = []; // Max 2 points for distance visualizer
+        let currentDistVizMetric = 'euclidean';
+
+        let kErrorData = []; // Array of {k, error} for K Effect plot
+        let highlightedKEffect = null; // K value highlighted on the error plot
+
+
+        // --- Canvas & Contexts ---
+        const simCanvas = document.getElementById('knn-simulation');
+        const simCtx = simCanvas.getContext('2d');
+
+        const distVizCanvas = document.getElementById('distance-viz');
+        const distVizCtx = distVizCanvas.getContext('2d');
+
+        const kEffectCanvas = document.getElementById('k-effect-viz');
+        const kEffectCtx = kEffectCanvas.getContext('2d');
+
+        // --- Controls ---
+        const kSlider = document.getElementById('k-slider');
+        kSlider.max = MAX_K_SLIDER; // Set max based on config
+        const kValueSpan = document.getElementById('k-value');
+        const modeClassificationBtn = document.getElementById('mode-classification');
+        const modeRegressionBtn = document.getElementById('mode-regression');
+        const metricEuclideanBtn = document.getElementById('metric-euclidean');
+        const metricManhattanBtn = document.getElementById('metric-manhattan');
+
+        const distMetricEuclideanBtn = document.getElementById('distance-viz-metric-euclidean');
+        const distMetricManhattanBtn = document.getElementById('distance-viz-metric-manhattan');
+        const distClearPointsBtn = document.getElementById('distance-clear-points');
+
+
+        // --- Coordinate Mapping (Data Space: 0-100, Canvas Pixels) ---
+        function dataToSimPixels(p) {
+            const x = (p.x / 100) * simCanvas.width;
+            const y = (1 - p.y / 100) * simCanvas.height; // Invert Y axis for canvas
+            return { x, y };
+        }
+
+         function simPixelsToData(p) {
+            const x = (p.x / simCanvas.width) * 100;
+            const y = (1 - p.y / simCanvas.height) * 100; // Invert Y axis for canvas
+            return { x, y };
+        }
+
+        function dataToVizPixels(p, canvas) {
+             const x = (p.x / 100) * canvas.width;
+             const y = (1 - p.y / 100) * canvas.height; // Invert Y axis for canvas
+             return { x, y };
+        }
+
+        function vizPixelsToData(p, canvas) {
+             const x = (p.x / canvas.width) * 100;
+             const y = (1 - p.y / canvas.height) * 100; // Invert Y axis for canvas
+             return { x, y };
+        }
+
+        // Map K Effect Data to pixels for plotting
+        function kEffectDataToPixels(d, plotWidth, plotHeight, padding, maxK, maxError) {
+             const x = padding + (d.k - 1) / (maxK - 1 || 1) * plotWidth; // Scale K from 1 to maxK
+             const y = padding + plotHeight - (d.error / maxError) * plotHeight; // Scale error 0 to maxError
+             return {x, y};
+        }
+
+
+        // --- Distance Calculations ---
+        function euclideanDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        }
+
+        function manhattanDistance(p1, p2) {
+            return Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y);
+        }
+
+        function getDistance(p1, p2, metric) {
+            if (metric === 'euclidean') return euclideanDistance(p1, p2);
+            if (metric === 'manhattan') return manhattanDistance(p1, p2);
+            return 0; // Should not happen
+        }
+
+        // --- KNN Core Logic ---
+        function findNearestNeighbors(point, data, k, metric) {
+            if (!data || data.length === 0) return [];
+            const distances = data.map(p => ({
+                point: p,
+                distance: getDistance(point, p, metric)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+
+            return distances.slice(0, Math.min(k, data.length)).map(d => d.point);
+        }
+
+        function predict(point, neighbors, mode) {
+            if (neighbors.length === 0) return { class: 'none', value: NaN };
+
+            if (mode === 'classification') {
+                const classCounts = {};
+                neighbors.forEach(p => {
+                    classCounts[p.class] = (classCounts[p.class] || 0) + 1;
+                });
+
+                let predictedClass = null;
+                let maxCount = -1;
+                // Find class with max count (simple tie-breaking: first one found)
+                let tiedClasses = [];
+                 for (const cls in classCounts) {
+                    if (classCounts[cls] > maxCount) {
+                        maxCount = classCounts[cls];
+                        predictedClass = cls;
+                        tiedClasses = [cls];
+                    } else if (classCounts[cls] === maxCount) {
+                         tiedClasses.push(cls);
+                    }
+                }
+                 // If tied, pick randomly (or first)
+                 if (tiedClasses.length > 1) {
+                     predictedClass = tiedClasses[Math.floor(Math.random() * tiedClasses.length)];
+                 }
+
+                return { class: predictedClass, value: NaN };
+            } else { // regression
+                const sum = neighbors.reduce((acc, p) => acc + p.value, 0);
+                const predictedValue = sum / neighbors.length;
+                return { class: null, value: predictedValue };
+            }
+        }
+
+        // --- Data Generation ---
+        function generateTrainingData(count, mode) {
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                if (mode === 'classification') {
+                    // Simple classification boundary example (y > x + constant) with noise
+                    const cls = y > x + (Math.random() - 0.5) * 40 ? 'Class A' : 'Class B';
+                    data.push({ x, y, class: cls });
+                } else { // regression
+                     // Simple regression value example (value proportional to x + y) with noise
+                    const value = (x + y) / 2 + (Math.random() - 0.5) * 30; // Increased noise
+                    data.push({ x, y, value: Math.max(0, Math.min(100, value)) }); // Cap value 0-100
+                }
+            }
+            return data;
+        }
+
+         // --- K Effect Logic (Error Calculation) ---
+         function calculateErrorVsK(data, mode, metric) {
+            if (data.length <= 1) return []; // Need at least 2 points for LOOCV
+
+            const errors = [];
+            for (let k = 1; k <= MAX_K_EFFECT_PLOT; k++) {
+                 let totalError = 0;
+                 for (let i = 0; i < data.length; i++) {
+                    // Leave-one-out CV: use all points except point i for training
+                    const trainingSubset = data.filter((_, index) => index !== i);
+                    const pointToPredict = data[i];
+
+                    const neighbors = findNearestNeighbors(pointToPredict, trainingSubset, k, metric);
+                    const prediction = predict(pointToPredict, neighbors, mode);
+
+                    if (mode === 'classification') {
+                        // 0/1 loss
+                        if (prediction.class !== pointToPredict.class) {
+                            totalError += 1;
+                        }
+                    } else { // regression
+                        // Squared error
+                        totalError += Math.pow(prediction.value - pointToPredict.value, 2);
+                    }
+                 }
+                 const averageError = totalError / data.length;
+                 errors.push({ k: k, error: averageError });
+            }
+             return errors;
+         }
+
+
+        // --- Drawing Functions ---
+
+        // Main Simulation Drawing
+        function drawSimulation() {
+            simCtx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+            simCtx.fillStyle = GFG_WHITE;
+            simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
+
+            // Draw training data
+            trainingData.forEach(p => {
+                const { x, y } = dataToSimPixels(p);
+                simCtx.beginPath();
+                simCtx.arc(x, y, POINT_RADIUS, 0, Math.PI * 2);
+
+                if (currentMode === 'classification') {
+                    simCtx.fillStyle = p.class === 'Class A' ? CLASS_A_COLOR : CLASS_B_COLOR;
+                } else { // regression
+                    // Simple grayscale gradient based on value 0-100
+                    const gray = 255 - Math.floor((p.value / 100) * 200); // Brighter for higher value
+                    simCtx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
+                }
+                simCtx.fill();
+                simCtx.strokeStyle = GFG_DARK;
+                simCtx.lineWidth = 1;
+                simCtx.stroke();
+            });
+
+
+            // Draw added points, lines, and predictions
+            addedPoints.forEach(addedP => {
+                 const { x: px, y: py } = dataToSimPixels(addedP);
+
+                 // Find K nearest neighbors for the added point
+                 const nearestNeighbors = findNearestNeighbors(addedP, trainingData, currentK, currentMetric);
+                 const nearestTrainingPoints = nearestNeighbors.map(n => trainingData.find(td => td === n)); // Get original training point object
+
+                 // Draw lines to ALL training points (faint), highlight K nearest (bold)
+                 trainingData.forEach(trainingP => {
+                    const { x: x1, y: y1 } = dataToSimPixels(addedP);
+                    const { x: x2, y: y2 } = dataToSimPixels(trainingP);
+
+                    const isNeighbor = nearestTrainingPoints.includes(trainingP);
+
+                    simCtx.beginPath();
+                    simCtx.moveTo(x1, y1);
+                    simCtx.lineTo(x2, y2);
+                    simCtx.strokeStyle = isNeighbor ? LINE_COLOR_HIGHLIGHT : LINE_COLOR_DEFAULT;
+                    simCtx.lineWidth = isNeighbor ? 2 : 0.5;
+                    simCtx.stroke();
+                 });
+
+                 // Highlight nearest neighbors
+                 nearestTrainingPoints.forEach(trainingP => {
+                      const { x: nx, y: ny } = dataToSimPixels(trainingP);
+                       simCtx.beginPath();
+                       simCtx.arc(nx, ny, HIGHLIGHT_RADIUS_TRAINING, 0, Math.PI * 2);
+                       simCtx.strokeStyle = LINE_COLOR_HIGHLIGHT;
+                       simCtx.lineWidth = 2;
+                       simCtx.stroke();
+                 });
+
+
+                 // Draw the added point
+                 simCtx.beginPath();
+                 simCtx.arc(px, py, POINT_RADIUS + 2, 0, Math.PI * 2); // Slightly larger for visibility
+                 simCtx.fillStyle = NEW_POINT_COLOR;
+                 simCtx.fill();
+                 simCtx.strokeStyle = GFG_DARK;
+                 simCtx.lineWidth = 2;
+                 simCtx.stroke();
+
+                 // Predict and draw prediction text
+                 const prediction = predict(addedP, nearestNeighbors, currentMode);
+
+                 simCtx.font = '14px system-ui';
+                 simCtx.fillStyle = GFG_DARK;
+                 simCtx.textAlign = 'left';
+                 simCtx.textBaseline = 'bottom';
+
+                 let predictionText = '';
+                 if (currentMode === 'classification') {
+                    predictionText = `Pred: ${prediction.class}`;
+                    // Optional: change added point color to predicted class
+                    simCtx.fillStyle = prediction.class === 'Class A' ? CLASS_A_COLOR : (prediction.class === 'Class B' ? CLASS_B_COLOR : NEW_POINT_COLOR);
+                    simCtx.fill(); // Redraw point with predicted color
+                 } else {
+                    predictionText = `Pred: ${prediction.value.toFixed(2)}`;
+                     // Optional: fill added point with a gradient based on predicted value
+                     const gray = 255 - Math.floor((prediction.value / 100) * 200);
+                     simCtx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
+                     simCtx.fill(); // Redraw point with predicted color
+                 }
+
+
+                 // Draw prediction text next to the point, adjust position if near edge
+                 let textX = px + POINT_RADIUS + 8;
+                 let textY = py;
+                 if (textX + simCtx.measureText(predictionText).width > simCanvas.width - 10) {
+                     textX = px - POINT_RADIUS - 8 - simCtx.measureText(predictionText).width;
+                     simCtx.textAlign = 'right';
+                 }
+                 if (textY - 15 < 10) { // If near top edge
+                     textY = py + 15; // Move text below
+                     simCtx.textBaseline = 'top';
+                 }
+
+                 simCtx.fillText(predictionText, textX, textY);
+            });
+        }
+
+
+        // Distance Visualizer Drawing
+        function drawDistanceViz() {
+            distVizCtx.clearRect(0, 0, distVizCanvas.width, distVizCanvas.height);
+            distVizCtx.fillStyle = GFG_WHITE;
+            distVizCtx.fillRect(0, 0, distVizCanvas.width, distVizCanvas.height);
+
+            if (distVizPoints.length < 2) {
+                 distVizCtx.font = '12px system-ui';
+                 distVizCtx.fillStyle = GFG_DARK;
+                 distVizCtx.textAlign = 'center';
+                 distVizCtx.textBaseline = 'middle';
+                 distVizCtx.fillText("Click two points to visualize distance", distVizCanvas.width / 2, distVizCanvas.height / 2);
+                 return;
+            }
+
+            const p1 = distVizPoints[0];
+            const p2 = distVizPoints[1];
+
+            const { x: x1, y: y1 } = dataToVizPixels(p1, distVizCanvas);
+            const { x: x2, y: y2 } = dataToVizPixels(p2, distVizCanvas);
+
+            // Draw grid lines faintly
+             distVizCtx.strokeStyle = '#eee';
+             distVizCtx.lineWidth = 0.5;
+             const gridSize = distVizCanvas.width / 10; // Simple grid based on canvas size
+             for(let i=0; i<=10; i++) {
+                 const px = i * gridSize;
+                 const py = i * gridSize;
+                 distVizCtx.beginPath(); // Vertical lines
+                 distVizCtx.moveTo(px, 0);
+                 distVizCtx.lineTo(px, distVizCanvas.height);
+                 distVizCtx.stroke();
+                 distVizCtx.beginPath(); // Horizontal lines
+                 distVizCtx.moveTo(0, py);
+                 distVizCtx.lineTo(distVizCanvas.width, py);
+                 distVizCtx.stroke();
+             }
+
+
+            // Draw path based on metric
+            distVizCtx.strokeStyle = GFG_GREEN;
+            distVizCtx.lineWidth = 2;
+            distVizCtx.setLineDash([]); // Solid line
+
+            if (currentDistVizMetric === 'euclidean') {
+                distVizCtx.beginPath();
+                distVizCtx.moveTo(x1, y1);
+                distVizCtx.lineTo(x2, y2);
+                distVizCtx.stroke();
+            } else if (currentDistVizMetric === 'manhattan') {
+                // Draw L-shaped path
+                distVizCtx.beginPath();
+                distVizCtx.moveTo(x1, y1);
+                distVizCtx.lineTo(x2, y1); // Move horizontally
+                distVizCtx.lineTo(x2, y2); // Move vertically
+                distVizCtx.stroke();
+            }
+
+            // Draw points on top
+            distVizCtx.fillStyle = NEW_POINT_COLOR;
+            distVizCtx.beginPath();
+            distVizCtx.arc(x1, y1, POINT_RADIUS, 0, Math.PI * 2);
+            distVizCtx.fill();
+            distVizCtx.beginPath();
+            distVizCtx.arc(x2, y2, POINT_RADIUS, 0, Math.PI * 2);
+            distVizCtx.fill();
+
+
+            // Display distance value
+            const distanceValue = getDistance(p1, p2, currentDistVizMetric);
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+
+            distVizCtx.font = '12px system-ui';
+            distVizCtx.fillStyle = GFG_DARK;
+            distVizCtx.textAlign = 'center';
+            distVizCtx.textBaseline = 'bottom';
+            distVizCtx.fillText(`${currentDistVizMetric} distance: ${distanceValue.toFixed(2)}`, midX, midY - 5);
+        }
+
+        // K Effect Visualizer Drawing
+         function drawKEffectViz() {
+             kEffectCtx.clearRect(0, 0, kEffectCanvas.width, kEffectCanvas.height);
+             kEffectCtx.fillStyle = GFG_WHITE;
+             kEffectCtx.fillRect(0, 0, kEffectCanvas.width, kEffectCanvas.height);
+
+             if (kErrorData.length === 0) {
+                  kEffectCtx.font = '12px system-ui';
+                  kEffectCtx.fillStyle = GFG_DARK;
+                  kEffectCtx.textAlign = 'center';
+                  kEffectCtx.textBaseline = 'middle';
+                  kEffectCtx.fillText("Calculating error vs K...", kEffectCanvas.width / 2, kEffectCanvas.height / 2);
+                 return;
+             }
+
+             const padding = 20;
+             const plotWidth = kEffectCanvas.width - 2 * padding;
+             const plotHeight = kEffectCanvas.height - 2 * padding;
+
+             const maxError = Math.max(...kErrorData.map(d => d.error)) || 1; // Prevent division by zero if maxError is 0
+             const maxK = MAX_K_EFFECT_PLOT; // Use config max K for consistent axis
+
+             // Draw Axes
+             kEffectCtx.strokeStyle = GFG_DARK;
+             kEffectCtx.lineWidth = 1;
+             // Y-axis
+             kEffectCtx.beginPath();
+             kEffectCtx.moveTo(padding, padding);
+             kEffectCtx.lineTo(padding, padding + plotHeight);
+             kEffectCtx.stroke();
+             // X-axis
+             kEffectCtx.beginPath();
+             kEffectCtx.moveTo(padding, padding + plotHeight);
+             kEffectCtx.lineTo(padding + plotWidth, padding + plotHeight);
+             kEffectCtx.stroke();
+
+             // Axis Labels and Ticks
+              kEffectCtx.font = '10px system-ui';
+              kEffectCtx.fillStyle = GFG_DARK;
+
+              // X-axis (K)
+              kEffectCtx.textAlign = 'center';
+              kEffectCtx.textBaseline = 'top';
+              kEffectCtx.fillText("K", padding + plotWidth / 2, padding + plotHeight + 5);
+               for (let k = 1; k <= maxK; k += (maxK > 10 ? 5 : 1) ) { // Show ticks every 1 or 5 Ks
+                 const x = padding + (k - 1) / (maxK - 1 || 1) * plotWidth;
+                 kEffectCtx.beginPath();
+                 kEffectCtx.moveTo(x, padding + plotHeight);
+                 kEffectCtx.lineTo(x, padding + plotHeight - 4);
+                 kEffectCtx.stroke();
+                 kEffectCtx.fillText(k, x, padding + plotHeight + 8);
+              }
+
+              // Y-axis (Error)
+               kEffectCtx.textAlign = 'right';
+               kEffectCtx.textBaseline = 'middle';
+               kEffectCtx.save();
+               kEffectCtx.translate(padding - 10, padding + plotHeight / 2);
+               kEffectCtx.rotate(-Math.PI / 2);
+               kEffectCtx.fillText("Error", 0, 0);
+               kEffectCtx.restore();
+                // Simple Y ticks
+                const numYTicks = 3;
+                for(let i=0; i<= numYTicks; i++) {
+                     const errorValue = (maxError / numYTicks) * i;
+                     const y = padding + plotHeight - (errorValue / maxError) * plotHeight;
+                     kEffectCtx.beginPath();
+                     kEffectCtx.moveTo(padding, y);
+                     kEffectCtx.lineTo(padding + 4, y);
+                     kEffectCtx.stroke();
+                     kEffectCtx.fillText(errorValue.toFixed(mode === 'classification' ? 2 : 0), padding - 5, y);
+                }
+
+
+             // Plot points and lines
+             kEffectCtx.strokeStyle = GFG_GREEN;
+             kEffectCtx.lineWidth = 2;
+             kEffectCtx.beginPath();
+
+             // Find the K data point corresponding to the slider's currentK for highlighting the line segment
+             let currentKPoint = null;
+             if (currentK >= 1 && currentK <= MAX_K_EFFECT_PLOT) {
+                 currentKPoint = kErrorData.find(d => d.k === currentK);
+             }
+
+
+             kErrorData.forEach((d, i) => {
+                 const {x, y} = kEffectDataToPixels(d, plotWidth, plotHeight, padding, maxK, maxError);
+
+                 // Store pixel position for hover detection
+                 d.pixelX = x;
+                 d.pixelY = y;
+
+                 if (i === 0) {
+                     kEffectCtx.moveTo(x, y);
+                 } else {
+                     // Draw line segment
+                     const prev = kErrorData[i-1];
+                      const {x: prevX, y: prevY} = kEffectDataToPixels(prev, plotWidth, plotHeight, padding, maxK, maxError);
+
+                      kEffectCtx.beginPath();
+                      kEffectCtx.moveTo(prevX, prevY);
+                      kEffectCtx.lineTo(x, y);
+                       // Highlight line segment if it ends at the currentK point or starts at the previous K point
+                       if (d.k === currentK || (i > 0 && kErrorData[i-1].k === currentK)) {
+                            kEffectCtx.strokeStyle = LINE_COLOR_HIGHLIGHT;
+                             kEffectCtx.lineWidth = 3;
+                       } else {
+                            kEffectCtx.strokeStyle = GFG_GREEN;
+                            kEffectCtx.lineWidth = 2;
+                       }
+                      kEffectCtx.stroke();
+                 }
+
+                 // Draw point circle on top of lines
+                 kEffectCtx.beginPath();
+                 kEffectCtx.arc(x, y, POINT_RADIUS / 2 + 1, 0, Math.PI * 2); // Slightly larger circle
+                 kEffectCtx.fillStyle = GFG_WHITE; // White center
+                 kEffectCtx.fill();
+                 kEffectCtx.strokeStyle = d.k === currentK ? LINE_COLOR_HIGHLIGHT : GFG_GREEN; // Highlight current K
+                 kEffectCtx.lineWidth = d.k === currentK ? 2 : 1;
+                 kEffectCtx.stroke();
+             });
+
+
+              // Draw highlighted point on hover
+              if (highlightedKEffect) {
+                   const x = highlightedKEffect.pixelX;
+                   const y = highlightedKEffect.pixelY;
+
+                   kEffectCtx.beginPath();
+                   kEffectCtx.arc(x, y, POINT_RADIUS + 2, 0, Math.PI * 2); // Larger highlight ring
+                   kEffectCtx.strokeStyle = GFG_DARK;
+                   kEffectCtx.lineWidth = 2;
+                   kEffectCtx.stroke();
+
+                    // Draw tooltip
+                    kEffectCtx.font = '12px monospace';
+                    kEffectCtx.fillStyle = GFG_DARK;
+
+                    const tooltipText = `K=${highlightedKEffect.k}, Error=${highlightedKEffect.error.toFixed(currentMode === 'classification' ? 4 : 2)}`;
+                    const textWidth = kEffectCtx.measureText(tooltipText).width;
+                    const textHeight = 14; // Approx height
+
+                    // Position tooltip to avoid going off screen
+                    let tooltipX = x + 10;
+                    let tooltipY = y - 5; // Default: above and right
+                    if (tooltipX + textWidth > kEffectCanvas.width - padding) {
+                         tooltipX = x - 10 - textWidth; // Flip to left
+                         kEffectCtx.textAlign = 'right';
+                    } else {
+                         kEffectCtx.textAlign = 'left';
+                    }
+                    if (tooltipY - textHeight < padding) { // If near top edge
+                         tooltipY = y + 5 + textHeight; // Move text below
+                         kEffectCtx.textBaseline = 'top';
+                    } else {
+                          kEffectCtx.textBaseline = 'bottom';
+                    }
+
+                     kEffectCtx.fillText(tooltipText, tooltipX, tooltipY);
+              }
+         }
+
+
+        // --- Event Listeners ---
+
+        // Resize Observer to make canvases fill available space
+        const resizeObserver = new ResizeObserver(entries => {
+            // Debounce resizing slightly to prevent excessive redraws
+            clearTimeout(window._resizeTimer);
+            window._resizeTimer = setTimeout(() => {
+                const main = document.querySelector('main');
+                if (!main) return; // Exit if main is not found
+
+                const mainRect = main.getBoundingClientRect();
+                simCanvas.width = mainRect.width * 0.6 - 10; // 60% width - gap
+                simCanvas.height = mainRect.height - 20; // Full height - padding
+
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar) return;
+                const sidebarRect = sidebar.getBoundingClientRect();
+                const controlPanelHeight = document.querySelector('.control-panel').offsetHeight;
+                 // Divide remaining height between two viz canvases, accounting for gap and padding
+                 const remainingSidebarHeight = sidebarRect.height - controlPanelHeight - 30; // 2 gaps + padding
+                 const vizHeight = (remainingSidebarHeight / 2) - 5; // Half height - half gap
+
+                distVizCanvas.width = sidebarRect.width - 20; // Full width - padding
+                distVizCanvas.height = Math.max(100, vizHeight); // Minimum height
+
+                kEffectCanvas.width = sidebarRect.width - 20; // Full width - padding
+                kEffectCanvas.height = Math.max(100, vizHeight); // Minimum height
+
+
+                // Redraw everything after resize
+                drawSimulation();
+                drawDistanceViz();
+                drawKEffectViz();
+            }, 50); // 50ms debounce
+        });
+
+
+        // Main Simulation Click
+        simCanvas.addEventListener('click', function(event) {
+            const rect = simCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const dataPoint = simPixelsToData({ x, y });
+            addedPoints.push(dataPoint); // Add the new point
+
+            drawSimulation(); // Redraw simulation to show new point and its prediction
+        });
+
+        // Controls
+        kSlider.addEventListener('input', function() {
+            currentK = parseInt(this.value, 10);
+            kValueSpan.textContent = currentK;
+            drawSimulation(); // Update prediction based on new K
+             drawKEffectViz(); // Update highlight on K effect plot
+        });
+
+        modeClassificationBtn.addEventListener('click', function() {
+            if (currentMode === 'classification') return;
+            currentMode = 'classification';
+            modeClassificationBtn.classList.add('active');
+            modeRegressionBtn.classList.remove('active');
+            // Regenerate training data for classification
+            trainingData = generateTrainingData(TRAINING_DATA_COUNT, currentMode);
+            // Recalculate K effect error for new mode
+            kErrorData = calculateErrorVsK(trainingData, currentMode, currentMetric);
+            addedPoints = []; // Clear added points as mode changes
+            drawSimulation();
+            drawKEffectViz();
+             // Update K slider max if training data count changed significantly (not needed with fixed count)
+        });
+
+        modeRegressionBtn.addEventListener('click', function() {
+             if (currentMode === 'regression') return;
+            currentMode = 'regression';
+            modeRegressionBtn.classList.add('active');
+            modeClassificationBtn.classList.remove('active');
+             // Regenerate training data for regression
+            trainingData = generateTrainingData(TRAINING_DATA_COUNT, currentMode);
+             // Recalculate K effect error for new mode
+             kErrorData = calculateErrorVsK(trainingData, currentMode, currentMetric);
+            addedPoints = []; // Clear added points as mode changes
+            drawSimulation();
+            drawKEffectViz();
+             // Update K slider max
+        });
+
+        metricEuclideanBtn.addEventListener('click', function() {
+            if (currentMetric === 'euclidean') return;
+            currentMetric = 'euclidean';
+            metricEuclideanBtn.classList.add('active');
+            metricManhattanBtn.classList.remove('active');
+            // Recalculate K effect error for new metric
+            kErrorData = calculateErrorVsK(trainingData, currentMode, currentMetric);
+            drawSimulation(); // Update prediction based on new metric
+             drawKEffectViz();
+        });
+
+        metricManhattanBtn.addEventListener('click', function() {
+            if (currentMetric === 'manhattan') return;
+            currentMetric = 'manhattan';
+            metricManhattanBtn.classList.add('active');
+            metricEuclideanBtn.classList.remove('active');
+            // Recalculate K effect error for new metric
+            kErrorData = calculateErrorVsK(trainingData, currentMode, currentMetric);
+            drawSimulation(); // Update prediction based on new metric
+            drawKEffectViz();
+        });
+
+        // Distance Viz Click
+        distVizCanvas.addEventListener('click', function(event) {
+             const rect = distVizCanvas.getBoundingClientRect();
+             const x = event.clientX - rect.left;
+             const y = event.clientY - rect.top;
+             const dataPoint = vizPixelsToData({x,y}, distVizCanvas);
+
+             if (distVizPoints.length < 2) {
+                 distVizPoints.push(dataPoint);
+             } else {
+                 // Replace the first point if 2 already exist
+                 distVizPoints[0] = distVizPoints[1];
+                 distVizPoints[1] = dataPoint;
+             }
+             drawDistanceViz();
+        });
+
+        // Distance Viz Clear Button
+        distClearPointsBtn.addEventListener('click', function() {
+             distVizPoints = [];
+             drawDistanceViz();
+        });
+
+         // Distance Viz Metric Buttons
+         distMetricEuclideanBtn.addEventListener('click', function() {
+             if (currentDistVizMetric === 'euclidean') return;
+             currentDistVizMetric = 'euclidean';
+             distMetricEuclideanBtn.classList.add('active');
+             distMetricManhattanBtn.classList.remove('active');
+             drawDistanceViz();
+         });
+
+         distMetricManhattanBtn.addEventListener('click', function() {
+              if (currentDistVizMetric === 'manhattan') return;
+             currentDistVizMetric = 'manhattan';
+             distMetricManhattanBtn.classList.add('active');
+             distMetricEuclideanBtn.classList.remove('active');
+             drawDistanceViz();
+         });
+
+
+        // K Effect Viz Hover
+         kEffectCanvas.addEventListener('mousemove', function(event) {
+             const rect = kEffectCanvas.getBoundingClientRect();
+             const mouseX = event.clientX - rect.left;
+             const mouseY = event.clientY - rect.top;
+
+             let found = null;
+             // Check distance to each plotted point
+             for (const dataPoint of kErrorData) {
+                 // Use stored pixel positions
+                 const dist = Math.sqrt(Math.pow(mouseX - dataPoint.pixelX, 2) + Math.pow(mouseY - dataPoint.pixelY, 2));
+                 if (dist < POINT_RADIUS + 3) { // Tolerance for hover
+                     found = dataPoint;
+                     break;
+                 }
+             }
+
+             if (found !== highlightedKEffect) {
+                 highlightedKEffect = found;
+                 drawKEffectViz(); // Redraw to show/hide highlight and tooltip
+             }
+         });
+
+         kEffectCanvas.addEventListener('mouseout', function() {
+             if (highlightedKEffect !== null) {
+                 highlightedKEffect = null;
+                 drawKEffectViz(); // Redraw to remove highlight/tooltip
+             }
+         });
+
+         // K Effect Viz Click (Sync K slider)
+          kEffectCanvas.addEventListener('click', function(event) {
+               const rect = kEffectCanvas.getBoundingClientRect();
+               const mouseX = event.clientX - rect.left;
+               const mouseY = event.clientY - rect.top;
+
+               let found = null;
+               // Check distance to each plotted point
+               for (const dataPoint of kErrorData) {
+                   // Use stored pixel positions
+                   const dist = Math.sqrt(Math.pow(mouseX - dataPoint.pixelX, 2) + Math.pow(mouseY - dataPoint.pixelY, 2));
+                   if (dist < POINT_RADIUS + 3) { // Tolerance for click
+                       found = dataPoint;
+                       break;
+                   }
+               }
+
+               if (found) {
+                   // Update main simulation K slider and state
+                   kSlider.value = found.k;
+                   kValueSpan.textContent = found.k;
+                   currentK = found.k;
+
+                   drawSimulation(); // Update main sim
+                   // K effect plot will redraw automatically because currentK changed state
+               }
+          });
+
+
+        // --- Initialization ---
+        function initialize() {
+            // Set initial canvas sizes (will be updated by ResizeObserver)
+             const main = document.querySelector('main');
+             const headerHeight = document.querySelector('header').offsetHeight;
+             const footerHeight = document.querySelector('footer').offsetHeight;
+             const mainHeight = window.innerHeight - headerHeight - footerHeight - 20; // Total height - header - footer - main padding
+             main.style.height = mainHeight + 'px';
+
+
+            // Initialize training data
+            trainingData = generateTrainingData(TRAINING_DATA_COUNT, currentMode);
+
+            // Initialize K effect data (calculate error vs K)
+            kErrorData = calculateErrorVsK(trainingData, currentMode, currentMetric);
+
+
+             // Ensure resize observer starts watching the main container
+             resizeObserver.observe(document.querySelector('main'));
+
+            // Initial draw - resize observer will handle the first proper sizing and draw
+            // but we can do a quick initial draw with placeholder sizes if needed,
+            // or just rely on the observer firing on load. Relying on observer is cleaner.
+             // Let's manually trigger a resize observation to draw initially
+             const mainElement = document.querySelector('main');
+              if(mainElement) {
+                  resizeObserver.observe(mainElement); // Start observing
+                  // Manually trigger the callback once for initial layout
+                  resizeObserver.takeRecords().forEach(entry => {
+                       // Find the entry for the main element itself
+                       if (entry.target === mainElement) {
+                           resizeObserver.disconnect(); // Avoid infinite loop
+                           resizeObserver.observe(mainElement); // Re-observe
+                           resizeObserver.callback([entry], resizeObserver); // Call the handler
+                       }
+                  });
+              }
+
+
+        }
+
+        // Run initialization when the DOM is ready
+        document.addEventListener('DOMContentLoaded', initialize);
+
+        // Also run initialization if window is resized (in case observer isn't perfect on all browsers/conditions)
+        // But the ResizeObserver should be sufficient for modern browsers.
+        // window.addEventListener('resize', initialize); // Redundant with ResizeObserver, keep it simple.
+
+
+    </script>
+
+</body>
+</html>

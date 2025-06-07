@@ -1,0 +1,616 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTFc-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depth First Search Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: #222222;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        #app-header {
+            background-color: #2f8d46; /* GfG Green */
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #main-container {
+            flex-grow: 1; /* Occupy remaining space */
+            display: flex;
+            overflow: hidden; /* Hide overflow within main content */
+        }
+
+        #control-panel {
+            width: 250px; /* Fixed width sidebar */
+            background-color: #f0f0f0; /* Light grey for contrast */
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Allow scrolling if controls exceed height */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #control-panel h3 {
+            margin-top: 0;
+            color: #2f8d46; /* GfG Green */
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, button {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px; /* Space between buttons */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            box-sizing: border-box; /* Include padding and border in element's total width and height */
+        }
+
+        button {
+            background-color: #2f8d46; /* GfG Green */
+            color: #ffffff;
+            border: none;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #3da45a; /* Slightly lighter green */
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #graph-area {
+            flex-grow: 1; /* Occupy remaining horizontal space */
+            position: relative; /* Needed for absolute positioning if drawing overlaid info */
+            background-color: #ffffff;
+        }
+
+        #graphCanvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+        }
+
+        #output-area {
+            background-color: #f0f0f0; /* Light grey */
+            padding: 10px 20px;
+            border-top: 1px solid #ccc;
+            flex-shrink: 0; /* Prevent shrinking */
+            max-height: 80px; /* Limit height */
+            overflow-y: auto; /* Allow scrolling if output is long */
+        }
+
+        #output-area h3 {
+             margin: 0 0 5px 0;
+             color: #2f8d46; /* GfG Green */
+        }
+
+        #output-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            white-space: nowrap; /* Keep items on a single line */
+            overflow-x: auto; /* Add horizontal scroll if needed */
+            padding-bottom: 5px; /* Padding for scrollbar */
+        }
+
+        #output-list li {
+            display: inline-block; /* Arrange items horizontally */
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            padding: 3px 8px;
+            margin-right: 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        #call-stack-visual {
+            border: 1px solid #ccc;
+            padding: 5px;
+            min-height: 50px; /* Ensure visibility */
+            background-color: #ffffff;
+            font-family: monospace;
+            font-size: 0.9em;
+            display: flex;
+            flex-direction: column-reverse; /* Stack grows upwards */
+            overflow-y: auto;
+            max-height: 150px; /* Limit stack height */
+        }
+
+        #call-stack-visual div {
+            padding: 2px 5px;
+            border-bottom: 1px solid #eee;
+        }
+         #call-stack-visual div:last-child {
+             border-bottom: none;
+         }
+
+        #call-stack-visual div.active {
+             background-color: #ffcc00; /* Yellow for active */
+        }
+
+
+        #app-footer {
+            background-color: #2f8d46; /* GfG Green */
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 0.9em;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #app-footer a {
+            color: #ffffff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        #app-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Node and Edge Drawing Styles (handled in JS drawing logic) */
+        /* Node states: default, visited, current, selected (start) */
+        /* Edge states: default, exploring */
+
+    </style>
+</head>
+<body>
+    <header id="app-header">
+        Depth First Search Visualizer
+    </header>
+
+    <div id="main-container">
+        <aside id="control-panel">
+            <div class="control-group">
+                <h3>Graph Settings</h3>
+                <label for="graph-select">Select Graph:</label>
+                <select id="graph-select">
+                    <option value="0">Simple Path (0-1-2-3)</option>
+                    <option value="1">Tree (0->1,2; 1->3,4; 2->5)</option>
+                    <option value="2">Cycle (0-1-2-0, 2-3)</option>
+                    <option value="3">Disconnected (0-1, 2-3)</option>
+                </select>
+                 <div id="start-node-info" style="margin-top: 10px;">
+                    Start Node: <span id="current-start-node">0</span> (Click node on graph to change)
+                 </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Simulation Control</h3>
+                <button id="start-dfs-btn">Start DFS</button>
+                <button id="next-step-btn" disabled>Next Step</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+
+             <div class="control-group">
+                 <h3>Call Stack</h3>
+                 <div id="call-stack-visual"></div>
+             </div>
+        </aside>
+
+        <main id="graph-area">
+            <canvas id="graphCanvas"></canvas>
+        </main>
+    </div>
+
+    <div id="output-area">
+        <h3>Visited Nodes</h3>
+        <ul id="output-list">
+            <!-- Visited nodes appear here -->
+        </ul>
+    </div>
+
+    <footer id="app-footer">
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Graph Data ---
+        // Nodes have x, y positions and a label (index)
+        // Adjacency List stores neighbors
+        const predefinedGraphs = [
+            { // Graph 0: Simple Path
+                nodes: [
+                    { x: 100, y: 250, label: 0 },
+                    { x: 250, y: 250, label: 1 },
+                    { x: 400, y: 250, label: 2 },
+                    { x: 550, y: 250, label: 3 },
+                ],
+                adjacencyList: {
+                    0: [1],
+                    1: [0, 2],
+                    2: [1, 3],
+                    3: [2],
+                },
+                startNode: 0
+            },
+            { // Graph 1: Tree
+                nodes: [
+                     { x: 350, y: 50, label: 0 },
+                     { x: 200, y: 180, label: 1 },
+                     { x: 500, y: 180, label: 2 },
+                     { x: 100, y: 310, label: 3 },
+                     { x: 300, y: 310, label: 4 },
+                     { x: 600, y: 310, label: 5 },
+                ],
+                adjacencyList: {
+                    0: [1, 2],
+                    1: [0, 3, 4],
+                    2: [0, 5],
+                    3: [1],
+                    4: [1],
+                    5: [2]
+                },
+                startNode: 0
+            },
+             { // Graph 2: Cycle with tail
+                nodes: [
+                    { x: 200, y: 150, label: 0 },
+                    { x: 400, y: 150, label: 1 },
+                    { x: 300, y: 300, label: 2 },
+                    { x: 550, y: 300, label: 3 }
+                ],
+                adjacencyList: {
+                    0: [1, 2],
+                    1: [0, 2],
+                    2: [0, 1, 3],
+                    3: [2]
+                },
+                startNode: 0
+            },
+             { // Graph 3: Disconnected
+                nodes: [
+                     { x: 150, y: 250, label: 0 },
+                     { x: 350, y: 250, label: 1 },
+                     { x: 500, y: 250, label: 2 },
+                     { x: 700, y: 250, label: 3 },
+                ],
+                adjacencyList: {
+                    0: [1],
+                    1: [0],
+                    2: [3],
+                    3: [2],
+                },
+                startNode: 0 // DFS from 0 will only visit 0, 1
+            }
+        ];
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const graphSelect = document.getElementById('graph-select');
+        const startNodeSpan = document.getElementById('current-start-node');
+        const startBtn = document.getElementById('start-dfs-btn');
+        const nextBtn = document.getElementById('next-step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const outputList = document.getElementById('output-list');
+        const callStackVisual = document.getElementById('call-stack-visual');
+
+        // --- Simulation State ---
+        let currentGraphIndex = 0;
+        let currentGraph = predefinedGraphs[currentGraphIndex];
+        let startNode = currentGraph.startNode;
+
+        let simulationRunning = false;
+        let visited = new Set();
+        let output = [];
+        let dfsStack = []; // Stores node indices
+        let explorationIndex = {}; // Stores the index of the next neighbor to explore for a node { nodeId: neighborIndex }
+        let currentNode = null; // Node currently being processed/pushed for visualization
+        let currentEdgeHighlight = null; // Edge {u, v} being traversed or checked
+
+        // --- Canvas Drawing ---
+        const nodeRadius = 15;
+        const nodeColorDefault = '#ffffff';
+        const nodeColorVisited = '#cccccc'; /* Grey */
+        const nodeColorCurrent = '#ffcc00'; /* Yellow */
+        const nodeColorStart = '#2f8d46'; /* GfG Green */
+        const edgeColorDefault = '#222222';
+        const edgeColorExploring = '#2f8d46'; /* GfG Green */
+
+        function drawGraph() {
+            // Resize canvas to fill parent container
+             const graphArea = canvas.parentElement;
+             canvas.width = graphArea.clientWidth;
+             canvas.height = graphArea.clientHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const nodes = currentGraph.nodes;
+            const adjacencyList = currentGraph.adjacencyList;
+
+            // Draw Edges
+            ctx.strokeStyle = edgeColorDefault;
+            ctx.lineWidth = 2;
+            for (const u in adjacencyList) {
+                if (adjacencyList.hasOwnProperty(u)) {
+                    const neighbors = adjacencyList[u];
+                    const nodeU = nodes[u];
+
+                    for (const v of neighbors) {
+                         // To avoid drawing each edge twice in undirected graphs
+                         if (u < v) { // Assumes numerical node labels and undirected graph structure for drawing unique edges
+                            const nodeV = nodes[v];
+
+                            ctx.beginPath();
+                            ctx.moveTo(nodeU.x, nodeU.y);
+                            ctx.lineTo(nodeV.x, nodeV.y);
+
+                            // Highlight the edge if it's the one being explored
+                            if (currentEdgeHighlight &&
+                               ((currentEdgeHighlight.u == u && currentEdgeHighlight.v == v) ||
+                                (currentEdgeHighlight.u == v && currentEdgeHighlight.v == u))) // Check both directions for undirected
+                            {
+                                ctx.strokeStyle = edgeColorExploring;
+                                ctx.lineWidth = 3;
+                                ctx.stroke();
+                                ctx.strokeStyle = edgeColorDefault; // Reset for next edges
+                                ctx.lineWidth = 2;
+                             } else {
+                                 ctx.stroke();
+                             }
+                         }
+                    }
+                }
+            }
+
+            // Draw Nodes
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                const isVisited = visited.has(i);
+                const isCurrent = currentNode === i;
+                const isStartNode = startNode === i;
+
+                // Node Circle
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+
+                if (isStartNode) {
+                     ctx.fillStyle = nodeColorStart;
+                } else if (isCurrent) {
+                     ctx.fillStyle = nodeColorCurrent;
+                } else if (isVisited) {
+                     ctx.fillStyle = nodeColorVisited;
+                } else {
+                     ctx.fillStyle = nodeColorDefault;
+                }
+
+                ctx.fill();
+                ctx.strokeStyle = '#222222'; // Node border color
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Node Label
+                ctx.fillStyle = isCurrent || isStartNode ? '#ffffff' : '#222222'; // Label color contrast
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.label, node.x, node.y);
+            }
+             currentEdgeHighlight = null; // Clear highlight after drawing
+        }
+
+        // --- UI Updates ---
+        function updateOutput() {
+            outputList.innerHTML = output.map(nodeId => `<li>${nodeId}</li>`).join('');
+        }
+
+        function updateCallStack() {
+            callStackVisual.innerHTML = '';
+            // Display stack bottom-up, but JS array is top-down (index 0 is bottom)
+             for(let i = 0; i < dfsStack.length; i++) {
+                 const nodeLabel = dfsStack[i];
+                 const stackItem = document.createElement('div');
+                 stackItem.textContent = nodeLabel;
+                 if (i === dfsStack.length - 1 && currentNode !== null) { // Highlight top of stack if exploring from it
+                    stackItem.classList.add('active');
+                 }
+                 callStackVisual.appendChild(stackItem);
+             }
+        }
+
+        function updateButtonStates() {
+            startBtn.disabled = simulationRunning;
+            nextBtn.disabled = !simulationRunning || dfsStack.length === 0;
+            resetBtn.disabled = simulationRunning; // Typically reset is only available when not running
+             // Or reset is always available? Let's allow reset anytime.
+             resetBtn.disabled = false;
+             graphSelect.disabled = simulationRunning;
+        }
+
+        function resetSimulation() {
+            simulationRunning = false;
+            visited = new Set();
+            output = [];
+            dfsStack = [];
+            explorationIndex = {};
+            currentNode = null;
+            currentEdgeHighlight = null;
+            startNode = predefinedGraphs[currentGraphIndex].startNode; // Reset start node to default for graph
+
+            // If a node was selected *before* start, keep that selection
+            const selectedStartNode = parseInt(startNodeSpan.textContent);
+            if (!isNaN(selectedStartNode) && selectedStartNode >= 0 && selectedStartNode < currentGraph.nodes.length) {
+                 startNode = selectedStartNode;
+            } else {
+                 startNodeSpan.textContent = startNode; // Ensure UI matches default if invalid selection happened
+            }
+
+
+            updateOutput();
+            updateCallStack();
+            drawGraph();
+            updateButtonStates();
+        }
+
+        function loadGraph(index) {
+             currentGraphIndex = index;
+             currentGraph = predefinedGraphs[currentGraphIndex];
+             resetSimulation(); // Reset whenever a new graph is loaded
+             startNodeSpan.textContent = currentGraph.startNode; // Update start node display for new graph
+        }
+
+        // --- Simulation Logic (Stepped DFS) ---
+        function startDFS() {
+             if (simulationRunning) return;
+
+             simulationRunning = true;
+
+             // Ensure start node is valid
+             const validStartNode = parseInt(startNodeSpan.textContent);
+             if (isNaN(validStartNode) || validStartNode < 0 || validStartNode >= currentGraph.nodes.length) {
+                 alert("Invalid start node selected.");
+                 resetSimulation(); // Go back to default or reset entirely
+                 return;
+             }
+             startNode = validStartNode; // Use the value from the span
+
+             visited.add(startNode);
+             output.push(startNode);
+             dfsStack.push(startNode);
+             explorationIndex[startNode] = 0; // Initialize exploration index for start node
+             currentNode = startNode; // Visual: Mark start node as current
+
+             drawGraph();
+             updateOutput();
+             updateCallStack();
+             updateButtonStates();
+        }
+
+        function nextStep() {
+            if (!simulationRunning || dfsStack.length === 0) {
+                // Simulation finished
+                 currentNode = null; // Clear current node highlight
+                 drawGraph(); // Final redraw
+                 updateButtonStates(); // Disable next button
+                 return;
+             }
+
+            let u = dfsStack[dfsStack.length - 1]; // Node currently on top of the stack
+            let neighbors = currentGraph.adjacencyList[u] || [];
+            let currentNeighborIndex = explorationIndex[u] || 0;
+
+            // Clear previous step's highlights visually *before* potentially setting new ones
+            currentNode = null; // Assume backtracking initially unless we find a new node to push
+
+            if (currentNeighborIndex < neighbors.length) {
+                // Explore next neighbor of u
+                let v = neighbors[currentNeighborIndex];
+                explorationIndex[u] = currentNeighborIndex + 1; // Increment exploration index for u
+
+                // Set the edge to highlight for this step
+                currentEdgeHighlight = { u: u, v: v };
+
+                if (!visited.has(v)) {
+                    // Found an unvisited neighbor v
+                    visited.add(v);
+                    output.push(v);
+                    dfsStack.push(v);
+                    explorationIndex[v] = 0; // Initialize exploration index for v
+                    currentNode = v; // Visual: v is the new current node
+                } else {
+                    // Neighbor v is already visited, just skip this edge
+                    // No change to stack, visited set, or output
+                    // currentNode remains conceptually u, but visual might not show it explicitly unless needed
+                     currentNode = u; // Let's show u is still being processed, checking neighbors
+                }
+            } else {
+                // All neighbors of u explored or skipped, time to backtrack
+                dfsStack.pop(); // Pop u from stack
+                // No change to visited set or output
+                // currentNode remains null or could point to the *new* top of stack if any
+                 currentNode = dfsStack.length > 0 ? dfsStack[dfsStack.length - 1] : null; // Visual: Highlight new top of stack
+            }
+
+            drawGraph();
+            updateOutput();
+            updateCallStack();
+            updateButtonStates(); // Re-check if simulation finished after this step
+        }
+
+        // --- Event Listeners ---
+        graphSelect.addEventListener('change', (event) => {
+            loadGraph(parseInt(event.target.value));
+        });
+
+        startBtn.addEventListener('click', startDFS);
+        nextBtn.addEventListener('click', nextStep);
+        resetBtn.addEventListener('click', resetSimulation);
+
+        // Canvas click for selecting start node
+        canvas.addEventListener('click', (event) => {
+            if (simulationRunning) return; // Cannot change start node while running
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            const nodes = currentGraph.nodes;
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                const dist = Math.sqrt(Math.pow(clickX - node.x, 2) + Math.pow(clickY - node.y, 2));
+                if (dist <= nodeRadius) {
+                    // Clicked on node i
+                    startNode = i;
+                    startNodeSpan.textContent = i; // Update UI display
+                    drawGraph(); // Redraw to highlight new start node
+                    break;
+                }
+            }
+        });
+
+        // Optional: Canvas hover for node info
+         canvas.addEventListener('mousemove', (event) => {
+             // Simple hover feedback - just redraw to potentially highlight
+             // For minimal implementation, skipping complex tooltip/label drawing
+             // Could add a subtle visual change on hover if desired and kept minimal
+         });
+
+
+        // --- Initialization ---
+        window.addEventListener('resize', drawGraph); // Redraw on resize to fit container
+        loadGraph(0); // Load the first graph on page load
+
+    </script>
+</body>
+</html>

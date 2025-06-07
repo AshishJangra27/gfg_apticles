@@ -1,0 +1,600 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Nearest Neighbors Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: grid;
+            grid-template-rows: auto 1fr auto; /* Header, Main+Step Area, Footer */
+            height: 100vh; /* Full viewport height */
+            overflow: hidden; /* Prevent scrolling */
+            background-color: #ffffff; /* White background */
+            color: #222222; /* Dark text */
+        }
+
+        header {
+            background-color: #2f8d46; /* GeeksforGeeks Green */
+            color: #ffffff; /* White text */
+            padding: 10px;
+            text-align: center;
+            font-size: 1.5em;
+            grid-row: 1;
+        }
+
+        .main-content-area {
+            display: grid;
+            grid-template-columns: 250px 1fr; /* Control Panel, Visualization Area */
+            overflow: hidden;
+            grid-row: 2;
+        }
+
+        .control-panel {
+            padding: 15px;
+            background-color: #f0f0f0; /* Light grey background for contrast */
+            overflow-y: auto; /* Allow controls to scroll if needed */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .control-group {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 15px;
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .control-panel label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .control-panel input[type="range"],
+        .control-panel input[type="number"],
+        .control-panel select,
+        .control-panel button {
+             width: 100%;
+             padding: 8px;
+             border: 1px solid #ccc;
+             border-radius: 4px;
+             box-sizing: border-box;
+             font-size: 1em;
+        }
+
+         .control-panel input[type="radio"] {
+             width: auto;
+             margin-right: 5px;
+         }
+
+         .control-panel .radio-group div {
+             margin-bottom: 5px;
+         }
+         .control-panel .radio-group div:last-child {
+             margin-bottom: 0;
+         }
+
+
+        .control-panel button {
+            background-color: #2f8d46; /* GeeksforGeeks Green */
+            color: #ffffff; /* White text */
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border: none;
+        }
+
+        .control-panel button:hover {
+            background-color: #257339; /* Darker green on hover */
+        }
+
+        .visualization-container {
+             grid-column: 2;
+             grid-row: 1;
+             display: grid;
+             grid-template-rows: 1fr auto; /* Canvas, Step Visualizer */
+             overflow: hidden;
+        }
+
+        .visualization-area {
+             grid-row: 1;
+             overflow: hidden;
+             position: relative; /* For potential overlays, though none are absolutely positioned now */
+        }
+
+        #visualizationCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .step-visualizer {
+            background-color: #f0f0f0; /* Light grey background */
+            padding: 10px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            grid-row: 2;
+            flex-shrink: 0; /* Prevent it from shrinking */
+        }
+
+        .step-visualizer button {
+            padding: 8px 15px;
+            background-color: #2f8d46;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .step-visualizer button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .step-visualizer button:hover:not(:disabled) {
+             background-color: #257339;
+        }
+
+        footer {
+            background-color: #2f8d46; /* GeeksforGeeks Green */
+            color: #ffffff; /* White text */
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            grid-row: 3;
+        }
+
+        footer a {
+            color: #ffffff; /* White link color */
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        K-Nearest Neighbors Explorer
+    </header>
+
+    <div class="main-content-area">
+        <div class="control-panel">
+             <div class="control-group">
+                <label for="modeToggle">Mode:</label>
+                <select id="modeToggle">
+                    <option value="classification">Classification</option>
+                    <option value="regression">Regression</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="kValue">K: <span id="kValueDisplay">3</span></label>
+                <input type="range" id="kValue" min="1" max="10" value="3">
+            </div>
+
+            <div class="control-group">
+                <label>Distance Metric:</label>
+                <div class="radio-group">
+                    <div>
+                        <input type="radio" id="metricEuclidean" name="metric" value="euclidean" checked>
+                        <label for="metricEuclidean">Euclidean</label>
+                    </div>
+                    <div>
+                         <input type="radio" id="metricManhattan" name="metric" value="manhattan">
+                         <label for="metricManhattan">Manhattan</label>
+                     </div>
+                 </div>
+             </div>
+        </div>
+
+        <div class="visualization-container">
+            <div class="visualization-area">
+                <canvas id="visualizationCanvas"></canvas>
+            </div>
+            <div class="step-visualizer">
+                <button id="startStepBtn" disabled>Start Step-by-Step</button>
+                <button id="nextStepBtn" disabled>Next Step</button>
+                <button id="resetStepBtn" disabled>Reset Step</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('visualizationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const modeToggle = document.getElementById('modeToggle');
+        const kValueInput = document.getElementById('kValue');
+        const kValueDisplay = document.getElementById('kValueDisplay');
+        const metricRadios = document.querySelectorAll('input[name="metric"]');
+        const startStepBtn = document.getElementById('startStepBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const resetStepBtn = document.getElementById('resetStepBtn');
+
+        let data = [];
+        let mode = modeToggle.value; // 'classification' or 'regression'
+        let k = parseInt(kValueInput.value);
+        let metric = document.querySelector('input[name="metric"]:checked').value; // 'euclidean' or 'manhattan'
+        let predictionPoint = null; // { x, y } of the clicked point
+        let predictedResult = null; // Predicted class or value
+        let nearestNeighbors = []; // Array of neighbor data points
+        let step = 0; // 0: Idle, 1: Show Distances, 2: Highlight Neighbors, 3: Show Prediction
+
+        // --- Configuration ---
+        const CLASSIFICATION_COLORS = ['#ff6347', '#4682b4', '#8a2be2', '#32cd32']; // Tomato, SteelBlue, BlueViolet, LimeGreen
+        const POINT_RADIUS = 5;
+        const PREDICTION_POINT_RADIUS = 8;
+        const PREDICTION_TEXT_OFFSET_Y = -15;
+
+        // --- Data Generation ---
+        function generateData(currentMode) {
+            data = [];
+            const numPoints = 25; // Slightly more points
+            const width = canvas.width;
+            const height = canvas.height;
+
+            if (currentMode === 'classification') {
+                // Generate simple clusters
+                const numClasses = 3;
+                const clusterCenters = [
+                    { x: width * 0.25, y: height * 0.3, class: CLASSIFICATION_COLORS[0] },
+                    { x: width * 0.75, y: height * 0.3, class: CLASSIFICATION_COLORS[1] },
+                    { x: width * 0.5, y: height * 0.7, class: CLASSIFICATION_COLORS[2] }
+                ];
+
+                for (let i = 0; i < numPoints; i++) {
+                    const center = clusterCenters[i % numClasses];
+                    // Add some randomness around the center
+                    const x = center.x + (Math.random() - 0.5) * 80;
+                    const y = center.y + (Math.random() - 0.5) * 80;
+                     // Ensure points are within canvas bounds
+                    data.push({
+                        x: Math.max(POINT_RADIUS, Math.min(width - POINT_RADIUS, x)),
+                        y: Math.max(POINT_RADIUS, Math.min(height - POINT_RADIUS, y)),
+                        class: center.class
+                    });
+                }
+            } else { // regression
+                // Generate points with a linear trend plus noise
+                const baseValue = 5; // Central value
+                const valueRange = 10; // Total range of values
+
+                for (let i = 0; i < numPoints; i++) {
+                    const x = Math.random() * width * 0.8 + width * 0.1;
+                    const y = Math.random() * height * 0.8 + height * 0.1;
+                    // Simple linear value based on x and y, with noise
+                    const value = baseValue + (x / width - 0.5) * valueRange * 0.8 + (y / height - 0.5) * valueRange * 0.5 + (Math.random() - 0.5) * valueRange * 0.3;
+
+                    data.push({ x, y, value: value });
+                }
+            }
+            // Ensure K is not larger than the number of data points
+            kValueInput.max = data.length;
+            if (k > data.length) {
+                k = data.length;
+                kValueInput.value = k;
+                kValueDisplay.textContent = k;
+            }
+        }
+
+        // --- Distance Metrics ---
+        function euclideanDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        function manhattanDistance(p1, p2) {
+            return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        }
+
+        // --- KNN Logic ---
+        function getNeighbors(point, dataPoints, numK, distanceMetric) {
+            const distanceFunc = distanceMetric === 'euclidean' ? euclideanDistance : manhattanDistance;
+
+            const distances = dataPoints.map(dp => ({
+                point: dp,
+                distance: distanceFunc(point, dp)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+
+            return distances.slice(0, numK).map(d => d.point);
+        }
+
+        function predictClassification(neighbors) {
+            const classCounts = {};
+            neighbors.forEach(n => {
+                classCounts[n.class] = (classCounts[n.class] || 0) + 1;
+            });
+
+            let maxCount = 0;
+            let predictedClass = null;
+            // Find the class with the maximum count
+            for (const className in classCounts) {
+                if (classCounts[className] > maxCount) {
+                    maxCount = classCounts[className];
+                    predictedClass = className;
+                }
+            }
+             return predictedClass; // Returns the color code
+        }
+
+        function predictRegression(neighbors) {
+            if (neighbors.length === 0) return 0; // Avoid division by zero
+            const totalValue = neighbors.reduce((sum, n) => sum + n.value, 0);
+            return totalValue / neighbors.length;
+        }
+
+        function getValueColor(value) {
+            // Map value to a color gradient based on GeeksforGeeks green
+            // Determine data value range dynamically
+            const minVal = data.reduce((min, p) => Math.min(min, p.value), Infinity);
+            const maxVal = data.reduce((max, p) => Math.max(max, p.value), -Infinity);
+            const range = maxVal - minVal;
+            let ratio = (value - minVal) / range;
+            if (range === 0) ratio = 0.5; // Handle case where all values are the same
+            if (ratio < 0) ratio = 0; // Clamp ratio
+            if (ratio > 1) ratio = 1;
+
+            // Interpolate between a light color and GFG green (#2f8d46)
+            const startColor = { r: 200, g: 240, b: 210 }; // Light green
+            const endColor = { r: 47, g: 141, b: 70 }; // GFG Green
+
+            const r = Math.round(startColor.r + (endColor.r - startColor.r) * ratio);
+            const g = Math.round(startColor.g + (endColor.g - startColor.g) * ratio);
+            const b = Math.round(startColor.b + (endColor.b - startColor.b) * ratio);
+
+            return `rgb(${r},${g},${b})`;
+        }
+
+
+        // --- Drawing ---
+        function draw() {
+            // Resize canvas to fit container
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw data points
+            data.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, POINT_RADIUS, 0, Math.PI * 2);
+                ctx.fillStyle = mode === 'classification' ? point.class : getValueColor(point.value);
+                ctx.fill();
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // If a prediction point exists
+            if (predictionPoint) {
+                // Always calculate neighbors and prediction when point exists
+                nearestNeighbors = getNeighbors(predictionPoint, data, k, metric);
+                 if (nearestNeighbors.length > 0) {
+                    predictedResult = mode === 'classification' ?
+                                      predictClassification(nearestNeighbors) :
+                                      predictRegression(nearestNeighbors);
+                 } else {
+                     predictedResult = mode === 'classification' ? 'N/A' : 0; // No neighbors found
+                 }
+
+
+                // Step 1: Show Distances (simplified: show lines to neighbors)
+                if (step >= 1) {
+                     ctx.strokeStyle = '#aaaaaa'; // Faint grey lines
+                     ctx.lineWidth = 1;
+                    nearestNeighbors.forEach(neighbor => {
+                        ctx.beginPath();
+                        ctx.moveTo(predictionPoint.x, predictionPoint.y);
+                         if (metric === 'euclidean') {
+                            ctx.lineTo(neighbor.x, neighbor.y);
+                         } else { // manhattan
+                            ctx.lineTo(predictionPoint.x, neighbor.y);
+                            ctx.lineTo(neighbor.x, neighbor.y);
+                         }
+                        ctx.stroke();
+                    });
+                }
+
+                // Step 2: Highlight Neighbors
+                if (step >= 2) {
+                    nearestNeighbors.forEach(neighbor => {
+                        ctx.beginPath();
+                        ctx.arc(neighbor.x, neighbor.y, POINT_RADIUS + 3, 0, Math.PI * 2); // Draw larger circle
+                        ctx.strokeStyle = '#2f8d46'; // GFG Green highlight
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    });
+                }
+
+                // Draw prediction point - changes appearance based on step
+                ctx.beginPath();
+                ctx.arc(predictionPoint.x, predictionPoint.y, PREDICTION_POINT_RADIUS, 0, Math.PI * 2);
+
+                if (step >= 3) {
+                     // Filled with predicted color/shade at step 3
+                     ctx.fillStyle = mode === 'classification' ? predictedResult : getValueColor(predictedResult);
+                     ctx.fill();
+                     ctx.strokeStyle = '#222'; // Dark border
+                     ctx.lineWidth = 1;
+                     ctx.stroke();
+
+                     // Display prediction text
+                     ctx.fillStyle = '#222222';
+                     ctx.font = 'bold 14px sans-serif';
+                     ctx.textAlign = 'center';
+                     ctx.textBaseline = 'bottom';
+                     const text = mode === 'classification' ? `Pred: Class` : `Pred: ${predictedResult.toFixed(2)}`;
+                     ctx.fillText(text, predictionPoint.x, predictionPoint.y + PREDICTION_TEXT_OFFSET_Y);
+                     if (mode === 'classification') {
+                         // Optionally draw a small colored square/circle next to text
+                          const textMetrics = ctx.measureText(text);
+                           const boxSize = 10;
+                           const boxX = predictionPoint.x + textMetrics.width / 2 + 5;
+                           const boxY = predictionPoint.y + PREDICTION_TEXT_OFFSET_Y - boxSize;
+                           ctx.fillStyle = predictedResult;
+                           ctx.fillRect(boxX, boxY, boxSize, boxSize);
+                           ctx.strokeStyle = '#222';
+                           ctx.lineWidth = 1;
+                           ctx.strokeRect(boxX, boxY, boxSize, boxSize);
+                     }
+
+
+                } else {
+                     // Draw as placeholder (unfilled) before step 3
+                     ctx.strokeStyle = '#555'; // Grey placeholder
+                     ctx.lineWidth = 2;
+                     ctx.stroke();
+                }
+            }
+        }
+
+        // --- Event Listeners ---
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            predictionPoint = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+            step = 0; // Reset step visualization on new click
+            // Enable step buttons
+            startStepBtn.disabled = false;
+            nextStepBtn.disabled = true; // Next is disabled until Start
+            resetStepBtn.disabled = true; // Reset is disabled until steps start
+
+            // Draw immediately to show the clicked point placeholder
+            draw();
+        });
+
+        modeToggle.addEventListener('change', (event) => {
+            mode = event.target.value;
+            generateData(mode); // Regenerate data for the new mode
+            predictionPoint = null; // Clear prediction point on mode change
+            step = 0; // Reset steps
+            // Disable step buttons
+            startStepBtn.disabled = true;
+            nextStepBtn.disabled = true;
+            resetStepBtn.disabled = true;
+             // Ensure K is not larger than the number of data points in the new dataset
+            kValueInput.max = data.length;
+            if (k > data.length) {
+                k = data.length;
+                kValueInput.value = k;
+                kValueDisplay.textContent = k;
+            }
+            draw(); // Redraw with new mode and data
+        });
+
+        kValueInput.addEventListener('input', (event) => {
+            k = parseInt(event.target.value);
+            kValueDisplay.textContent = k;
+            // Update prediction/neighbors instantly if a point is clicked
+            if (predictionPoint) {
+                // If step is >= 2 (showing neighbors or prediction), redraw immediately
+                // Otherwise, the drawing will happen when steps are started.
+                 if (step >= 2) {
+                     draw(); // Redraw with new K
+                 } else if (step === 0){
+                     // If idle, just update the point placeholder
+                      draw();
+                 }
+            }
+        });
+
+        metricRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                metric = event.target.value;
+                // Update prediction/neighbors instantly if a point is clicked
+                if (predictionPoint) {
+                     // If step is >= 1 (showing distances or later), redraw immediately
+                     if (step >= 1) {
+                         draw(); // Redraw with new metric
+                     } else if (step === 0){
+                         // If idle, just update the point placeholder
+                          draw();
+                     }
+                }
+            });
+        });
+
+        startStepBtn.addEventListener('click', () => {
+            if (predictionPoint) {
+                step = 1;
+                startStepBtn.disabled = true;
+                nextStepBtn.disabled = false;
+                resetStepBtn.disabled = false;
+                draw();
+            }
+        });
+
+        nextStepBtn.addEventListener('click', () => {
+             if (predictionPoint) {
+                step++;
+                if (step >= 3) { // Max step is 3 (show prediction)
+                    nextStepBtn.disabled = true;
+                }
+                draw();
+             }
+        });
+
+        resetStepBtn.addEventListener('click', () => {
+            if (predictionPoint) {
+                step = 0;
+                startStepBtn.disabled = false;
+                nextStepBtn.disabled = true;
+                resetStepBtn.disabled = true;
+                draw();
+            }
+        });
+
+        // Initial Setup
+        function init() {
+            // Set initial canvas size based on container
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            generateData(mode); // Generate initial data
+
+            // Ensure initial K is valid
+            kValueInput.max = data.length;
+            k = parseInt(kValueInput.value);
+            if (k > data.length) {
+                k = data.length > 0 ? data.length : 1; // Ensure K is at least 1 if data exists
+                kValueInput.value = k;
+            }
+            kValueDisplay.textContent = k;
+
+            draw(); // Initial draw
+        }
+
+        // Run initialization when DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Optional: Redraw if window is resized to keep points scaled, but fixed layout makes this less critical
+        // window.addEventListener('resize', draw);
+
+    </script>
+</body>
+</html>
