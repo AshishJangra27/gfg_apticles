@@ -1,0 +1,367 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVM Visual Learner</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex; /* Use flexbox for overall layout */
+            flex-direction: column; /* Stack header, main, footer vertically */
+        }
+
+        header {
+            text-align: center;
+            padding: 1vh;
+            flex-shrink: 0; /* Prevent header from shrinking */
+            border-bottom: 1px solid black; /* Simple separator */
+            font-size: 1.2em;
+        }
+
+        main {
+            flex-grow: 1; /* Main area takes up remaining vertical space */
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls vertically within main */
+            justify-content: center; /* Center canvas/controls block vertically */
+            align-items: center; /* Center canvas/controls block horizontally */
+            padding: 1vh;
+            box-sizing: border-box; /* Include padding in main's size calculation */
+        }
+
+        canvas {
+            border: 1px solid black;
+            display: block; /* Remove extra space below canvas */
+            /* Canvas display size is set dynamically by JS for responsiveness */
+            flex-shrink: 0; /* Prevent canvas from shrinking */
+        }
+
+        .controls {
+             text-align: center;
+             padding-top: 1vh;
+             flex-shrink: 0; /* Prevent controls from shrinking */
+        }
+
+        button {
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+            padding: 0.5vh 1vw;
+            cursor: pointer;
+            margin: 0.5vh;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1vh;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+            border-top: 1px solid black; /* Simple separator */
+            font-size: 0.8em;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none; /* No underline */
+            margin: 0 0.5vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Support Vector Machines (SVM) Visual Learning
+    </header>
+
+    <main>
+        <canvas id="svmCanvas"></canvas>
+        <div class="controls">
+            <button id="toggleMarginBtn">Show Margin & Support Vectors</button>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('svmCanvas');
+        const ctx = canvas.getContext('2d');
+        const toggleMarginBtn = document.getElementById('toggleMarginBtn');
+
+        let showMargin = false; // State variable to toggle margin and support vectors display
+
+        // Sample Data points (defined in a conceptual 2D space)
+        // Class 1 (e.g., +1, blue)
+        const class1 = [
+            { x: 50, y: 250 },
+            { x: 70, y: 230 },
+            { x: 90, y: 210 } // Potential Support Vector
+        ];
+        // Class 2 (e.g., -1, red)
+        const class2 = [
+            { x: 160, y: 140 }, // Potential Support Vector
+            { x: 180, y: 120 },
+            { x: 200, y: 100 }
+        ];
+
+        // Optimal hyperplane and margin lines (Ax + By + C = 0)
+        // These equations are relative to the conceptual coordinate system.
+        // Based on sample data, a suitable separating line is y = x + 50, or x - y + 50 = 0.
+        const optimalHyperplane = { A: 1, B: -1, C: 50 }; // x - y + 50 = 0
+        // Margin lines are parallel to the hyperplane and pass through the support vectors.
+        // For SV1 (90, 210): 1*90 - 1*210 + C1 = 0 => C1 = 120. Line: x - y + 120 = 0.
+        // For SV2 (160, 140): 1*160 - 1*140 + C2 = 0 => C2 = -20. Line: x - y - 20 = 0.
+        const marginLine1 = { A: 1, B: -1, C: 120 };     // Through SV1 (90, 210)
+        const marginLine2 = { A: 1, B: -1, C: -20 };     // Through SV2 (160, 140)
+
+        // Support Vectors (matching the points that define the margin lines)
+        const supportVectors = [
+            { x: 90, y: 210, class: 1 },
+            { x: 160, y: 140, class: 2 }
+        ];
+
+        const conceptualSize = 300; // Define a conceptual drawing area size (e.g., 300x300 units)
+        let scale = 1; // Scale factor from conceptual units to canvas pixels
+
+        // Function to resize canvas and redraw content
+        function resizeCanvas() {
+            const mainArea = document.querySelector('main');
+            const controlsArea = document.querySelector('.controls');
+            // Calculate available height for canvas, subtracting padding and controls height
+            const availableHeight = mainArea.clientHeight - controlsArea.offsetHeight -
+                                    (parseFloat(getComputedStyle(mainArea).paddingTop) + parseFloat(getComputedStyle(mainArea).paddingBottom));
+            const availableWidth = mainArea.clientWidth -
+                                   (parseFloat(getComputedStyle(mainArea).paddingLeft) + parseFloat(getComputedStyle(mainArea).paddingRight));
+
+            // Determine the size of the square conceptual area display, fitting within available space
+            const displaySize = Math.min(availableWidth, availableHeight);
+
+            // Set canvas display size (CSS pixels)
+            canvas.style.width = displaySize + 'px';
+            canvas.style.height = displaySize + 'px';
+
+            // Set canvas internal drawing buffer size (device pixels) for resolution
+            // Use device pixel ratio for sharper drawing on hi-dpi screens
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = displaySize * dpr;
+            canvas.height = displaySize * dpr;
+
+            // Reset transformation matrix and apply device pixel ratio scale
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Calculate the scale factor from conceptual units to display pixels
+            scale = displaySize / conceptualSize;
+
+            // Redraw everything
+            draw();
+        }
+
+        // Function to convert conceptual coordinates (0 to conceptualSize) to canvas coordinates
+        // Accounts for scaling and centering the conceptual area within the canvas display area.
+        function toCanvasCoords(x, y) {
+            const canvasWidth = canvas.width / ctx.getTransform().a; // Get actual display size (CSS pixels)
+            const canvasHeight = canvas.height / ctx.getTransform().a;
+
+            // Calculate offset to center the conceptual area within the canvas display area
+            const offsetX = (canvasWidth - conceptualSize * scale) / 2;
+            const offsetY = (canvasHeight - conceptualSize * scale) / 2;
+
+            return {
+                x: x * scale + offsetX,
+                y: y * scale + offsetY
+            };
+        }
+
+        // Draw function - Clears canvas and draws all elements
+        function draw() {
+            // Clear canvas using the actual display size
+            ctx.clearRect(0, 0, canvas.width / ctx.getTransform().a, canvas.height / ctx.getTransform().a);
+
+            // Draw data points
+            class1.forEach(p => drawPoint(p.x, p.y, 5, 'blue'));
+            class2.forEach(p => drawPoint(p.x, p.y, 5, 'red'));
+
+            // Draw optimal hyperplane
+            drawLine(optimalHyperplane, 'black', 2);
+
+            // Draw margin lines and highlight Support Vectors if the state is true
+            if (showMargin) {
+                drawLine(marginLine1, 'black', 1, [5, 5]); // Dashed line for margin boundary
+                drawLine(marginLine2, 'black', 1, [5, 5]); // Dashed line for margin boundary
+
+                // Highlight Support Vectors
+                supportVectors.forEach(sv => {
+                    drawPoint(sv.x, sv.y, 8, sv.class === 1 ? 'blue' : 'red', true); // Draw point with black outline
+                });
+            }
+        }
+
+        // Helper function to draw a point (circle) on the canvas
+        // x, y are conceptual coordinates
+        function drawPoint(x, y, radius, color, outline = false) {
+            const { x: canvasX, y: canvasY } = toCanvasCoords(x, y);
+            const scaledRadius = radius * scale;
+
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, scaledRadius, 0, Math.PI * 2);
+
+            if (outline) {
+                // Draw black outline
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2 * scale; // Scaled line width
+                ctx.stroke();
+
+                // Draw inner circle (the point color)
+                ctx.fillStyle = color;
+                ctx.fill();
+            } else {
+                 // Draw solid circle
+                 ctx.fillStyle = color;
+                 ctx.fill();
+            }
+        }
+
+        // Helper function to draw a line based on its equation Ax + By + C = 0
+        // Finds intersection points with the conceptual boundary (0 to conceptualSize)
+        // Then converts these conceptual points to canvas coordinates for drawing.
+        function drawLine(line, color, width, dash = []) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width * scale; // Scaled line width
+            ctx.setLineDash(dash);
+
+            const { A, B, C } = line;
+            const bounds = conceptualSize; // Conceptual boundary size
+
+            const points = []; // Store conceptual intersection points
+
+            // Add a point if it's within conceptual bounds [0-bounds] with tolerance
+            const addPoint = (x, y) => {
+                if (x >= -1e-3 && x <= bounds + 1e-3 && y >= -1e-3 && y <= bounds + 1e-3) {
+                     // Clamp points exactly to bounds if they are very close
+                     const clampedX = Math.max(0, Math.min(bounds, x));
+                     const clampedY = Math.max(0, Math.min(bounds, y));
+                    points.push({ x: clampedX, y: clampedY });
+                }
+            };
+
+            // Find intersections with the four boundaries of the conceptual square [0, bounds] x [0, bounds]
+            // Line equation: Ax + By + C = 0
+
+            // Intersection with x = 0 boundary (vertical line)
+            if (Math.abs(B) > 1e-6) { // Line is not perfectly vertical
+                const y = (-A * 0 - C) / B;
+                addPoint(0, y);
+            }
+
+            // Intersection with x = bounds boundary (vertical line)
+            if (Math.abs(B) > 1e-6) { // Line is not perfectly vertical
+                const y = (-A * bounds - C) / B;
+                addPoint(bounds, y);
+            }
+
+            // Intersection with y = 0 boundary (horizontal line)
+             if (Math.abs(A) > 1e-6) { // Line is not perfectly horizontal
+                const x = (-B * 0 - C) / A;
+                addPoint(x, 0);
+             }
+
+            // Intersection with y = bounds boundary (horizontal line)
+             if (Math.abs(A) > 1e-6) { // Line is not perfectly horizontal
+                const x = (-B * bounds - C) / A;
+                addPoint(x, bounds);
+             }
+
+             // Handle cases where the line is perfectly vertical or horizontal
+             // Vertical line: A != 0, B is very close to 0. Check intersections with y=0 and y=bounds.
+             if (Math.abs(A) > 1e-6 && Math.abs(B) < 1e-6) {
+                 const x = -C / A; // Vertical line x = constant
+                 addPoint(x, 0);
+                 addPoint(x, bounds);
+             }
+
+             // Horizontal line: B != 0, A is very close to 0. Check intersections with x=0 and x=bounds.
+             if (Math.abs(B) > 1e-6 && Math.abs(A) < 1e-6) {
+                 const y = -C / B; // Horizontal line y = constant
+                 addPoint(0, y);
+                 addPoint(bounds, y);
+             }
+
+
+            // Ensure collected points are unique (e.g., points at corners might be added twice)
+            const uniquePoints = [];
+            points.forEach(p => {
+                // Check if a point already exists very close to the current one
+                if (!uniquePoints.some(up => Math.sqrt(Math.pow(up.x - p.x, 2) + Math.pow(up.y - p.y, 2)) < 1e-3)) {
+                    uniquePoints.push(p);
+                }
+            });
+
+            // Sort unique points to correctly draw the line segment within the bounds
+            uniquePoints.sort((p1, p2) => {
+                // Sort primarily by x, secondarily by y to get points in order along the line
+                if (Math.abs(p1.x - p2.x) > 1e-3) return p1.x - p2.x;
+                return p1.y - p2.y;
+            });
+
+
+            // Draw the line segment using the two outermost points found within the bounds
+            if (uniquePoints.length >= 2) {
+                 // Use the first and last point after sorting
+                 const p1 = uniquePoints[0];
+                 const p2 = uniquePoints[uniquePoints.length - 1];
+
+                 // Convert conceptual points to canvas coordinates before drawing
+                 const canvasP1 = toCanvasCoords(p1.x, p1.y);
+                 const canvasP2 = toCanvasCoords(p2.x, p2.y);
+
+                 ctx.moveTo(canvasP1.x, canvasP1.y);
+                 ctx.lineTo(canvasP2.x, canvasP2.y);
+            } else {
+                 // If less than 2 unique points, the line segment isn't visible within the conceptual square.
+                 // This happens if the line is entirely outside or just touches a corner/edge.
+            }
+
+            ctx.stroke(); // Draw the line
+            ctx.setLineDash([]); // Reset dash pattern for future drawings
+        }
+
+        // --- Event Listeners ---
+
+        // Toggle margin and support vectors visibility on button click
+        toggleMarginBtn.addEventListener('click', () => {
+            showMargin = !showMargin; // Flip state
+            toggleMarginBtn.textContent = showMargin ? 'Hide Margin & Support Vectors' : 'Show Margin & Support Vectors'; // Update button text
+            draw(); // Redraw canvas to reflect state change
+        });
+
+        // Resize and redraw canvas when window is resized
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Initial Setup ---
+
+        // Set initial canvas size and draw the content
+        resizeCanvas();
+        // Initial draw is called inside resizeCanvas, so no extra draw() needed here.
+
+    </script>
+</body>
+</html>

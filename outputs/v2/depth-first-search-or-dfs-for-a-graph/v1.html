@@ -1,0 +1,300 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            flex-shrink: 0;
+            height: 8vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            border-bottom: 1px solid black;
+        }
+
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1vh;
+            box-sizing: border-box;
+        }
+
+        #controls {
+            flex-shrink: 0;
+            margin-bottom: 1vh;
+            display: flex;
+            gap: 1em;
+        }
+
+        button {
+            font-family: monospace;
+            background-color: black;
+            color: white;
+            border: 1px solid black;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.1s ease;
+        }
+
+        button:hover {
+            background-color: #333;
+        }
+         button:disabled {
+            background-color: #eee;
+            color: #aaa;
+            border-color: #eee;
+            cursor: not-allowed;
+        }
+
+
+        #dfsCanvas {
+            flex-grow: 1;
+            width: 98vw;
+            border: 1px solid black;
+            box-sizing: border-box;
+        }
+
+        footer {
+            flex-shrink: 0;
+            height: 5vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid black;
+            font-size: 0.8em;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1em;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        Depth First Search Visualizer
+    </header>
+
+    <main>
+        <div id="controls">
+            <button id="stepButton">Step DFS</button>
+            <button id="resetButton">Reset</button>
+        </div>
+        <canvas id="dfsCanvas"></canvas>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const graph = {
+            'A': ['B', 'C'],
+            'B': ['D', 'E'],
+            'C': ['F'],
+            'D': [],
+            'E': ['F'],
+            'F': []
+        };
+
+        const nodePositions = {
+            'A': { x: 100, y: 100 },
+            'B': { x: 200, y: 200 },
+            'C': { x: 200, y: 0 },
+            'D': { x: 300, y: 300 },
+            'E': { x: 300, y: 100 },
+            'F': { x: 400, y: 100 }
+        };
+
+        const canvas = document.getElementById('dfsCanvas');
+        const ctx = canvas.getContext('2d');
+        const stepButton = document.getElementById('stepButton');
+        const resetButton = document.getElementById('resetButton');
+
+        let visited;
+        let visitOrder;
+        let stack;
+        let isFinished;
+
+        function resizeCanvas() {
+            const main = canvas.parentElement;
+            const controls = document.getElementById('controls');
+            const controlsMarginBottom = parseFloat(getComputedStyle(controls).marginBottom);
+            const availableHeight = main.offsetHeight - controls.offsetHeight - controlsMarginBottom - 2;
+            canvas.width = main.offsetWidth - 2;
+            canvas.height = availableHeight;
+            drawGraph();
+        }
+
+        function getNodeCoordinates(node) {
+             let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+             for(const key in nodePositions) {
+                 const pos = nodePositions[key];
+                 if(pos.x < minX) minX = pos.x;
+                 if(pos.y < minY) minY = pos.y;
+                 if(pos.x > maxX) maxX = pos.x;
+                 if(pos.y > maxY) maxY = pos.y;
+             }
+
+             const graphWidth = maxX - minX;
+             const graphHeight = maxY - minY;
+             const padding = 30;
+
+             const scaleX = (canvas.width - padding * 2) / graphWidth;
+             const scaleY = (canvas.height - padding * 2) / graphHeight;
+             const scale = Math.min(scaleX, scaleY);
+
+             const scaledGraphWidth = graphWidth * scale;
+             const scaledGraphHeight = graphHeight * scale;
+
+             const offsetX = (canvas.width - scaledGraphWidth) / 2 - minX * scale;
+             const offsetY = (canvas.height - scaledGraphHeight) / 2 - minY * scale;
+
+             const pos = nodePositions[node];
+             if (!pos) return null;
+
+             return {
+                x: pos.x * scale + offsetX,
+                y: pos.y * scale + offsetY
+             };
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 1;
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const nodeRadius = 15;
+
+            ctx.strokeStyle = '#ccc';
+             for (const node in graph) {
+                const p1 = getNodeCoordinates(node);
+                if (!p1) continue;
+                for (const neighbor of graph[node]) {
+                    const p2 = getNodeCoordinates(neighbor);
+                    if (p2) {
+                         ctx.beginPath();
+                         ctx.moveTo(p1.x, p1.y);
+                         ctx.lineTo(p2.x, p2.y);
+                         ctx.stroke();
+                    }
+                }
+            }
+
+             if (stack.length > 0) {
+                 ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                 for (const node of stack) {
+                      const pos = getNodeCoordinates(node);
+                      if (pos) {
+                          ctx.beginPath();
+                          ctx.arc(pos.x, pos.y, nodeRadius + 5, 0, Math.PI * 2);
+                          ctx.fill();
+                      }
+                 }
+             }
+
+            for (const node in nodePositions) {
+                const pos = getNodeCoordinates(node);
+                if (!pos) continue;
+
+                const isVisited = visited[node];
+                const visitNumber = visitOrder.indexOf(node);
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+                ctx.fillStyle = isVisited ? 'black' : 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = isVisited ? 'white' : 'black';
+                 if (visitNumber !== -1) {
+                     ctx.fillText(visitNumber + 1, pos.x, pos.y);
+                 } else {
+                     ctx.fillText(node, pos.x, pos.y);
+                 }
+            }
+        }
+
+        function resetDemo() {
+            visited = {};
+            visitOrder = [];
+            stack = [];
+            isFinished = false;
+
+            stack.push('A');
+            visited['A'] = true;
+            visitOrder.push('A');
+
+            stepButton.disabled = false;
+            drawGraph();
+        }
+
+        function stepDFS() {
+            if (isFinished || stack.length === 0) {
+                 isFinished = true;
+                 stepButton.disabled = true;
+                 drawGraph();
+                 return;
+            }
+
+            const currentNode = stack.pop();
+
+            const neighbors = graph[currentNode] || [];
+            const unvisitedNeighbors = neighbors.filter(neighbor => !visited[neighbor]);
+
+            for (let i = unvisitedNeighbors.length - 1; i >= 0; i--) {
+                const neighbor = unvisitedNeighbors[i];
+                visited[neighbor] = true;
+                visitOrder.push(neighbor);
+                stack.push(neighbor);
+            }
+
+            drawGraph();
+
+             if (stack.length === 0) {
+                 isFinished = true;
+                 stepButton.disabled = true;
+             }
+        }
+
+        stepButton.addEventListener('click', stepDFS);
+        resetButton.addEventListener('click', resetDemo);
+
+        window.addEventListener('resize', resizeCanvas);
+
+        resizeCanvas();
+        resetDemo();
+    </script>
+
+</body>
+</html>

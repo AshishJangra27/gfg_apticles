@@ -1,0 +1,334 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Visualizer</title>
+    <style>
+        /* Global Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Essential: Prevent scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Essential: Full viewport height */
+            box-sizing: border-box;
+        }
+
+        /* Header Styles */
+        header {
+            width: 100vw; /* Full viewport width */
+            height: 8vh; /* Fixed height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5vh;
+            border-bottom: 1px solid black;
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1; /* Takes remaining vertical space */
+            width: 100vw; /* Full viewport width */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically within main */
+            align-items: center; /* Center content horizontally within main */
+            padding: 2vh 0; /* Add some padding top/bottom */
+            box-sizing: border-box;
+        }
+
+        /* Array Container - The core visualization area */
+        #array-container {
+            display: flex;
+            justify-content: center; /* Center array elements */
+            align-items: center;
+            flex-wrap: nowrap; /* Prevent wrapping */
+            margin-bottom: 3vh;
+            max-width: 95vw; /* Ensure array fits width */
+            height: 10vh; /* Fixed height for element display */
+            box-sizing: border-box;
+        }
+
+        /* Array Element Style */
+        .array-element {
+            width: 5vw; /* Fixed width relative to viewport */
+            height: 5vw; /* Fixed height relative to viewport - making it square */
+            line-height: 5vw; /* Vertically center text */
+            text-align: center;
+            border: 1px solid black;
+            margin: 0 0.5vw; /* Spacing between elements */
+            font-size: 2.5vh; /* Responsive font size */
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease; /* Smooth transitions */
+            display: flex; /* Use flex to center text */
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Element States */
+        .state-initial { background-color: white; }
+        .state-low { background-color: #ffff99; } /* Light yellow */
+        .state-high { background-color: #ffff99; } /* Light yellow */
+        .state-mid { background-color: #90ee90; } /* Light green */
+        .state-found { background-color: #add8e6; } /* Light blue */
+        .state-eliminated {
+             background-color: #f0f0f0; /* Light grey */
+             color: #a0a0a0; /* Dim text */
+             border-color: #d0d0d0;
+        }
+
+
+        /* Controls Area */
+        #controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 3vh;
+        }
+
+        button {
+            font-family: monospace;
+            font-size: 2.5vh;
+            padding: 1vh 2vw;
+            margin: 0 1vw;
+            cursor: pointer;
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Status Message */
+        #status {
+            font-size: 2.5vh;
+            text-align: center;
+            min-height: 3vh; /* Reserve space */
+        }
+
+        /* Footer Styles */
+        footer {
+            width: 100vw; /* Full viewport width */
+            height: 5vh; /* Fixed height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2vh;
+            border-top: 1px solid black;
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        Binary Search Visualizer
+    </header>
+
+    <main>
+        <div id="array-container">
+            <!-- Array elements will be dynamically added here by JavaScript -->
+        </div>
+
+        <div id="controls">
+            <button id="start-btn">Start Search</button>
+            <button id="next-btn" disabled>Next Step</button>
+            <button id="reset-btn">Reset</button>
+        </div>
+
+        <div id="status">
+            Click "Start Search" to begin.
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Configuration ---
+        const sortedArray = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]; // Example sorted array
+        let target = null; // Target value to search for
+
+        // --- State Variables ---
+        let low = 0;
+        let high = sortedArray.length - 1;
+        let mid = -1; // -1 indicates no mid yet
+        let searchState = 'initial'; // 'initial', 'searching', 'found', 'notFound'
+
+        // --- DOM Elements ---
+        const arrayContainer = document.getElementById('array-container');
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const statusDiv = document.getElementById('status');
+
+        // --- Functions ---
+
+        // Initialize the visual array in the DOM
+        function createArrayVisualization() {
+            arrayContainer.innerHTML = ''; // Clear previous elements
+            sortedArray.forEach((value, index) => {
+                const element = document.createElement('div');
+                element.classList.add('array-element');
+                element.classList.add('state-initial'); // Start with initial state
+                element.textContent = value;
+                element.dataset.index = index; // Store index for easy lookup
+                arrayContainer.appendChild(element);
+            });
+        }
+
+        // Update the visual state of array elements based on current algorithm state
+        function updateVisualization() {
+            const elements = arrayContainer.querySelectorAll('.array-element');
+            elements.forEach((el, index) => {
+                el.className = 'array-element'; // Reset classes
+
+                if (searchState === 'searching' || searchState === 'found' || searchState === 'notFound') {
+                     // Elements outside the current [low, high] range are eliminated
+                    if (index < low || index > high) {
+                         el.classList.add('state-eliminated');
+                    } else {
+                         el.classList.add('state-initial'); // Elements within range are back to initial state before highlighting low/high/mid
+                    }
+                } else {
+                    // Initial state
+                    el.classList.add('state-initial');
+                }
+
+            });
+
+             // Add current state highlights *after* eliminating others
+             elements.forEach((el, index) => {
+                if (searchState === 'searching' || searchState === 'found') {
+                    if (index === low) el.classList.add('state-low');
+                    if (index === high) el.classList.add('state-high');
+                    if (index === mid) el.classList.add('state-mid');
+
+                    if (searchState === 'found' && index === mid) {
+                        el.classList.add('state-found'); // Special highlight for found element
+                    }
+                }
+            });
+        }
+
+        // Start the search process
+        function startSearch() {
+            // Pick a random target value from the array for demo purposes
+            target = sortedArray[Math.floor(Math.random() * sortedArray.length)];
+            // Or pick a value not in the array sometimes
+             if (Math.random() < 0.3) { // 30% chance of picking a value not in array
+                 const constNotInArray = [1, 10, 30, 60, 100];
+                 target = constNotInArray[Math.floor(Math.random() * constNotInArray.length)];
+             }
+
+
+            low = 0;
+            high = sortedArray.length - 1;
+            mid = -1;
+            searchState = 'searching';
+
+            statusDiv.textContent = `Searching for target: ${target}`;
+            updateVisualization(); // Show initial range
+
+            startBtn.disabled = true;
+            nextBtn.disabled = false;
+            resetBtn.disabled = false;
+        }
+
+        // Perform one step of the binary search algorithm
+        function nextStep() {
+            if (low > high) {
+                // Target not found
+                searchState = 'notFound';
+                statusDiv.textContent = `Target ${target} not found in the array. Search finished.`;
+                nextBtn.disabled = true;
+                updateVisualization(); // Final state with eliminated elements
+                return;
+            }
+
+            // Calculate middle index
+            mid = Math.floor((low + high) / 2);
+            const midValue = sortedArray[mid];
+
+            statusDiv.textContent = `Comparing ${target} with middle element ${midValue} at index ${mid}.`;
+            updateVisualization(); // Highlight current low, high, mid
+
+            // Use a small delay to allow the highlight to be seen before updating state for the next step
+            setTimeout(() => {
+                if (midValue === target) {
+                    // Target found
+                    searchState = 'found';
+                    statusDiv.textContent = `Target ${target} found at index ${mid}. Search finished.`;
+                    nextBtn.disabled = true;
+                    updateVisualization(); // Show found state
+                } else if (midValue < target) {
+                    // Target is in the right half
+                    statusDiv.textContent += ` Target is greater (${target} > ${midValue}). Searching the right half.`;
+                    low = mid + 1; // Move low to mid + 1
+                     updateVisualization(); // Show new range (low updated)
+                } else {
+                    // Target is in the left half
+                     statusDiv.textContent += ` Target is smaller (${target} < ${midValue}). Searching the left half.`;
+                    high = mid - 1; // Move high to mid - 1
+                     updateVisualization(); // Show new range (high updated)
+                }
+            }, 600); // Short delay in milliseconds
+
+        }
+
+        // Reset the visualization and algorithm state
+        function resetSearch() {
+            low = 0;
+            high = sortedArray.length - 1;
+            mid = -1;
+            target = null;
+            searchState = 'initial';
+
+            createArrayVisualization(); // Recreate elements
+            statusDiv.textContent = 'Click "Start Search" to begin.';
+
+            startBtn.disabled = false;
+            nextBtn.disabled = true;
+            resetBtn.disabled = false; // Always enabled after first start
+        }
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', startSearch);
+        nextBtn.addEventListener('click', nextStep);
+        resetBtn.addEventListener('click', resetSearch);
+
+        // --- Initialization ---
+        createArrayVisualization(); // Build the initial array display on page load
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,332 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic SVM Concept Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: stretch;
+        }
+
+        header {
+            height: 8vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid black;
+            box-sizing: border-box;
+        }
+
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1vh;
+            box-sizing: border-box;
+        }
+
+        #visualizationArea {
+            width: 98vw;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 1px solid black;
+            max-width: 100%;
+            max-height: calc(100% - 40px);
+            display: block;
+            background-color: white;
+        }
+
+        button {
+            margin-top: 1vh;
+            padding: 0.8vh 1.5vw;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        button:hover {
+            background-color: #eee;
+        }
+
+        footer {
+            height: 5vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid black;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Basic SVM Visualizer</h1>
+    </header>
+
+    <main>
+        <div id="visualizationArea">
+            <canvas id="svmCanvas"></canvas>
+            <button id="generateButton">Generate New Data & Visualize</button>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <span>|</span>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('svmCanvas');
+        const ctx = canvas.getContext('2d');
+        const generateButton = document.getElementById('generateButton');
+
+        let CANVAS_SIZE = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7);
+        const POINT_RADIUS = 5;
+        const NUM_POINTS = 60;
+        const CLASS1_COLOR = 'blue';
+        const CLASS2_COLOR = 'red';
+        const SUPPORT_VECTOR_COLOR = 'green';
+        const HYPERPLANE_COLOR = 'black';
+        const MARGIN_COLOR = '#ccc';
+        const MARGIN_LINE_DASH = [5, 5];
+
+        function generateLinearlySeparableData(numPoints, size) {
+            const data = [];
+            const slope = 0.6; // Fixed slope for simplicity
+            const initialOffset = size / 3; // Base offset
+            const noiseMagnitude = size / 15; // Magnitude of noise
+
+            for (let i = 0; i < numPoints; i++) {
+                const x = Math.random() * size;
+                // Calculate base y on the separating line
+                const baseLineY = slope * x + initialOffset;
+
+                // Add noise and assign label based on position relative to the line
+                // Points significantly above the line get label 1
+                // Points significantly below get label -1
+                const noise = (Math.random() - 0.5) * noiseMagnitude * 2;
+                const y = baseLineY + noise + (i % 2 === 0 ? size/20 + Math.random()*size/30 : -(size/20 + Math.random()*size/30)); // Add separation margin
+
+                const label = (y > baseLineY) ? 1 : -1; // Simple label based on noise direction
+
+                 // Ensure points are within canvas bounds (simple clipping)
+                const clampedX = Math.max(0, Math.min(size, x));
+                const clampedY = Math.max(0, Math.min(size, y));
+
+                data.push({ x: clampedX, y: clampedY, label: label });
+            }
+             // Sort data by label to draw one class then the other for layering if needed (not strictly necessary here)
+            data.sort((a, b) => a.label - b.label);
+            return data;
+        }
+
+
+        function calculateSimplifiedSVM(data, size) {
+            const slope = 0.6; // Assume slope based on data generation
+
+            // Calculate v = y - slope * x for all points
+            const projectedValues = data.map(point => ({
+                v: point.y - slope * point.x,
+                label: point.label,
+                point: point
+            }));
+
+            // Find min v for class 1 and max v for class -1
+            let minV1 = Infinity;
+            let maxV_1 = -Infinity;
+
+            projectedValues.forEach(({ v, label }) => {
+                if (label === 1) {
+                    minV1 = Math.min(minV1, v);
+                } else {
+                    maxV_1 = Math.max(maxV_1, v);
+                }
+            });
+
+            // Hyperplane intercept is the midpoint
+            const hyperplane_b = (minV1 + maxV_1) / 2;
+
+            // Margin line intercepts
+            const margin_plus_b = minV1;
+            const margin_minus_b = maxV_1;
+
+            // Identify support vectors: points closest to the margin lines
+             const SV_TOLERANCE = 1; // Tolerance in the 'v' space
+            const supportVectors = projectedValues
+                .filter(({ v }) =>
+                    Math.abs(v - minV1) < SV_TOLERANCE || Math.abs(v - maxV_1) < SV_TOLERANCE
+                )
+                .map(item => item.point);
+
+
+            return {
+                hyperplane: { slope: slope, intercept: hyperplane_b },
+                marginPlus: { slope: slope, intercept: margin_plus_b },
+                marginMinus: { slope: slope, intercept: margin_minus_b },
+                supportVectors: supportVectors
+            };
+        }
+
+
+        function drawPoints(data, supportVectors) {
+            data.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, POINT_RADIUS, 0, Math.PI * 2, false);
+                ctx.fillStyle = point.label === 1 ? CLASS1_COLOR : CLASS2_COLOR;
+                ctx.fill();
+
+                const isSupportVector = supportVectors.some(sv => sv.x === point.x && sv.y === point.y && sv.label === point.label);
+                if (isSupportVector) {
+                    ctx.strokeStyle = SUPPORT_VECTOR_COLOR;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else {
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawLine(slope, intercept, color, isDashed = false, size) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            if (isDashed) {
+                ctx.setLineDash(MARGIN_LINE_DASH);
+            } else {
+                ctx.setLineDash([]);
+            }
+
+            const pointsOnBoundary = [];
+
+            // Intersections with x=0 and x=size
+            let y0 = slope * 0 + intercept;
+            if (y0 >= 0 && y0 <= size) pointsOnBoundary.push({x: 0, y: y0});
+
+            let yW = slope * size + intercept;
+             if (yW >= 0 && yW <= size) pointsOnBoundary.push({x: size, y: yW});
+
+            // Intersections with y=0 and y=size
+            if (slope !== 0) {
+                let x0 = (0 - intercept) / slope;
+                if (x0 > 0 && x0 < size) pointsOnBoundary.push({x: x0, y: 0}); // Check strictly between 0 and size to avoid duplicates
+                                                                                // if slope is very large/small hitting corners
+
+                let xH = (size - intercept) / slope;
+                if (xH > 0 && xH < size) pointsOnBoundary.push({x: xH, y: size});
+            } else { // Horizontal line y = intercept
+                 if (intercept >= 0 && intercept <= size) {
+                     pointsOnBoundary.push({x: 0, y: intercept});
+                     pointsOnBoundary.push({x: size, y: intercept});
+                 }
+            }
+
+
+            // Need exactly two points to draw the segment within the canvas
+            // Due to potential floating point issues or corners, might get more or less.
+            // Filter unique points based on close coordinates.
+             const uniquePoints = [];
+             const tolerance = 0.1; // Coordinate tolerance
+             pointsOnBoundary.forEach(p1 => {
+                 if (!uniquePoints.some(p2 => Math.abs(p1.x - p2.x) < tolerance && Math.abs(p1.y - p2.y) < tolerance)) {
+                     uniquePoints.push(p1);
+                 }
+             });
+
+             if (uniquePoints.length >= 2) {
+                 // Take the first two unique points found that are within bounds
+                 // A more robust approach would sort and take endpoints, but for fixed slope it's simpler.
+                 ctx.moveTo(uniquePoints[0].x, uniquePoints[0].y);
+                 ctx.lineTo(uniquePoints[1].x, uniquePoints[1].y);
+             } else if (uniquePoints.length === 1) {
+                 // Line might be tangent or endpoint might be a corner
+                 // This case is tricky, might not draw anything or just a point
+                 // For this simplified demo, we'll skip drawing if only one point is found
+             }
+             // If uniquePoints.length is 0, the line is outside the canvas
+
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+
+        function drawVisualization(data, svmResult, size) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw margin lines first (behind hyperplane)
+            drawLine(svmResult.marginPlus.slope, svmResult.marginPlus.intercept, MARGIN_COLOR, true, size);
+            drawLine(svmResult.marginMinus.slope, svmResult.marginMinus.intercept, MARGIN_COLOR, true, size);
+
+            // Draw the hyperplane
+            drawLine(svmResult.hyperplane.slope, svmResult.hyperplane.intercept, HYPERPLANE_COLOR, false, size);
+
+            // Draw points (Support Vectors will have a border)
+            drawPoints(data, svmResult.supportVectors);
+        }
+
+        function init() {
+            CANVAS_SIZE = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7);
+            canvas.width = CANVAS_SIZE;
+            canvas.height = CANVAS_SIZE;
+
+            const data = generateLinearlySeparableData(NUM_POINTS, CANVAS_SIZE);
+            const svmResult = calculateSimplifiedSVM(data, CANVAS_SIZE);
+            drawVisualization(data, svmResult, CANVAS_SIZE);
+        }
+
+        generateButton.addEventListener('click', () => {
+            const data = generateLinearlySeparableData(NUM_POINTS, CANVAS_SIZE);
+            const svmResult = calculateSimplifiedSVM(data, CANVAS_SIZE);
+            drawVisualization(data, svmResult, CANVAS_SIZE);
+        });
+
+        window.addEventListener('resize', () => {
+             // Check if the size *really* changed significantly before redrawing
+            const newCanvasSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7);
+            if (Math.abs(newCanvasSize - CANVAS_SIZE) > 5) { // Use a small tolerance
+                 init(); // Recalculate size, regenerate data, and redraw
+            }
+        });
+
+        init();
+
+    </script>
+
+</body>
+</html>

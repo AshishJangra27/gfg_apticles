@@ -1,0 +1,494 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        /* Minimalist Base */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ensure viewport height */
+            width: 100vw; /* Ensure viewport width */
+        }
+
+        /* Layout */
+        header {
+            text-align: center;
+            padding: 1vh;
+            flex-shrink: 0; /* Don't shrink header */
+            border-bottom: 1px solid black;
+            font-size: 1.5vh; /* Relative font size */
+        }
+
+        .main-content {
+            flex-grow: 1; /* Fill available space */
+            display: flex;
+            flex-direction: column; /* Stack controls and canvas */
+            justify-content: center;
+            align-items: center;
+            padding: 1vh;
+            box-sizing: border-box; /* Include padding in dimensions */
+            overflow: hidden; /* Ensure no overflow within main content */
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1vh;
+            flex-shrink: 0;
+            font-size: 1.5vh;
+        }
+
+        .controls label {
+            margin-right: 1vw;
+        }
+
+        .controls input[type="range"] {
+             width: 20vw; /* Responsive width for slider */
+        }
+
+         .result {
+            margin-top: 1vh;
+            font-weight: bold;
+            font-size: 1.5vh;
+         }
+
+        canvas {
+            border: 1px solid black;
+            max-width: 95vw; /* Ensure canvas fits within viewport */
+            max-height: 70vh; /* Ensure canvas fits within viewport */
+            flex-grow: 1; /* Allow canvas to take space */
+            cursor: pointer; /* Indicate interactivity */
+        }
+
+        footer {
+            text-align: center;
+            padding: 1vh;
+            flex-shrink: 0; /* Don't shrink footer */
+            border-top: 1px solid black;
+            font-size: 1.5vh;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+         /* Minimalist Elements */
+        button {
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+            padding: 0.5vh 1vw;
+            font-family: monospace;
+            cursor: pointer;
+            font-size: 1.5vh;
+            margin-left: 1vw;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        KNN Visualizer
+    </header>
+
+    <div class="main-content">
+        <div class="controls">
+            <label for="kSlider">K:</label>
+            <input type="range" id="kSlider" min="1" max="10" value="3">
+            <span id="kValue">3</span>
+            <button id="resetBtn">Reset Points</button>
+        </div>
+         <div class="result" id="predictionResult">Click canvas to add test point</div>
+        <canvas id="knnCanvas"></canvas>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kSlider = document.getElementById('kSlider');
+        const kValueSpan = document.getElementById('kValue');
+        const predictionResultDiv = document.getElementById('predictionResult');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let dataPoints = []; // Array of { x, y, class }
+        let testPoint = null; // { x, y }
+        let k = parseInt(kSlider.value);
+
+        // --- Configuration ---
+        const pointSize = 8;
+        const classColors = { 'A': 'blue', 'B': 'red', 'C': 'green' };
+        const testPointColor = 'black';
+        const neighborLineColor = '#ccc';
+        const neighborLineWidth = 1;
+        const initialDataPointCount = 30; // Total initial points
+        const maxK = 10; // Max K value for slider
+        const initialClasses = ['A', 'B']; // Classes to generate initially
+
+        // --- Helper Functions ---
+        function distance(p1, p2) {
+            return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+        }
+
+        function generateRandomPoints(count, classes) {
+            const points = [];
+            for (let i = 0; i < count; i++) {
+                points.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    class: classes[Math.floor(Math.random() * classes.length)]
+                });
+            }
+            return points;
+        }
+
+         function generateClusteredPoints(countPerCluster = 15, classes = ['A', 'B']) {
+            const points = [];
+            const clusters = [
+                { x: canvas.width * 0.25, y: canvas.height * 0.25, class: classes[0] },
+                { x: canvas.width * 0.75, y: canvas.height * 0.75, class: classes[1] }
+            ];
+
+            clusters.forEach(cluster => {
+                for (let i = 0; i < countPerCluster; i++) {
+                     const angle = Math.random() * Math.PI * 2;
+                     const radius = Math.random() * Math.min(canvas.width, canvas.height) * 0.1; // Spread within ~10% radius
+                    points.push({
+                        x: cluster.x + radius * Math.cos(angle),
+                        y: cluster.y + radius * Math.sin(angle),
+                        class: cluster.class
+                    });
+                }
+            });
+             // Add a few outliers or points for a third class if desired
+             if (classes.length > 2) {
+                 const thirdCluster = { x: canvas.width * 0.25, y: canvas.height * 0.75, class: classes[2] };
+                 for (let i = 0; i < countPerCluster/2; i++) {
+                     const angle = Math.random() * Math.PI * 2;
+                     const radius = Math.random() * Math.min(canvas.width, canvas.height) * 0.05;
+                      points.push({
+                        x: thirdCluster.x + radius * Math.cos(angle),
+                        y: thirdCluster.y + radius * Math.sin(angle),
+                        class: thirdCluster.class
+                    });
+                 }
+             }
+
+
+            return points;
+         }
+
+
+        function classifyTestPoint() {
+            if (!testPoint || dataPoints.length === 0) {
+                predictionResultDiv.textContent = 'Click canvas to add test point';
+                return;
+            }
+
+            // Calculate distances to all data points
+            const distances = dataPoints.map(point => ({
+                point: point,
+                distance: distance(testPoint, point)
+            }));
+
+            // Sort by distance and get the k nearest
+            distances.sort((a, b) => a.distance - b.distance);
+            const neighbors = distances.slice(0, Math.min(k, dataPoints.length)); // Handle k > dataPoints
+
+            // Count class occurrences among neighbors
+            const classCounts = {};
+            neighbors.forEach(neighbor => {
+                classCounts[neighbor.point.class] = (classCounts[neighbor.point.class] || 0) + 1;
+            });
+
+            // Find the majority class
+            let predictedClass = 'Undetermined';
+            let maxCount = 0;
+            // Convert counts object to array to sort or find max
+            const countsArray = Object.entries(classCounts);
+
+            if (countsArray.length > 0) {
+                // Sort by count descending, then class name ascending for tie-breaking (optional)
+                countsArray.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+                predictedClass = countsArray[0][0]; // The class with the highest count
+                 maxCount = countsArray[0][1];
+
+                 // Check for ties (simple tie-breaking: first class in sorted list wins)
+                 // If we wanted more sophisticated tie-breaking (e.g., look at k-1, k+1), it would be more complex.
+                 // For this simple demo, the sort order handles ties.
+            }
+
+
+            predictionResultDiv.textContent = `Predicted Class: ${predictedClass} (k=${k})`;
+            return { neighbors: neighbors.map(d => d.point), predictedClass: predictedClass };
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let classificationResult = null;
+            if (testPoint) {
+                 classificationResult = classifyTestPoint();
+            } else {
+                predictionResultDiv.textContent = 'Click canvas to add test point';
+            }
+
+
+            // Draw data points
+            dataPoints.forEach(point => {
+                ctx.fillStyle = classColors[point.class] || 'gray'; // Default to gray if class not in colors
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, pointSize, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw test point and neighbor lines
+            if (testPoint) {
+                 // Draw neighbor lines first (underneath test point)
+                if (classificationResult && classificationResult.neighbors) {
+                    ctx.strokeStyle = neighborLineColor;
+                    ctx.lineWidth = neighborLineWidth;
+                    classificationResult.neighbors.forEach(neighbor => {
+                        ctx.beginPath();
+                        ctx.moveTo(testPoint.x, testPoint.y);
+                        ctx.lineTo(neighbor.x, neighbor.y);
+                        ctx.stroke();
+                    });
+                }
+
+                // Draw test point
+                ctx.fillStyle = testPointColor;
+                ctx.beginPath();
+                ctx.rect(testPoint.x - pointSize, testPoint.y - pointSize, pointSize * 2, pointSize * 2); // Draw as square
+                ctx.fill();
+
+                 // Optionally draw predicted class color outline
+                 if (classificationResult && classificationResult.predictedClass && classColors[classificationResult.predictedClass]) {
+                     ctx.strokeStyle = classColors[classificationResult.predictedClass];
+                     ctx.lineWidth = 2;
+                     ctx.beginPath();
+                     ctx.rect(testPoint.x - pointSize - 2, testPoint.y - pointSize - 2, pointSize * 2 + 4, pointSize * 2 + 4);
+                     ctx.stroke();
+                 }
+            }
+        }
+
+        // --- Event Handlers ---
+        function resizeCanvas() {
+             // Get display size from CSS
+             // The canvas CSS max-width/max-height and flex-grow handles the visual size.
+             // We need to set the drawing buffer size (canvas.width/height) to match the displayed size.
+             canvas.width = canvas.clientWidth;
+             canvas.height = canvas.clientHeight;
+
+             // Ensure canvas has a reasonable minimum size if initial flex calculation is off
+             if (canvas.width < 10 || canvas.height < 10) {
+                 // Fallback: use a percentage of window size if flex sizing fails initially
+                 canvas.width = window.innerWidth * 0.8;
+                 canvas.height = window.innerHeight * 0.5;
+                 // Also update style to influence clientWidth/Height if necessary
+                 canvas.style.width = canvas.width + 'px';
+                 canvas.style.height = canvas.height + 'px';
+             }
+
+
+            // Regenerate points based on new size
+            // Simple approach: regenerate completely
+            initDataPoints();
+            // More complex: Scale existing points would require storing original canvas size ratio.
+            // For simplicity in a minimalist demo, regenerating is acceptable.
+
+
+            draw();
+        }
+
+        let isDraggingTestPoint = false;
+
+        function handleCanvasClick(event) {
+             const rect = canvas.getBoundingClientRect();
+             const x = event.clientX - rect.left;
+             const y = event.clientY - rect.top;
+
+             // Check if clicked on the test point (within a small radius)
+             if (testPoint) {
+                  const distToTestPoint = distance({x, y}, testPoint);
+                  // Check if click is near the test point's current screen position, adjusted for canvas scaling
+                  // Need to convert click coordinates (relative to scaled canvas client area)
+                  // to canvas drawing buffer coordinates if canvas is stretched/scaled differently.
+                  // However, since we set canvas.width/height = canvas.clientWidth/clientHeight in resize,
+                  // screen coordinates directly map to drawing buffer coordinates.
+                  const clickCanvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
+                  const clickCanvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+                  const distToTestPointBuffer = distance({x: clickCanvasX, y: clickCanvasY}, testPoint);
+
+                  if (distToTestPointBuffer <= pointSize * 2) { // Allow slightly larger click area around the point
+                       isDraggingTestPoint = true;
+                       // Store offset for smooth dragging in canvas buffer coordinates
+                       testPoint.dragOffsetX = clickCanvasX - testPoint.x;
+                       testPoint.dragOffsetY = clickCanvasY - testPoint.y;
+                       canvas.style.cursor = 'grabbing'; // Change cursor while dragging
+                       return; // Start drag, don't place a new point
+                  }
+             }
+
+            // If not dragging, place a new test point
+            const newTestPointX = (event.clientX - rect.left) * (canvas.width / rect.width);
+            const newTestPointY = (event.clientY - rect.top) * (canvas.height / rect.height);
+            testPoint = { x: newTestPointX, y: newTestPointY };
+            isDraggingTestPoint = false; // Ensure drag is false if placing new point
+            canvas.style.cursor = 'pointer'; // Reset cursor
+            draw();
+        }
+
+        function handleCanvasMouseMove(event) {
+             if (!isDraggingTestPoint || !testPoint) return;
+
+             const rect = canvas.getBoundingClientRect();
+             // Convert mouse coordinates (relative to scaled canvas client area) to canvas drawing buffer coordinates
+             const mouseCanvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
+             const mouseCanvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+             // Update test point position based on mouse and stored offset
+             testPoint.x = mouseCanvasX - testPoint.dragOffsetX;
+             testPoint.y = mouseCanvasY - testPoint.dragOffsetY;
+
+             // Clamp to canvas bounds
+             testPoint.x = Math.max(0, Math.min(canvas.width, testPoint.x));
+             testPoint.y = Math.max(0, Math.min(canvas.height, testPoint.y));
+
+             draw();
+        }
+
+        function handleCanvasMouseUp(event) {
+             if (isDraggingTestPoint) {
+                  isDraggingTestPoint = false;
+                  canvas.style.cursor = 'pointer'; // Reset cursor
+                  if (testPoint) {
+                       // Remove drag offsets after finishing drag
+                       delete testPoint.dragOffsetX;
+                       delete testPoint.dragOffsetY;
+                  }
+                  draw(); // Redraw once more to finalize
+             }
+        }
+
+         function handleCanvasMouseLeave(event) {
+             // Treat mouse leaving the canvas the same as mouse up if dragging
+             handleCanvasMouseUp(event);
+         }
+
+
+        function handleKSliderChange(event) {
+            k = parseInt(event.target.value);
+            kValueSpan.textContent = k;
+             // Update max value based on current data points
+             kSlider.max = Math.max(1, dataPoints.length); // K can't be more than available points
+             // Ensure current k is not more than the new max
+             if (k > dataPoints.length && dataPoints.length > 0) {
+                 k = dataPoints.length;
+                 kSlider.value = k;
+                 kValueSpan.textContent = k;
+             } else if (dataPoints.length === 0) {
+                 k = 1; // Default K to 1 if no data points
+                 kSlider.value = k;
+                 kValueSpan.textContent = k;
+                 kSlider.max = 1; // If no points, max k is 1 (or even 0, but 1 is safer for slider)
+             } else if (k < 1) {
+                 k = 1; // K must be at least 1
+                 kSlider.value = k;
+                 kValueSpan.textContent = k;
+             }
+
+            draw();
+        }
+
+         function initDataPoints() {
+             // Regenerate points using the clustered function
+             dataPoints = generateClusteredPoints(Math.floor(initialDataPointCount / initialClasses.length), initialClasses);
+
+             // Update k slider max based on new points
+             const currentMax = parseInt(kSlider.max);
+             const newMax = Math.max(1, dataPoints.length);
+
+             kSlider.max = newMax;
+
+             // Adjust current k if it exceeds the new max
+             if (k > newMax) {
+                 k = newMax;
+                 kSlider.value = k;
+                 kValueSpan.textContent = k;
+             } else if (k < 1 && newMax >= 1) {
+                 // Ensure k is at least 1 if points exist
+                 k = 1;
+                 kSlider.value = k;
+                 kValueSpan.textContent = k;
+             } else if (newMax === 0) {
+                 // If somehow no points are generated
+                 k = 1; // Default k even with no points
+                 kSlider.value = k;
+                 kValueSpan.textContent = k;
+                 kSlider.max = 1; // Set max to 1 if no points
+             }
+
+
+             // Keep test point if it exists, but recalculate if needed (not needed here as we regenerate points)
+             // If we regenerated completely new points, we might want to clear test point or scale it.
+             // Clearing is simpler for this demo on reset, but not on resize if we want to keep the test point location relative.
+             // For this demo, initDataPoints is called on resize AND reset, so let's keep testPoint clearing in reset.
+             // If you wanted to keep testPoint on resize, you'd add logic here to scale its {x, y} based on old/new canvas dimensions.
+         }
+
+         function handleResetClick() {
+              initDataPoints();
+              testPoint = null; // Clear test point on reset
+              canvas.style.cursor = 'pointer'; // Reset cursor
+              draw();
+         }
+
+
+        // --- Initialization ---
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('mousedown', handleCanvasClick);
+        canvas.addEventListener('mousemove', handleCanvasMouseMove);
+        canvas.addEventListener('mouseup', handleCanvasMouseUp);
+        canvas.addEventListener('mouseleave', handleCanvasMouseLeave); // Stop drag if mouse leaves
+        kSlider.addEventListener('input', handleKSliderChange); // Use input for continuous update
+        resetBtn.addEventListener('click', handleResetClick);
+
+
+        // Initial setup
+        resizeCanvas(); // Set canvas size and generate points
+        // kSlider max is set within initDataPoints now
+        kValueSpan.textContent = kSlider.value; // Display initial K value
+        draw(); // Initial draw
+
+    </script>
+
+</body>
+</html>

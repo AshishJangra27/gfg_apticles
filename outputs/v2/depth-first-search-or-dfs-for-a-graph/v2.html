@@ -1,0 +1,439 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic DFS Visualizer</title>
+    <style>
+        /* Basic Reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Body & Layout (Non-Scrollable, Fixed) */
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            color: black;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            flex-shrink: 0; /* Don't shrink */
+            height: 5vh; /* Fixed height */
+            line-height: 5vh;
+            text-align: center;
+            font-size: 2vh;
+            border-bottom: 1px solid black;
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1; /* Take remaining space */
+            display: flex;
+            width: 100%;
+        }
+
+        /* Canvas Container (Left/Canvas Area) */
+        #canvas-container {
+            flex-grow: 1; /* Take most of the space */
+            display: flex;
+            justify-content: center; /* Center canvas horizontally */
+            align-items: center; /* Center canvas vertically */
+            padding: 1vh; /* Some padding around canvas */
+        }
+
+        /* Canvas Styling */
+        canvas {
+            border: 1px solid black;
+            max-width: 100%; /* Ensure canvas fits container */
+            max-height: 100%;
+        }
+
+        /* Controls/Info Area (Right Sidebar) */
+        #controls {
+            flex-shrink: 0; /* Don't shrink */
+            width: 25vw; /* Fixed width */
+            padding: 2vh 1vw;
+            font-size: 1.5vh;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid black;
+            overflow-y: auto; /* Allow controls to scroll if content overflows vertically */
+        }
+
+        #controls h2 {
+            font-size: 1.8vh;
+            margin-bottom: 1vh;
+        }
+
+        #controls p {
+            margin-bottom: 1.5vh;
+            line-height: 1.4;
+        }
+
+        #controls button {
+            margin-bottom: 1.5vh;
+            padding: 1vh 1vw;
+            font-family: monospace;
+            font-size: 1.5vh;
+            cursor: pointer;
+            border: 1px solid black;
+            background-color: white;
+        }
+
+        #controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #controls button:hover:not(:disabled) {
+             background-color: #f0f0f0;
+        }
+
+        .status-text {
+            margin-top: 1.5vh;
+            font-weight: bold;
+        }
+
+        .visited-order-text {
+            margin-top: 1.5vh;
+        }
+
+        #visitedOrder {
+            margin-top: 0.5vh;
+            min-height: 3vh; /* Reserve some space */
+            word-break: break-all; /* Prevent overflow */
+        }
+
+
+        /* Footer */
+        footer {
+            flex-shrink: 0; /* Don't shrink */
+            height: 4vh; /* Fixed height */
+            line-height: 4vh;
+            text-align: center;
+            font-size: 1.5vh;
+            border-top: 1px solid black;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Depth First Search Visualizer</h1>
+    </header>
+
+    <main>
+        <div id="canvas-container">
+             <canvas id="dfsCanvas"></canvas>
+        </div>
+        <div id="controls">
+            <h2>Concept:</h2>
+            <p>
+                DFS explores as far as possible along each branch before backtracking, using a visited array to avoid cycles and ensure each vertex is processed only once.
+            </p>
+            <h2>Controls:</h2>
+            <button id="startButton">Start DFS (from Node 0)</button>
+            <button id="nextButton" disabled>Next Step</button>
+            <button id="resetButton">Reset</button>
+
+            <p class="status-text">Status: <span id="status">Ready</span></p>
+            <p class="visited-order-text">Visited Order:</p>
+            <div id="visitedOrder">-</div>
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a> | <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('dfsCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const nextButton = document.getElementById('nextButton');
+        const resetButton = document.getElementById('resetButton');
+        const statusSpan = document.getElementById('status');
+        const visitedOrderDiv = document.getElementById('visitedOrder');
+
+        // Define a simple graph (Adjacency List)
+        // This graph is intentionally small and clear
+        const graph = {
+            0: [1, 2],
+            1: [0, 3],
+            2: [0, 3],
+            3: [1, 2]
+        };
+        const numNodes = Object.keys(graph).length;
+
+        // Node positions (manual for simplicity and control in a fixed layout)
+        // Position nodes relative to canvas size later
+        const nodePositions = [
+            { x: 0.25, y: 0.25 }, // Node 0 (top-left)
+            { x: 0.75, y: 0.25 }, // Node 1 (top-right)
+            { x: 0.25, y: 0.75 }, // Node 2 (bottom-left)
+            { x: 0.75, y: 0.75 }  // Node 3 (bottom-right)
+        ];
+        const nodeRadius = 0.05; // Radius as a percentage of minimum canvas dimension
+
+        // DFS State
+        let visited = new Array(numNodes).fill(false);
+        let stack = []; // Using array as stack
+        let visitedOrder = [];
+        let currentPath = []; // To show the path being explored
+        let simulationActive = false;
+        let startNode = 0; // Start DFS from node 0
+
+        // Drawing Parameters
+        const nodeColor = 'black';
+        const edgeColor = 'black';
+        const visitedColor = 'darkgreen';
+        const pathColor = 'blue'; // Color for edges/nodes currently on the path
+
+        // --- Drawing Functions ---
+
+        function resizeCanvas() {
+             const container = document.getElementById('canvas-container');
+             // Set canvas size to fit container, ensuring it's a square or maintains aspect ratio
+             const size = Math.min(container.clientWidth, container.clientHeight) - 2; // Subtract border width for canvas border
+             canvas.width = size;
+             canvas.height = size;
+             drawGraph(); // Redraw whenever canvas size changes
+        }
+
+        function getNodeCoords(nodeIndex) {
+            const pos = nodePositions[nodeIndex];
+            return {
+                x: pos.x * canvas.width,
+                y: pos.y * canvas.height
+            };
+        }
+
+        function drawEdge(nodeIndex1, nodeIndex2, color = edgeColor, isPath = false) {
+            const coords1 = getNodeCoords(nodeIndex1);
+            const coords2 = getNodeCoords(nodeIndex2);
+
+            ctx.beginPath();
+            ctx.moveTo(coords1.x, coords1.y);
+            ctx.lineTo(coords2.x, coords2.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isPath ? 3 : 1; // Thicker line for path
+            ctx.stroke();
+        }
+
+        function drawNode(nodeIndex, color = nodeColor, isCurrent = false) {
+            const coords = getNodeCoords(nodeIndex);
+            const radius = nodeRadius * Math.min(canvas.width, canvas.height);
+
+            // Draw circle
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color; // Fill with node color (visited or not)
+            ctx.fill();
+            ctx.strokeStyle = isCurrent ? pathColor : nodeColor; // Outline current node
+            ctx.lineWidth = isCurrent ? 3 : 1;
+            ctx.stroke();
+
+            // Draw node label
+            ctx.fillStyle = 'black'; // Always draw text in black
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `${radius * 0.8}px monospace`; // Adjust font size based on radius
+            ctx.fillText(nodeIndex, coords.x, coords.y);
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw edges
+            for (const nodeStr in graph) {
+                const node = parseInt(nodeStr);
+                for (const neighbor of graph[node]) {
+                    // Draw edge only once for undirected graph
+                    if (node < neighbor) {
+                         let edgeColorToUse = edgeColor;
+                         let isPathEdge = false;
+                         // Check if this edge is part of the current path visualization
+                         // The path is visualized as segments between consecutive nodes in currentPath
+                         for(let i = 0; i < currentPath.length - 1; i++) {
+                             const pathNode1 = currentPath[i];
+                             const pathNode2 = currentPath[i+1];
+                             if ((pathNode1 === node && pathNode2 === neighbor) || (pathNode1 === neighbor && pathNode2 === node)) {
+                                isPathEdge = true;
+                                edgeColorToUse = pathColor;
+                                break;
+                             }
+                         }
+                         drawEdge(node, neighbor, edgeColorToUse, isPathEdge);
+                    }
+                }
+            }
+
+            // Draw nodes (on top of edges)
+            for (let i = 0; i < numNodes; i++) {
+                let color = nodeColor;
+                let isCurrent = false;
+
+                if (visited[i]) {
+                    color = visitedColor;
+                }
+                // If this node is the top of the stack (the one currently being processed or about to be)
+                if (stack.length > 0 && stack[stack.length - 1] === i) {
+                    isCurrent = true;
+                } else if (visitedOrder.length > 0 && visitedOrder[visitedOrder.length - 1] === i && stack.length > 0) {
+                     // If this is the most recently visited node and we haven't moved yet, outline it
+                     // This helps indicate the starting point of exploration for the next step
+                    isCurrent = true; // Alternative approach: highlight most recent visited if stack not empty
+                }
+
+
+                 drawNode(i, color, isCurrent);
+            }
+        }
+
+        function updateInfo() {
+            statusSpan.textContent = simulationActive ? 'In Progress...' : (visitedOrder.length === numNodes ? 'Finished' : 'Ready');
+            visitedOrderDiv.textContent = visitedOrder.length > 0 ? visitedOrder.join(' -> ') : '-';
+        }
+
+        // --- DFS Logic (Step-by-Step) ---
+
+        function startDFS() {
+            visited.fill(false);
+            stack = [];
+            visitedOrder = [];
+            currentPath = [];
+            simulationActive = true;
+
+
+            // Initial push to stack
+            stack.push(startNode);
+            visited[startNode] = true;
+            visitedOrder.push(startNode);
+            currentPath.push(startNode); // Path starts at the start node
+
+            startButton.disabled = true;
+            nextButton.disabled = false;
+            resetButton.disabled = false;
+
+            drawGraph(); // Draw initial state
+            updateInfo();
+        }
+
+        function performStep() {
+            if (stack.length === 0) {
+                endDFS();
+                return;
+            }
+
+            const currentNode = stack.pop(); // Get node from stack
+
+            // Remove currentNode from currentPath unless it's the start node and the only node
+            if (currentPath.length > 1) {
+                 // Find currentNode in path and remove it and subsequent nodes
+                 const nodeIndexInPath = currentPath.indexOf(currentNode);
+                 if (nodeIndexInPath !== -1) {
+                     currentPath = currentPath.slice(0, nodeIndexInPath + 1); // Keep currentNode as end of path for now
+                 }
+            } else if (currentPath.length === 1 && currentPath[0] !== currentNode) {
+                 // If path only has start node and we just popped something else (shouldn't happen if starting from 0?)
+                 // Reset path or handle as needed. For this simple graph, it should be fine.
+            }
+
+
+            // Explore neighbors
+            const neighbors = graph[currentNode];
+            let foundUnvisitedNeighbor = null;
+
+            // Iterate neighbors in reverse order so they are pushed to stack in standard order (0, 1, 2...)
+            // and the *first* neighbor in the graph's list is explored first.
+            for (let i = neighbors.length - 1; i >= 0; i--) {
+                 const neighbor = neighbors[i];
+                 if (!visited[neighbor]) {
+                     foundUnvisitedNeighbor = neighbor;
+                     break; // Found the next node to explore
+                 }
+            }
+
+            if (foundUnvisitedNeighbor !== null) {
+                 visited[foundUnvisitedNeighbor] = true;
+                 stack.push(foundUnvisitedNeighbor);
+                 visitedOrder.push(foundUnvisitedNeighbor);
+                 currentPath.push(foundUnvisitedNeighbor); // Add the newly visited neighbor to path
+            } else {
+                 // No unvisited neighbors from currentNode, we are effectively backtracking
+                 // The currentPath should already be traced back to currentNode in the logic above
+                 // If stack is not empty, the path should now extend to the node that will be popped next
+                 if (stack.length > 0) {
+                     currentPath.push(stack[stack.length - 1]);
+                 }
+            }
+
+
+            drawGraph(); // Redraw state
+            updateInfo();
+
+            if (stack.length === 0) {
+                endDFS();
+            }
+        }
+
+        function endDFS() {
+            simulationActive = false;
+            statusSpan.textContent = 'Finished';
+            nextButton.disabled = true;
+            // Draw final state (all nodes visited, clear path highlighting)
+            currentPath = []; // Clear path visualization
+            drawGraph();
+        }
+
+        function resetDFS() {
+            visited.fill(false);
+            stack = [];
+            visitedOrder = [];
+            currentPath = [];
+            simulationActive = false;
+            statusSpan.textContent = 'Ready';
+            visitedOrderDiv.textContent = '-';
+
+            startButton.disabled = false;
+            nextButton.disabled = true;
+            resetButton.disabled = false;
+
+            drawGraph(); // Draw initial graph state
+        }
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', startDFS);
+        nextButton.addEventListener('click', performStep);
+        resetButton.addEventListener('click', resetDFS);
+
+        // Initial Setup
+        window.addEventListener('resize', resizeCanvas);
+        // Set initial size and draw
+        resizeCanvas();
+        drawGraph(); // Draw the graph initially
+
+    </script>
+
+</body>
+</html>

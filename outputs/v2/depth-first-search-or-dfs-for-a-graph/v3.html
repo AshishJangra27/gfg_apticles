@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: white;
+            color: black;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        header, footer {
+            flex-shrink: 0;
+            text-align: center;
+            padding: 1vh;
+            border-bottom: 1px solid black;
+        }
+
+        footer {
+            border-top: 1px solid black;
+            border-bottom: none;
+            margin-top: auto;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1vh;
+            box-sizing: border-box;
+        }
+
+        .controls {
+            flex-shrink: 0;
+            padding: 1vh;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid black;
+            display: block;
+            max-width: 98vw;
+            box-sizing: border-box;
+        }
+
+        button {
+            font-family: monospace;
+            padding: 0.8vh 1.5vh;
+            margin: 0.5vh;
+            background-color: black;
+            color: white;
+            border: 1px solid black;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: white;
+            color: black;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            color: #666666;
+            border-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vh;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        #status {
+            margin-top: 1vh;
+            min-height: 2vh;
+            font-size: small;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Depth First Search Visualizer</h1>
+    </header>
+
+    <div class="main-content">
+        <canvas id="dfsCanvas"></canvas>
+        <div class="controls">
+            <button id="startBtn">Start DFS from Node A</button>
+            <button id="resetBtn">Reset</button>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('dfsCanvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusDiv = document.getElementById('status');
+
+        const nodes = {
+            A: { x: 20, y: 50 },
+            B: { x: 80, y: 20 },
+            C: { x: 80, y: 80 },
+            D: { x: 140, y: 50 },
+            E: { x: 140, y: 10 },
+            F: { x: 140, y: 90 },
+        };
+
+        const CONCEPTUAL_GRAPH_WIDTH = 160;
+        const CONCEPTUAL_GRAPH_HEIGHT = 100;
+        const CONCEPTUAL_NODE_RADIUS = 10;
+
+        const adjList = {
+            A: ['B', 'C'],
+            B: ['A', 'D', 'E'],
+            C: ['A', 'F'],
+            D: ['B'],
+            E: ['B'],
+            F: ['C']
+        };
+
+        const visited = new Set();
+        const traversalOrder = [];
+        let animationTimeout;
+        let isAnimating = false;
+
+        const NODE_COLOR_DEFAULT = 'white';
+        const NODE_COLOR_VISITED = 'lightblue';
+        const EDGE_COLOR_DEFAULT = 'black';
+        const TEXT_COLOR = 'black';
+        const FRAME_DELAY = 800;
+
+        function getScaledPosition(nodeKey) {
+            const node = nodes[nodeKey];
+            const scale = Math.min(canvas.width / CONCEPTUAL_GRAPH_WIDTH, canvas.height / CONCEPTUAL_GRAPH_HEIGHT);
+            const offsetX = (canvas.width - CONCEPTUAL_GRAPH_WIDTH * scale) / 2;
+            const offsetY = (canvas.height - CONCEPTUAL_GRAPH_HEIGHT * scale) / 2;
+
+            return {
+                x: offsetX + node.x * scale,
+                y: offsetY + node.y * scale,
+                radius: CONCEPTUAL_NODE_RADIUS * scale
+            };
+        }
+
+        function drawNode(nodeKey, color = NODE_COLOR_DEFAULT) {
+            const pos = getScaledPosition(nodeKey);
+
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, pos.radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.fillStyle = TEXT_COLOR;
+            ctx.font = `${Math.max(10, pos.radius * 1.2)}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(nodeKey, pos.x, pos.y);
+        }
+
+        function drawEdge(nodeKey1, nodeKey2) {
+            const p1 = getScaledPosition(nodeKey1);
+            const p2 = getScaledPosition(nodeKey2);
+
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = EDGE_COLOR_DEFAULT;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (const nodeKey in adjList) {
+                const neighbors = adjList[nodeKey];
+                for (const neighborKey of neighbors) {
+                     if (nodeKey < neighborKey) {
+                         drawEdge(nodeKey, neighborKey);
+                    }
+                }
+            }
+
+            for (const nodeKey in nodes) {
+                 let color = NODE_COLOR_DEFAULT;
+                 if (visited.has(nodeKey)) {
+                     color = NODE_COLOR_VISITED;
+                 }
+                 drawNode(nodeKey, color);
+            }
+
+            statusDiv.textContent = `Visited Order: ${traversalOrder.join(', ')}`;
+        }
+
+        async function dfs(nodeKey) {
+            if (!isAnimating) return;
+
+            if (visited.has(nodeKey)) {
+                 return;
+            }
+
+            visited.add(nodeKey);
+            traversalOrder.push(nodeKey);
+            drawGraph();
+
+            await new Promise(resolve => animationTimeout = setTimeout(resolve, FRAME_DELAY));
+
+            const neighbors = adjList[nodeKey];
+            if (neighbors) {
+                for (const neighborKey of neighbors) {
+                    if (!visited.has(neighborKey)) {
+                        await dfs(neighborKey);
+                         if (!isAnimating) return;
+                    }
+                }
+            }
+        }
+
+        async function startDFS() {
+            if (isAnimating) return;
+            resetGraphState();
+            isAnimating = true;
+            startBtn.disabled = true;
+
+            const startNode = 'A';
+            if (nodes[startNode]) {
+                statusDiv.textContent = `Starting DFS from Node ${startNode}...`;
+                await dfs(startNode);
+                if (!isAnimating) { // Check if reset during animation
+                    statusDiv.textContent = "Reset.";
+                } else {
+                    statusDiv.textContent += " - Finished.";
+                }
+            } else {
+                 statusDiv.textContent = `Error: Starting node '${startNode}' not found.`;
+            }
+
+            isAnimating = false;
+            startBtn.disabled = false;
+        }
+
+        function resetGraphState() {
+            clearTimeout(animationTimeout);
+            isAnimating = false;
+            visited.clear();
+            traversalOrder.length = 0;
+            startBtn.disabled = false;
+            drawGraph();
+            statusDiv.textContent = "Click 'Start DFS from Node A' to visualize.";
+        }
+
+        function initializeCanvas() {
+            const headerHeight = document.querySelector('header').offsetHeight;
+            const footerHeight = document.querySelector('footer').offsetHeight;
+            const controlsElement = document.querySelector('.controls');
+            const controlsHeight = controlsElement.offsetHeight + parseFloat(getComputedStyle(controlsElement).marginTop) + parseFloat(getComputedStyle(controlsElement).marginBottom);
+
+            const mainContentPaddingTop = parseFloat(getComputedStyle(document.querySelector('.main-content')).paddingTop);
+            const mainContentPaddingBottom = parseFloat(getComputedStyle(document.querySelector('.main-content')).paddingBottom);
+
+            const availableHeight = window.innerHeight - headerHeight - footerHeight - controlsHeight - mainContentPaddingTop - mainContentPaddingBottom;
+
+            canvas.width = window.innerWidth * 0.98;
+            canvas.height = availableHeight * 0.9;
+
+            drawGraph();
+        }
+
+        window.addEventListener('resize', initializeCanvas);
+        initializeCanvas();
+
+        startBtn.addEventListener('click', startDFS);
+        resetBtn.addEventListener('click', resetGraphState);
+
+        resetGraphState();
+
+    </script>
+
+</body>
+</html>

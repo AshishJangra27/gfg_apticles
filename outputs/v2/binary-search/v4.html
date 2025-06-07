@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Binary Search Visualizer</title>
+    <style>
+        /* Basic Reset and Box Model */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Root & Body Styles for Layout */
+        html, body {
+            height: 100%; /* Use 100% instead of 100vh for better compatibility */
+            width: 100%;
+            overflow: hidden; /* Prevent Scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: space-between; /* Push header/footer to ends */
+            align-items: stretch; /* Stretch children horizontally */
+        }
+
+        /* Header */
+        header {
+            height: 8vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid black;
+            font-size: 1.5em;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1; /* Takes up remaining vertical space */
+            display: flex;
+            flex-direction: column; /* Stack internal elements */
+            align-items: center;
+            justify-content: center; /* Center content block vertically */
+            padding: 2vh 2vw; /* Padding around content */
+            overflow: hidden; /* Ensure main content doesn't cause scroll */
+        }
+
+        /* Array Container - Visual Representation */
+        #array-container {
+            display: flex;
+            justify-content: center; /* Center array elements */
+            align-items: center;
+            margin-bottom: 3vh;
+            border: 1px solid black; /* Simple border around the array area */
+            padding: 1vh;
+        }
+
+        /* Individual Array Element Style */
+        .array-element {
+            width: 5vw; /* Fixed width based on viewport */
+            height: 5vw; /* Make it square */
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0.5vw; /* Space between elements */
+            font-size: 1em;
+            transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease; /* Smooth transitions */
+        }
+
+        /* Visual States for Array Elements */
+        .array-element.current-interval {
+            border-color: blue; /* Highlight the currently considered range */
+        }
+        .array-element.middle {
+            background-color: yellow; /* Highlight the middle element */
+            border-color: red;
+        }
+         .array-element.found {
+            background-color: lightgreen; /* Indicate the target was found here */
+            border-color: green;
+        }
+         .array-element.discarded {
+            opacity: 0.5; /* Dim elements outside the current search interval */
+            border-color: grey;
+        }
+
+
+        /* Controls and Info Area */
+        #controls {
+            margin-bottom: 2vh;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        #info {
+            min-height: 4vh; /* Reserve space for messages */
+            text-align: center;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Button Styling */
+        button {
+            font-family: monospace;
+            margin: 0 1vw;
+            padding: 1vh 2vw;
+            cursor: pointer;
+            background-color: white;
+            border: 1px solid black;
+            color: black;
+            transition: background-color 0.2s ease;
+        }
+         button:hover:not(:disabled) {
+             background-color: #eee;
+         }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Footer */
+        footer {
+            height: 8vh; /* Fixed height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+            font-size: 0.9em;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+         footer a {
+             color: black;
+             text-decoration: none;
+             margin: 0 1vw;
+         }
+         footer a:hover {
+             text-decoration: underline;
+         }
+    </style>
+</head>
+<body>
+
+    <header>
+        Basic Binary Search Visualizer
+    </header>
+
+    <main>
+        <div id="array-container">
+            <!-- Array elements will be dynamically added here -->
+        </div>
+        <div id="controls">
+            <button id="startButton">Start Demo</button>
+            <button id="nextButton" disabled>Next Step</button>
+            <button id="resetButton" disabled>Reset</button>
+        </div>
+        <div id="info">
+            <!-- Algorithm status updates here -->
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra-/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        // --- Core Data and State ---
+        let sortedArray = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]; // Must be sorted
+        let targetValue = 23; // Value to search for
+        let lowIndex = 0;
+        let highIndex = sortedArray.length - 1;
+        let middleIndex = -1;
+        let foundIndex = -1; // Index where target is found
+        let isRunning = false; // State flag
+
+        // --- DOM Elements ---
+        const arrayContainer = document.getElementById('array-container');
+        const infoDiv = document.getElementById('info');
+        const startButton = document.getElementById('startButton');
+        const nextButton = document.getElementById('nextButton');
+        const resetButton = document.getElementById('resetButton');
+
+        // --- Rendering Functions ---
+
+        // Draws the array elements based on the current state (low, high, middle, found)
+        function renderArray() {
+            arrayContainer.innerHTML = ''; // Clear previous elements
+            sortedArray.forEach((value, index) => {
+                const elementDiv = document.createElement('div');
+                elementDiv.classList.add('array-element');
+                elementDiv.textContent = value;
+
+                // Apply visual states
+                if (isRunning && index >= lowIndex && index <= highIndex) {
+                     elementDiv.classList.add('current-interval'); // Highlight current search range
+                } else if (isRunning) {
+                     elementDiv.classList.add('discarded'); // Dim elements outside range
+                }
+
+                if (index === middleIndex && isRunning) {
+                    elementDiv.classList.add('middle'); // Highlight the middle element
+                }
+
+                if (index === foundIndex) {
+                    elementDiv.classList.add('found'); // Highlight if found
+                }
+
+                arrayContainer.appendChild(elementDiv);
+            });
+        }
+
+        // Updates the information display area
+        function updateInfo(message) {
+            infoDiv.textContent = message;
+        }
+
+        // --- Algorithm Logic (Step-by-Step) ---
+
+        function initialize() {
+             lowIndex = 0;
+             highIndex = sortedArray.length - 1;
+             middleIndex = -1;
+             foundIndex = -1;
+             isRunning = false;
+
+             updateInfo(`Searching for ${targetValue} in the array. Click Start.`);
+             renderArray(); // Render initial state
+
+             startButton.disabled = false;
+             nextButton.disabled = true;
+             resetButton.disabled = true;
+        }
+
+        function startDemo() {
+            isRunning = true;
+            lowIndex = 0;
+            highIndex = sortedArray.length - 1;
+            middleIndex = -1; // Reset middle
+            foundIndex = -1; // Reset found index
+
+            updateInfo(`Starting search for ${targetValue}. Interval: [${lowIndex}, ${highIndex}]`);
+            renderArray();
+
+            startButton.disabled = true;
+            nextButton.disabled = false;
+            resetButton.disabled = false;
+        }
+
+        function nextStep() {
+            if (lowIndex > highIndex) {
+                // Search space is empty, target not found
+                isRunning = false;
+                updateInfo(`${targetValue} not found in the array.`);
+                nextButton.disabled = true; // End of demo
+                renderArray(); // Re-render to show final state (all dimmed)
+                return;
+            }
+
+            // Calculate middle index
+            middleIndex = Math.floor((lowIndex + highIndex) / 2);
+            let middleValue = sortedArray[middleIndex];
+
+            updateInfo(`Checking index ${middleIndex} (value: ${middleValue}). Target: ${targetValue}`);
+            renderArray(); // Render with new middle highlighted
+
+            // Pause briefly for visual clarity before decision (optional but good for demo)
+            setTimeout(() => {
+                if (middleValue === targetValue) {
+                    // Target found!
+                    foundIndex = middleIndex;
+                    isRunning = false; // Stop the process
+                    updateInfo(`Target ${targetValue} found at index ${foundIndex}!`);
+                    nextButton.disabled = true; // End of demo
+                    renderArray(); // Final render with found element highlighted
+                } else if (middleValue < targetValue) {
+                    // Target is in the right half
+                    lowIndex = middleIndex + 1;
+                    updateInfo(`Value ${middleValue} is less than target ${targetValue}. Search right half. New interval: [${lowIndex}, ${highIndex}]`);
+                    middleIndex = -1; // Clear middle highlight for next step
+                    renderArray(); // Re-render for next step
+                } else { // middleValue > targetValue
+                    // Target is in the left half
+                    highIndex = middleIndex - 1;
+                    updateInfo(`Value ${middleValue} is greater than target ${targetValue}. Search left half. New interval: [${lowIndex}, ${highIndex}]`);
+                    middleIndex = -1; // Clear middle highlight for next step
+                    renderArray(); // Re-render for next step
+                }
+            }, 700); // Short delay
+        }
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', startDemo);
+        nextButton.addEventListener('click', nextStep);
+        resetButton.addEventListener('click', initialize); // Reset goes back to initial state
+
+        // --- Initial Setup ---
+        initialize(); // Setup the initial state on page load
+
+        // Optional: Allow setting a different target value (simple prompt)
+        // This adds a minor interaction but might break the minimalist principle.
+        // For this request, I'll keep it fixed as per the summary focus.
+        // If adding:
+        // const newTarget = prompt("Enter a target value (e.g., 56):");
+        // if (newTarget !== null && !isNaN(newTarget)) {
+        //    targetValue = parseInt(newTarget);
+        // }
+        // initialize(); // Re-initialize with potentially new target
+
+
+    </script>
+
+</body>
+</html>

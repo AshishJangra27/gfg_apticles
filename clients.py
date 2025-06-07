@@ -14,7 +14,8 @@ urls = [
     "https://www.geeksforgeeks.org/bubble-sort-algorithm/"
     "https://www.geeksforgeeks.org/decision-tree-introduction-example/",
     "https://www.geeksforgeeks.org/support-vector-machine-algorithm/",
-    "https://www.geeksforgeeks.org/k-nearest-neighbours/"
+    "https://www.geeksforgeeks.org/k-nearest-neighbours/",
+    "https://www.geeksforgeeks.org/python-lists/"
 ]
 
 def url_to_folder_name(url):

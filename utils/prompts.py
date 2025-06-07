@@ -94,11 +94,11 @@ Return design brief
 def generate_webpage_prompt(design_brief: str) -> str:
     """
     Generate a strict prompt for a veteran (20+ years) minimalist web developer
-    to produce a clean, static, single-page HTML/CSS/JS app based on the design brief,
-    using a white background, black text, and monospace font.
+    to produce a clean, interactive, single-page HTML/CSS/JS app based on the design brief,
+    allowing randomization, real-time interaction, and lightweight visual explanations.
     """
     return f"""
-You are a minimalist web developer with **20+ years of experience**. Build a **fully functional, static, single-screen HTML application** strictly based on the following design brief.
+You are a minimalist web developer with **20+ years of experience**. Build a **fully functional, static, single-screen HTML application** based on the design brief below, giving users **freedom to interact, explore, and learn visually**.
 
 ---
 
@@ -111,45 +111,55 @@ You are a minimalist web developer with **20+ years of experience**. Build a **f
 
 1. **File Structure**:
    - Use a single `.html` file.
-   - All CSS and JavaScript must be embedded in the same file (no external stylesheets or scripts).
+   - Embed all **HTML**, **CSS**, and **JavaScript** in the same file.
+   - No external libraries, stylesheets, or media files.
 
 2. **Theme & Styling**:
    - Background: **white**
-   - Text and elements: **black**
-   - Font: **monospace**, clean and readable
-   - Avoid unnecessary styling, colors, or visual effects
+   - Primary text and UI elements: **black**
+   - Secondary elements (hints, borders, indicators): **light gray** `#888888` or `#cccccc`
+   - Font: **monospace**, clean, readable
+   - Use **contrast-aware layout** — ensure all content is clearly visible under daylight and dark mode environments.
 
 3. **Layout & Viewport**:
-   - The entire app must fit within a **1080p screen** without scrolling
-   - Use CSS `vh` and `vw` units to maintain a static layout
-   - If interactivity is required, use a central `<canvas>` or clearly defined interaction area
+   - Design must fit entirely within a **1080p screen** (no scrolling).
+   - Use `vh` and `vw` units for responsiveness.
+   - Layout must include a **central interactive area** (like a `<canvas>`, control panel, or graph).
+   - Optional sections for:
+     - **Live explanation text** (1–2 lines max, inline, dynamically updated)
+     - **Action buttons** (e.g., Randomize, Reset, Demo Mode)
 
 4. **Interactivity**:
-   - Add interactivity **only if it directly serves the concept** being taught
-   - If used, support:
-     - **Click**, **drag**, or **hover**
-     - **Basic feedback** (no animations or transitions)
-   - A simple **reset** button or **auto-demo** toggle may be included if helpful
+   - Allow users to **interact with the concept in real-time** (if applicable).
+   - Populate the app with **new random data** or variables on each refresh or via a button.
+   - If applicable, support:
+     - **Click**, **drag**, **hover**, or **slider-based input**
+     - Instant updates to visuals and brief explanations
+   - Add:
+     - A **Randomize** button
+     - A **Reset** button
+     - An optional **Auto-demo** toggle
+   - Use **hover hints** or **inline explanation text** to describe what's happening in the interaction (keep it short and simple).
 
 5. **Functionality Requirements**:
-   - All components must be **fully working and bug-free**
-   - Keep user interactions intuitive and lightweight
-   - Do not add complexity unless essential for understanding the concept
+   - All features must be **bug-free**, **fully implemented**, and **intuitively usable**
+   - Every interaction must make the **learning objective clearer**
+   - Avoid decorative or overly complex behavior — **simplicity + clarity** is key
 
 6. **Footer**:
-   - Fixed at the bottom of the viewport
+   - Fixed at the bottom
    - Includes:
      - GitHub: `https://github.com/AshishJangra27/`
      - LinkedIn: `https://www.linkedin.com/in/ashish-jangra/`
-   - Styled simply to match the rest of the theme (black text on white background)
+   - Style matches the theme (black/gray text on white)
 
 7. **Technical Constraints**:
-   - Do not use any external libraries, frameworks, fonts, or media
+   - No external libraries, fonts, icons, or media
    - Use only **vanilla HTML, CSS, and JavaScript**
 
 ---
 
 🧾 **Output Format**:
-- Return **only the complete `.html` code as plain text**
-- No markdown, no explanations, no comments — just the HTML
+- Return only the full `.html` code as **plain text**
+- Do not return markdown, comments, or explanation — just the raw HTML
 """.strip()

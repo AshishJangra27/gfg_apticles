@@ -1,0 +1,325 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Binary Search Visualizer</title>
+    <style>
+        /*
+         * Minimalist Binary Search Visualizer CSS
+         * - Ensures fixed layout, no scrolling, monospace font.
+         */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column; /* Arrange header, main, footer vertically */
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        header {
+            width: 100vw;
+            height: 10vh; /* Allocate height using vh */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid black;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        main {
+            width: 100vw;
+            height: 80vh; /* Allocate remaining height */
+            display: flex;
+            flex-direction: column; /* Arrange array and controls vertically */
+            align-items: center;
+            justify-content: center; /* Center content vertically */
+            padding: 1vh;
+            box-sizing: border-box;
+            flex-grow: 1; /* Allow growing to fill space */
+        }
+
+        #array-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 95vw;
+            height: 25vh; /* Allocate height for array */
+            margin-bottom: 2vh;
+            flex-wrap: wrap; /* Allow wrapping if array is very wide, though vw units should help */
+            overflow: hidden; /* Prevent array elements from pushing content outside container */
+        }
+
+        .array-item {
+            display: flex;
+            flex-direction: column; /* Value and index vertically */
+            align-items: center;
+            justify-content: center;
+             /* Calculate width dynamically based on a max number of items */
+             /* Assuming ~10-15 items is typical for this visualizer */
+             /* Adjust calc(95vw / N) based on expected max array length */
+            width: calc(95vw / 15);
+            min-width: 50px; /* Prevent items from becoming too small */
+            height: 10vh;
+            border: 1px solid black;
+            margin: 0.2vw;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            user-select: none; /* Prevent text selection */
+        }
+
+        .array-item .value {
+            font-weight: bold;
+            font-size: 1.5vh;
+        }
+
+        .array-item .index {
+             font-size: 1vh;
+             opacity: 0.7;
+        }
+
+        .current-range {
+            border-color: blue; /* Indicate current search range */
+        }
+
+        .middle-element {
+            background-color: yellow; /* Indicate the middle element */
+        }
+
+         .found-element {
+            background-color: lightgreen; /* Indicate the found element */
+            border-color: green;
+         }
+
+        .discarded {
+            opacity: 0.5; /* Visually grey out discarded elements */
+            border-color: #ccc;
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: column; /* Stack buttons and status vertically */
+            align-items: center;
+            width: 95vw;
+            height: 30vh; /* Allocate height for controls/status */
+            padding: 1vh;
+            box-sizing: border-box;
+            border: 1px solid black;
+        }
+
+        #controls button {
+            font-family: monospace;
+            font-size: 2vh;
+            padding: 1vh 2vh;
+            margin: 1vh;
+            cursor: pointer;
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+        }
+
+        #controls button:hover {
+             background-color: #f0f0f0;
+        }
+
+         #controls button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+         }
+
+        #status {
+            margin-top: 2vh;
+            font-size: 1.8vh;
+            text-align: center;
+            height: 5vh; /* Reserve space for status messages */
+        }
+
+
+        footer {
+            width: 100vw;
+            height: 10vh; /* Allocate height using vh */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid black;
+            font-size: 1.5vh;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Binary Search Visualizer</h1>
+    </header>
+
+    <main>
+        <div id="array-container">
+            <!-- Array elements will be rendered here by JavaScript -->
+        </div>
+        <div id="controls">
+            <div id="status">Click 'Next Step' to start. Searching for target: <span id="target-value"></span></div>
+            <div>
+                 <button id="next-step">Next Step</button>
+                 <button id="reset">Reset</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <span>&copy; 2023 Minimalist App</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        /*
+         * Minimalist Binary Search Visualizer JavaScript
+         * - Implements step-by-step binary search logic.
+         * - Updates array visualization and status message.
+         */
+
+        const array = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]; // Must be sorted
+        const target = 23; // Target value to search for
+        // You can change array and target here, but array must remain sorted.
+
+        let low = 0;
+        let high = array.length - 1;
+        let middle = -1;
+        let foundIndex = -1;
+        let isSearching = true;
+        let stepCount = 0;
+
+        const arrayContainer = document.getElementById('array-container');
+        const statusDiv = document.getElementById('status');
+        const nextStepButton = document.getElementById('next-step');
+        const resetButton = document.getElementById('reset');
+        const targetValueSpan = document.getElementById('target-value');
+
+        /**
+         * Renders the current state of the array visualization.
+         */
+        function renderArray() {
+            arrayContainer.innerHTML = ''; // Clear previous state
+
+            array.forEach((value, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('array-item');
+
+                const valueSpan = document.createElement('span');
+                valueSpan.classList.add('value');
+                valueSpan.textContent = value;
+
+                const indexSpan = document.createElement('span');
+                indexSpan.classList.add('index');
+                indexSpan.textContent = `[${index}]`;
+
+                itemDiv.appendChild(valueSpan);
+                itemDiv.appendChild(indexSpan);
+
+                // Apply visual styles based on state
+                if (index < low || index > high) {
+                    itemDiv.classList.add('discarded');
+                } else {
+                    itemDiv.classList.add('current-range');
+                }
+
+                // Highlight middle element only if still searching and within the current range
+                 if (isSearching && index === middle && index >= low && index <= high) {
+                    itemDiv.classList.add('middle-element');
+                }
+
+                // Highlight found element
+                if (index === foundIndex) {
+                    itemDiv.classList.add('found-element');
+                    // Remove other visual states if found
+                    itemDiv.classList.remove('current-range', 'middle-element', 'discarded');
+                }
+
+                arrayContainer.appendChild(itemDiv);
+            });
+        }
+
+        /**
+         * Executes one step of the binary search algorithm.
+         */
+        function step() {
+            if (!isSearching) {
+                 // Status is already set to final message, just return
+                return;
+            }
+
+            stepCount++;
+
+            if (low > high) {
+                isSearching = false;
+                foundIndex = -1;
+                statusDiv.textContent = `Step ${stepCount}: Search range [${low}, ${high}] is empty. Target ${target} not found.`;
+                renderArray(); // Update to show final state (all discarded)
+                 nextStepButton.disabled = true; // Disable button when search is over
+                return;
+            }
+
+            middle = Math.floor((low + high) / 2);
+            const middleValue = array[middle];
+
+            statusDiv.textContent = `Step ${stepCount}: Search range [${low}, ${high}]. Middle index: ${middle} (Value: ${middleValue}). `;
+
+            if (middleValue === target) {
+                statusDiv.textContent += `Target ${target} found at index ${middle}!`;
+                foundIndex = middle;
+                isSearching = false; // Search is complete
+                 nextStepButton.disabled = true; // Disable button
+            } else if (middleValue < target) {
+                statusDiv.textContent += `Value ${middleValue} < Target ${target}. Discarding left half. New range: [${middle + 1}, ${high}].`;
+                low = middle + 1;
+            } else { // middleValue > target
+                statusDiv.textContent += `Value ${middleValue} > Target ${target}. Discarding right half. New range: [${low}, ${middle - 1}].`;
+                high = middle - 1;
+            }
+
+            renderArray(); // Update visualization after the step
+        }
+
+        /**
+         * Resets the visualizer to its initial state.
+         */
+        function reset() {
+            low = 0;
+            high = array.length - 1;
+            middle = -1; // Reset middle highlight
+            foundIndex = -1; // Reset found state
+            isSearching = true;
+            stepCount = 0;
+            statusDiv.textContent = `Click 'Next Step' to start. Searching for target: ${target}.`;
+            nextStepButton.disabled = false; // Enable button
+            renderArray(); // Render initial state
+        }
+
+        // Initialize the app
+        targetValueSpan.textContent = target;
+        reset(); // Start with the reset state
+
+        // Add event listeners
+        nextStepButton.addEventListener('click', step);
+        resetButton.addEventListener('click', reset);
+
+    </script>
+
+</body>
+</html>

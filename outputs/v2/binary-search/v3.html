@@ -1,0 +1,374 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Binary Search Visualiser</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Ensure full viewport height and prevent scrolling */
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column; /* Stack header, content, footer vertically */
+            align-items: center; /* Center content horizontally */
+            justify-content: space-between; /* Distribute space */
+        }
+
+        /* Header */
+        header {
+            width: 100%;
+            padding: 1vh 0;
+            text-align: center;
+            font-size: 2.5vh;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Main Content Area */
+        main {
+            width: 95vw; /* Use a percentage of viewport width */
+            height: 75vh; /* Allocate most space to the main area */
+            display: flex;
+            flex-direction: column; /* Stack controls and visualization */
+            align-items: center;
+            justify-content: center;
+            gap: 2vh; /* Space between elements */
+            flex-grow: 1; /* Allow content to grow */
+            flex-shrink: 1; /* Allow content to shrink if needed (though design aims to fit) */
+        }
+
+        /* Controls Area */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 2vw;
+            font-size: 2vh;
+            flex-shrink: 0;
+        }
+
+        .controls input[type="number"] {
+            font-family: monospace;
+            padding: 0.5vh 1vw;
+            font-size: 2vh;
+            border: 1px solid black;
+            width: 10vw; /* Fixed width based on viewport */
+            max-width: 100px; /* Prevent becoming too wide on large screens */
+        }
+
+        .controls button {
+            font-family: monospace;
+            padding: 0.5vh 1.5vw;
+            font-size: 2vh;
+            border: 1px solid black;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background-color: #eee;
+        }
+
+        .status {
+             font-size: 2vh;
+             min-height: 3vh; /* Reserve space */
+             text-align: center;
+             flex-shrink: 0;
+        }
+
+
+        /* Array Visualization Area */
+        .array-container {
+            display: flex;
+            justify-content: center; /* Center array elements */
+            align-items: center;
+            width: 100%;
+            height: auto; /* Height determined by content */
+            flex-grow: 1; /* Allow array area to fill space */
+            gap: 0.5vw; /* Space between array elements */
+            flex-wrap: nowrap; /* Prevent wrapping */
+            overflow: hidden; /* Crucial for no-scrolling */
+        }
+
+        .array-item {
+            width: 5vw; /* Width based on viewport */
+            max-width: 50px; /* Prevent becoming too large */
+            height: 5vw; /* Make it square */
+             max-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid black;
+            font-size: 2.5vh;
+            flex-shrink: 0; /* Prevent shrinking */
+            flex-grow: 0; /* Prevent growing */
+            transition: background-color 0.3s ease; /* Smooth transitions for highlighting */
+        }
+
+        /* Highlighting Classes */
+        .array-item.current-low {
+            border-top: 3px solid blue;
+            border-bottom: 3px solid blue;
+        }
+         .array-item.current-high {
+            border-top: 3px solid red;
+            border-bottom: 3px solid red;
+        }
+        .array-item.current-mid {
+            background-color: yellow;
+        }
+         .array-item.discarded {
+             background-color: #eee; /* Light grey out discarded elements */
+             color: #888;
+         }
+        .array-item.found {
+            background-color: lightgreen;
+            border-color: green;
+            font-weight: bold;
+        }
+        .array-item.not-found {
+            background-color: pink;
+            border-color: red;
+        }
+
+
+        /* Footer */
+        footer {
+            width: 100%;
+            padding: 1vh 0;
+            text-align: center;
+            font-size: 1.8vh;
+            border-top: 1px solid black;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        Binary Search Visualisation
+    </header>
+
+    <main>
+        <div class="controls">
+            Target Value: <input type="number" id="targetInput" value="42">
+            <button id="nextStepButton">Start / Next Step</button>
+             <button id="resetButton">Reset</button>
+        </div>
+         <div class="status" id="statusMessage">Enter a target value and click "Start".</div>
+        <div class="array-container" id="arrayContainer">
+            <!-- Array elements will be injected here by JavaScript -->
+        </div>
+    </main>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank">GitHub</a>
+        |
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank">LinkedIn</a>
+    </footer>
+
+    <script>
+        // Sample sorted array
+        let sortedArray = [2, 5, 8, 12, 16, 23, 38, 42, 56, 72, 91];
+        let low = 0;
+        let high = sortedArray.length - 1;
+        let target = null;
+        let foundIndex = -1; // -1: not found yet, -2: search finished, not found
+        let stepCount = 0;
+        let searchInProgress = false;
+
+        const arrayContainer = document.getElementById('arrayContainer');
+        const targetInput = document.getElementById('targetInput');
+        const nextStepButton = document.getElementById('nextStepButton');
+        const resetButton = document.getElementById('resetButton');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Function to render the array visually
+        function renderArray() {
+            arrayContainer.innerHTML = ''; // Clear previous state
+
+            // Handle edge case: empty array visualization
+            if (sortedArray.length === 0) {
+                 arrayContainer.textContent = "Array is empty.";
+                 // If search was in progress on empty array, stop it
+                 if (searchInProgress) {
+                     searchInProgress = false;
+                     foundIndex = -2; // Indicate not found on empty array
+                     statusMessage.textContent = "Cannot search an empty array.";
+                 }
+                 return;
+            }
+
+
+            sortedArray.forEach((value, index) => {
+                const item = document.createElement('div');
+                item.classList.add('array-item');
+                item.textContent = value;
+                item.dataset.index = index; // Store index for easy reference
+
+                // --- Apply Highlighting Classes based on current state ---
+
+                // 1. Final State: Found
+                if (foundIndex !== -1) {
+                     if (index === foundIndex) {
+                         item.classList.add('found');
+                     }
+                     // Elements not at foundIndex remain plain in final state
+                }
+                // 2. Final State: Not Found (Search finished, target not found)
+                else if (foundIndex === -2) {
+                     item.classList.add('not-found'); // Mark all elements as not found per CSS interpretation
+                }
+                // 3. In Progress State (Search is active)
+                else if (searchInProgress) {
+                    // Discarded elements (outside current [low, high] range)
+                    if (index < low || index > high) {
+                        item.classList.add('discarded');
+                    }
+                    // Elements within the current [low, high] range
+                    else {
+                        // Calculate mid for the *current* step's range
+                        if (low <= high) { // Ensure valid range before calculating mid/applying mid/low/high styles
+                           const mid = Math.floor((low + high) / 2);
+
+                            // Apply mid highlight
+                            if (index === mid) {
+                                item.classList.add('current-mid');
+                            }
+                            // Apply low/high borders (can be on the same element as mid if low=mid=high)
+                            if (index === low) {
+                                item.classList.add('current-low');
+                            }
+                            if (index === high) {
+                                item.classList.add('current-high');
+                            }
+                        }
+                         // If low > high during search progress (before next step detects failure),
+                         // elements within the previous range are implicitly discarded, already handled by the first 'if' in this block.
+                    }
+                }
+                // 4. Initial State: No highlighting if search hasn't started (foundIndex=-1, searchInProgress=false)
+
+                arrayContainer.appendChild(item);
+            });
+        }
+
+        // Function to perform one step of binary search
+        function performNextStep() {
+            if (!searchInProgress) {
+                // Start a new search
+                target = parseInt(targetInput.value);
+                if (isNaN(target)) {
+                    statusMessage.textContent = "Please enter a valid number.";
+                    return;
+                }
+                // Reset state for a new search
+                low = 0;
+                high = sortedArray.length - 1;
+                foundIndex = -1;
+                stepCount = 0;
+                searchInProgress = true;
+
+                 if (sortedArray.length === 0) {
+                     statusMessage.textContent = "Cannot search an empty array.";
+                     searchInProgress = false; // Cannot start search
+                     foundIndex = -2; // Immediately mark as not found
+                      renderArray(); // Render empty array state
+                      return;
+                 }
+
+                statusMessage.textContent = `Starting search for ${target}...`;
+                renderArray(); // Initial render with low/high on the full array
+
+            } else {
+                // Continue the search
+                // Check termination condition (interval is empty) *before* calculating mid for this step
+                if (low > high) {
+                    statusMessage.textContent = `${target} not found in the array after ${stepCount} steps.`;
+                    foundIndex = -2; // Indicate search finished, not found
+                    searchInProgress = false; // Search finished
+                    renderArray(); // Render final 'not found' state (all elements pink)
+                    return; // Stop search steps
+                }
+
+                // Perform one step: Calculate mid, compare
+                const mid = Math.floor((low + high) / 2);
+                stepCount++;
+
+                statusMessage.textContent = `Step ${stepCount}: Checking index ${mid} (value ${sortedArray[mid]}). Current range [${low}, ${high}].`;
+
+                if (sortedArray[mid] === target) {
+                    foundIndex = mid; // Target found!
+                    statusMessage.textContent = `${target} found at index ${mid} in ${stepCount} steps!`;
+                    searchInProgress = false; // Search finished successfully
+                } else if (sortedArray[mid] < target) {
+                    // Target is greater, search in the right half
+                    low = mid + 1; // Discard mid and left half
+                     statusMessage.textContent += ` Target is greater, move low pointer to ${low}.`;
+                } else {
+                    // Target is smaller, search in the left half
+                    high = mid - 1; // Discard mid and right half
+                     statusMessage.textContent += ` Target is smaller, move high pointer to ${high}.`;
+                }
+
+                 renderArray(); // Re-render after updating state (low, high, or foundIndex)
+
+                 // If search just finished (either found or low > high in the *next* potential step),
+                 // the render above was the final one. No need for extra steps or checks here.
+            }
+        }
+
+         // Function to reset the search
+         function resetSearch() {
+             low = 0;
+             high = sortedArray.length - 1;
+             target = null;
+             foundIndex = -1; // Reset to not found yet
+             stepCount = 0;
+             searchInProgress = false;
+             statusMessage.textContent = "Reset. Enter a target value and click 'Start'.";
+             targetInput.value = ''; // Clear input value
+             renderArray(); // Render initial state (no highlights)
+         }
+
+        // Initial render of the array when the page loads (before any search starts)
+        renderArray();
+
+        // Add event listeners
+        nextStepButton.addEventListener('click', performNextStep);
+        resetButton.addEventListener('click', resetSearch);
+
+         // Allow starting search by pressing Enter in the input field
+         targetInput.addEventListener('keypress', function(event) {
+             if (event.key === 'Enter') {
+                 event.preventDefault(); // Prevent default form submission
+                 performNextStep();
+             }
+         });
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,363 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visualizer</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header {
+            width: 100vw;
+            height: 8vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            box-sizing: border-box;
+            border-bottom: 1px solid black;
+        }
+
+        main {
+            width: 100vw;
+            height: 84vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 1vh 1vw;
+        }
+
+        canvas {
+            border: 1px solid black;
+            max-width: 98%;
+            max-height: 98%;
+            box-sizing: border-box;
+            cursor: crosshair;
+        }
+
+        .controls {
+            margin-top: 1vh;
+            display: flex;
+            gap: 1vw;
+            align-items: center;
+        }
+
+        button {
+            font-family: monospace;
+            font-size: 1em;
+            padding: 0.5vh 1vw;
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #f0f0f0;
+        }
+
+        button:active {
+            background-color: #ddd;
+        }
+
+        footer {
+            width: 100vw;
+            height: 8vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            border-top: 1px solid black;
+            box-sizing: border-box;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1vw;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        K-Nearest Neighbors (KNN) Visualizer
+    </header>
+
+    <main>
+        <canvas id="knnCanvas"></canvas>
+        <div class="controls">
+            <span>K: <span id="kValue">3</span></span>
+            <button id="decreaseK" title="Decrease K">-</button>
+            <button id="increaseK" title="Increase K">+</button>
+            <button id="resetBtn" title="Reset points and classification">Reset</button>
+             <span id="info">Click on the canvas to classify a new point.</span>
+        </div>
+    </main>
+
+    <footer>
+        <span class="separator">|</span>
+        <a href="https://github.com/AshishJangra27/" target="_blank" title="Ashish Jangra's GitHub">GitHub</a>
+        <span class="separator">|</span>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" title="Ashish Jangra's LinkedIn">LinkedIn</a>
+        <span class="separator">|</span>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kValueSpan = document.getElementById('kValue');
+        const decreaseKBtn = document.getElementById('decreaseK');
+        const increaseKBtn = document.getElementById('increaseK');
+        const resetBtn = document.getElementById('resetBtn');
+        const infoSpan = document.getElementById('info');
+
+        let dataPoints = [];
+        let pointToClassify = null;
+        let k = 3;
+        const classes = ['A', 'B'];
+
+        function resizeCanvas() {
+            const main = document.querySelector('main');
+            const mainRect = main.getBoundingClientRect();
+            const controlsHeight = document.querySelector('.controls').offsetHeight;
+            const mainPaddingTop = parseFloat(getComputedStyle(main).paddingTop);
+            const mainPaddingBottom = parseFloat(getComputedStyle(main).paddingBottom);
+            const mainPaddingLeft = parseFloat(getComputedStyle(main).paddingLeft);
+            const mainPaddingRight = parseFloat(getComputedStyle(main).paddingRight);
+
+            const availableHeight = mainRect.height - controlsHeight - mainPaddingTop - mainPaddingBottom;
+            const availableWidth = mainRect.width - mainPaddingLeft - mainPaddingRight;
+
+            // Use the smaller dimension to maintain aspect ratio close to 1:1 if possible,
+            // or simply fit within available space while respecting max-width/height CSS.
+            // A simple way is to set canvas pixel size based on the element size after CSS layout.
+            // Using offsetWidth/offsetHeight after the element is in the DOM:
+             canvas.style.width = availableWidth + 'px';
+             canvas.style.height = availableHeight + 'px';
+
+             // Set the canvas's internal drawing buffer size to match its displayed size
+             canvas.width = canvas.offsetWidth;
+             canvas.height = canvas.offsetHeight;
+
+
+             draw();
+        }
+
+        function initializeDataPoints() {
+             dataPoints = [
+                { x: 150, y: 150, class: 'A' },
+                { x: 200, y: 100, class: 'A' },
+                { x: 100, y: 200, class: 'A' },
+                { x: 250, y: 250, class: 'A' },
+                { x: 150, y: 300, class: 'A' },
+                { x: 600, y: 400, class: 'B' },
+                { x: 650, y: 350, class: 'B' },
+                { x: 700, y: 450, class: 'B' },
+                { x: 550, y: 500, class: 'B' },
+                { x: 750, y: 550, class: 'B' },
+             ];
+             // Scale points to canvas size if canvas size differs significantly from initial point coordinates
+             // This simple example assumes initial points are roughly centered in a larger area.
+             // For a robust solution, points should be stored normalized or scaled on draw.
+             // Let's scale the initial points relative to a hypothetical 800x600 area to the current canvas size
+             const initialWidth = 800; // Hypothetical original canvas width
+             const initialHeight = 600; // Hypothetical original canvas height
+             const scaleX = canvas.width / initialWidth;
+             const scaleY = canvas.height / initialHeight;
+
+             dataPoints.forEach(point => {
+                 point.x *= scaleX;
+                 point.y *= scaleY;
+             });
+
+        }
+
+        function drawPoint(point, isNew = false) {
+            ctx.beginPath();
+            const size = isNew ? 8 : 6;
+            ctx.fillStyle = 'black';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+
+            if (isNew) {
+                ctx.moveTo(point.x - size * 1.5, point.y);
+                ctx.lineTo(point.x + size * 1.5, point.y);
+                ctx.moveTo(point.x, point.y - size * 1.5);
+                ctx.lineTo(point.x, point.y + size * 1.5);
+                ctx.stroke();
+
+                if (point.predictedClass) {
+                     drawClassShape(point.x, point.y, point.predictedClass, size);
+                } else {
+                    ctx.font = `${size*2}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('?', point.x, point.y);
+                }
+
+            } else {
+                 drawClassShape(point.x, point.y, point.class, size);
+            }
+        }
+
+        function drawClassShape(x, y, className, size) {
+             ctx.beginPath();
+             if (className === 'A') {
+                 ctx.arc(x, y, size, 0, Math.PI * 2, false);
+                 ctx.fill();
+             } else if (className === 'B') {
+                 const squareSize = size * 1.5;
+                 ctx.rect(x - squareSize / 2, y - squareSize / 2, squareSize, squareSize);
+                 ctx.stroke();
+             }
+        }
+
+        function drawConnections() {
+            if (!pointToClassify || !pointToClassify.neighbors) return;
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+
+            pointToClassify.neighbors.forEach(neighbor => {
+                ctx.beginPath();
+                ctx.moveTo(pointToClassify.x, pointToClassify.y);
+                ctx.lineTo(neighbor.x, neighbor.y);
+                ctx.stroke();
+            });
+
+            ctx.setLineDash([]);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            dataPoints.forEach(point => drawPoint(point, false));
+
+            drawConnections();
+
+            if (pointToClassify) {
+                drawPoint(pointToClassify, true);
+            }
+        }
+
+        function getDistance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+
+        function classifyPoint(point, data, k) {
+            if (data.length === 0) return { neighbors: [], predictedClass: null };
+
+            const distances = data.map(dp => ({
+                point: dp,
+                distance: getDistance(point, dp)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+            const neighbors = distances.slice(0, Math.min(k, data.length)).map(d => d.point);
+
+            const classCounts = {};
+            neighbors.forEach(neighbor => {
+                classCounts[neighbor.class] = (classCounts[neighbor.class] || 0) + 1;
+            });
+
+            let predictedClass = null;
+            let maxCount = -1;
+            classes.forEach(className => {
+                 if (classCounts[className] > maxCount) {
+                     maxCount = classCounts[className];
+                     predictedClass = className;
+                 }
+            });
+
+
+            return { neighbors, predictedClass };
+        }
+
+        function runKNN() {
+            if (!pointToClassify || dataPoints.length === 0) {
+                infoSpan.textContent = 'Add data points first or click to classify.';
+                if (pointToClassify) pointToClassify = null; // Clear if data is empty
+                draw();
+                return;
+            }
+
+            const { neighbors, predictedClass } = classifyPoint(pointToClassify, dataPoints, k);
+
+            pointToClassify.neighbors = neighbors;
+            pointToClassify.predictedClass = predictedClass;
+
+            infoSpan.textContent = `Predicted Class for new point: ${predictedClass}`;
+
+            draw();
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+             pointToClassify = { x: x, y: y, class: null, neighbors: [], predictedClass: null };
+             runKNN();
+        });
+
+        decreaseKBtn.addEventListener('click', () => {
+            if (k > 1) {
+                k--;
+                kValueSpan.textContent = k;
+                runKNN();
+            }
+        });
+
+        increaseKBtn.addEventListener('click', () => {
+            if (k < dataPoints.length) {
+                 k++;
+                 kValueSpan.textContent = k;
+                 runKNN();
+            } else {
+                 infoSpan.textContent = `K cannot exceed the number of data points (${dataPoints.length}).`;
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            initializeDataPoints();
+            pointToClassify = null;
+            k = 3;
+            kValueSpan.textContent = k;
+            infoSpan.textContent = 'Click on the canvas to classify a new point.';
+            draw();
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        resizeCanvas();
+        initializeDataPoints(); // Re-initialize data points after initial resize
+        draw();
+
+
+    </script>
+
+</body>
+</html>

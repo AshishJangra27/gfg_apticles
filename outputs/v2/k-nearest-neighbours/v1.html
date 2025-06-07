@@ -1,0 +1,316 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Visual Learning</title>
+    <style>
+        /* Minimalist Global Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Use vh for full viewport height */
+            overflow: hidden; /* Prevent scrolling */
+            box-sizing: border-box; /* Include padding/border in element's total width and height */
+        }
+
+        /* Layout using Flexbox */
+        header, footer {
+            text-align: center;
+            padding: 1vh 0; /* Use vh for vertical padding */
+            flex-shrink: 0; /* Prevent shrinking */
+            border-bottom: 1px solid black;
+            border-top: 1px solid black;
+        }
+
+        header {
+            border-top: none; /* No top border for the header */
+            font-size: 1.1em;
+        }
+
+        footer {
+            border-bottom: none; /* No bottom border for the footer */
+            font-size: 0.8em;
+        }
+
+        footer a {
+            color: black;
+            text-decoration: none;
+            margin: 0 1em; /* Space out links */
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .main-content {
+            flex-grow: 1; /* Allow main content to take remaining space */
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls vertically */
+            overflow: hidden; /* Ensure no scroll within main content */
+            border-bottom: 1px solid black; /* Separator between main and footer */
+        }
+
+        /* Canvas and Controls */
+        canvas {
+            display: block;
+            flex-grow: 1; /* Canvas takes available space within main-content */
+            width: 100%; /* Canvas width fills container */
+            /* Height is managed by flex-grow */
+            box-sizing: border-box; /* Include any potential border in size */
+        }
+
+        .controls {
+            padding: 1vh; /* Vertical padding */
+            text-align: center;
+            flex-shrink: 0; /* Prevent shrinking */
+            /* Optional: border-top: 1px solid black; */
+        }
+
+        .controls label {
+            margin-right: 0.5em;
+        }
+
+        .controls input[type="number"] {
+            width: 4em;
+            padding: 0.2em;
+            border: 1px solid black;
+            background: white;
+            color: black;
+            font-family: monospace;
+        }
+
+        .controls button {
+            padding: 0.2em 0.8em;
+            border: 1px solid black;
+            background: white;
+            color: black;
+            font-family: monospace;
+            cursor: pointer;
+            margin-left: 1em;
+        }
+
+        .controls button:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Add hover hint for canvas */
+        canvas:hover {
+             cursor: crosshair; /* Indicate clickable area */
+        }
+
+        header p {
+            margin: 0.5vh 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>K-Nearest Neighbors (KNN) Visualizer</h1>
+        <p>Click anywhere on the canvas to see how KNN classifies a new point based on 'K' neighbors.</p>
+    </header>
+
+    <div class="main-content">
+        <canvas id="knnCanvas"></canvas>
+        <div class="controls">
+            <label for="kValue">Set K:</label>
+            <input type="number" id="kValue" value="3" min="1" step="1">
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://github.com/AshishJangra27/" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.linkedin.com/in/ashish-jangra/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+
+    <script>
+        // Basic KNN JavaScript Logic
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const kInput = document.getElementById('kValue');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Sample Training Data Points (Color represents class)
+        // Using simple object structure for points
+        const trainingData = [
+            { x: 100, y: 100, class: 'blue' },
+            { x: 150, y: 120, class: 'blue' },
+            { x: 110, y: 160, class: 'blue' },
+            { x: 200, y: 200, class: 'red' },
+            { x: 250, y: 220, class: 'red' },
+            { x: 210, y: 260, class: 'red' },
+            { x: 180, y: 180, class: 'blue' }, // Mixed point
+            { x: 220, y: 150, class: 'red' },  // Mixed point
+            { x: 80, y: 220, class: 'blue' },
+            { x: 280, y: 100, class: 'red' },
+        ];
+
+        let newPoint = null; // The point the user clicks to classify
+
+        // Function to draw a point
+        function drawPoint(p, color, size = 5, strokeColor = 'black', strokeWidth = 1) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = strokeWidth;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // Function to calculate Euclidean distance
+        function getDistance(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // Function to find K nearest neighbors
+        function getNeighbors(data, point, k) {
+            const distances = data.map(item => ({
+                ...item,
+                distance: getDistance(point, item)
+            }));
+
+            distances.sort((a, b) => a.distance - b.distance);
+
+            return distances.slice(0, k);
+        }
+
+        // Function to predict the class based on neighbors
+        function predictClass(neighbors) {
+            const classVotes = {};
+            for (const neighbor of neighbors) {
+                const className = neighbor.class;
+                classVotes[className] = (classVotes[className] || 0) + 1;
+            }
+
+            let majorityClass = null;
+            let maxVotes = 0;
+
+            // Find the class with the most votes
+            for (const className in classVotes) {
+                if (classVotes[className] > maxVotes) {
+                    maxVotes = classVotes[className];
+                    majorityClass = className;
+                }
+            }
+            return majorityClass;
+        }
+
+        // Function to draw everything on the canvas
+        function draw() {
+            // Resize canvas to fit container (important for responsive/fixed layout)
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            // Draw training data points
+            trainingData.forEach(point => {
+                drawPoint(point, point.class, 6); // Size 6 for training points
+            });
+
+            // If a new point exists, perform KNN and draw
+            if (newPoint) {
+                const k = parseInt(kInput.value);
+                if (isNaN(k) || k < 1) {
+                     // Reset k if invalid
+                     kInput.value = 1;
+                     k = 1;
+                }
+                const effectiveK = Math.min(k, trainingData.length); // Ensure k doesn't exceed data length
+
+                // Draw the unclassified new point initially (e.g., gray)
+                 drawPoint(newPoint, 'gray', 7, 'black', 2);
+
+
+                if (effectiveK > 0) {
+                    const neighbors = getNeighbors(trainingData, newPoint, effectiveK);
+
+                    // Draw lines to neighbors and highlight them
+                    neighbors.forEach(neighbor => {
+                        ctx.beginPath();
+                        ctx.moveTo(newPoint.x, newPoint.y);
+                        ctx.lineTo(neighbor.x, neighbor.y);
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)'; // Semi-transparent line
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                        ctx.closePath();
+
+                        // Highlight neighbor point (thicker stroke)
+                        drawPoint(neighbor, neighbor.class, 6, 'black', 3);
+                    });
+
+                    // Predict and draw the new point with its predicted class color
+                    const predictedClass = predictClass(neighbors);
+                    newPoint.predictedClass = predictedClass; // Store predicted class
+
+                    // Draw the new point again with its predicted class color
+                    drawPoint(newPoint, newPoint.predictedClass, 8, 'black', 2);
+
+                     // Optionally draw a label near the point
+                    // ctx.fillStyle = 'black';
+                    // ctx.font = '12px monospace';
+                    // ctx.fillText(`Predicted: ${predictedClass}`, newPoint.x + 10, newPoint.y - 10);
+                } else {
+                     // If effectiveK is 0 (e.g., no data), draw the point unclassified
+                     drawPoint(newPoint, 'gray', 7, 'black', 2);
+                }
+            }
+        }
+
+        // Event Listener for Canvas Click
+        canvas.addEventListener('click', (event) => {
+            // Get click position relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // Create the new point
+            newPoint = { x: x, y: y, predictedClass: null };
+
+            // Redraw the canvas with the new point
+            draw();
+        });
+
+        // Event Listener for K value change
+        kInput.addEventListener('input', () => {
+             let kVal = parseInt(kInput.value);
+            if (isNaN(kVal) || kVal < 1) {
+                kInput.value = 1; // Default to 1 if invalid
+            } else if (kVal > trainingData.length) {
+                 kInput.value = trainingData.length; // Clamp to max data points
+            }
+            // Only redraw if a new point exists to classify
+            if (newPoint) {
+                draw();
+            }
+        });
+
+        // Event Listener for Reset button
+        resetBtn.addEventListener('click', () => {
+            newPoint = null; // Remove the new point
+            draw(); // Redraw to clear the new point
+        });
+
+         // Adjust canvas size and redraw on window resize
+        window.addEventListener('resize', draw);
+
+        // Initial draw call to render the training data
+        draw();
+
+    </script>
+
+</body>
+</html>
